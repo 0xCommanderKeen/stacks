@@ -561,6 +561,7 @@
       <div class="eyebrow">LOOK AFTER YOUR LIBRARY</div>
       <h1>Keep it <em>safe.</em></h1>
       <p class="intro">Your books and your choices belong to you.</p>
+      <Backups />
       <div class="settings-grid">
         <section class="settings-card">
           <span class="index">02</span>
@@ -572,7 +573,6 @@
           <a class="button secondary" href="/api/export" download>Export catalog <span>↓</span></a>
         </section>
       </div>
-      <Backups />
       <Devices />
       <SourceRoots onopen={open} />
     {:else if selected}

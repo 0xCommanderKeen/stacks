@@ -180,7 +180,14 @@
     margin-bottom: 0.5rem;
   }
   select {
-    max-width: 100%;
+    width: 100%;
+    max-width: 32rem;
+    min-height: 44px;
+    padding: 0.65rem;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--line);
     margin-bottom: 0.4rem;
   }
   .health {
