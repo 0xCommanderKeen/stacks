@@ -450,7 +450,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ):
             raise HTTPException(413, "This file exceeds the upload limit.")
         with tempfile.NamedTemporaryFile(
-            dir=lib.staging, prefix="upload-", suffix=Path(name).suffix
+            dir=lib.uploads, prefix="upload-", suffix=Path(name).suffix
         ) as temporary:
             size = 0
             async for chunk in request.stream():
