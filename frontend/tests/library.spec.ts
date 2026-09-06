@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 
 test('import, search, edit, download, reload and back up a book', async ({ page }, testInfo) => {
   await page.goto('/');
@@ -55,6 +56,15 @@ test('import, search, edit, download, reload and back up a book', async ({ page 
   );
   await backups.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath('backups.png'), fullPage: true });
+  const exportPromise = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Export catalog' }).click();
+  const exported = await exportPromise;
+  expect(exported.suggestedFilename()).toBe('stacks-catalog.json');
+  const exportedPath = await exported.path();
+  const catalog = JSON.parse(await readFile(exportedPath!, 'utf8'));
+  expect(catalog.format_version).toBe(1);
+  expect(catalog.tables.work.some((work: { title: string }) => work.title === title)).toBe(true);
+  expect(catalog.tables).not.toHaveProperty('device_credential');
   await page.getByRole('button', { name: /Sign out/ }).click();
   await expect(page.getByLabel('Library password')).toBeVisible();
 });

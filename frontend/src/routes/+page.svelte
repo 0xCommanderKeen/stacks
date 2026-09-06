@@ -568,7 +568,8 @@
           <h2>Catalog export</h2>
           <p>
             Take your book details and file references with you in an open JSON format. This export
-            contains no original files.
+            contains no original files. Import it into a fresh Stacks installation with the
+            documented catalog import command; restore original storage separately.
           </p>
           <a class="button secondary" href="/api/export" download>Export catalog <span>↓</span></a>
         </section>

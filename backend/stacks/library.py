@@ -19,28 +19,14 @@ from stacks.epub import InvalidBook, safe_member
 from stacks.inspection import inspect_file, natural_key
 from stacks.models import (
     Asset,
-    BackupRecord,
-    CatalogOperation,
-    Collection,
-    CollectionEntry,
     Contributor,
-    CoverBlob,
     Credit,
     Edition,
     ImportOperation,
-    InboxCandidate,
-    IntakeItem,
-    IntakeJob,
-    MetadataSuggestion,
     PersonalState,
-    Progress,
-    ReadingRecord,
     Representation,
-    ScanDirectory,
     Series,
     SeriesMembership,
-    TrashFile,
-    TrashOperation,
     Work,
     WorkRedirect,
     identity,
@@ -881,51 +867,12 @@ class Library:
                     path.unlink()
 
     def export(self) -> dict:
-        """Versioned portable catalog. No sessions, secrets, or machine-specific paths."""
-        with self.lock, self.engine.connect() as connection:
-            tables = {}
-            for model in (
-                BackupRecord,
-                MetadataSuggestion,
-                CoverBlob,
-                Work,
-                Contributor,
-                Credit,
-                Edition,
-                Representation,
-                Asset,
-                Series,
-                SeriesMembership,
-                WorkRedirect,
-                CatalogOperation,
-                Collection,
-                CollectionEntry,
-                Progress,
-                PersonalState,
-                ReadingRecord,
-                IntakeJob,
-                ScanDirectory,
-                InboxCandidate,
-                IntakeItem,
-                TrashOperation,
-                TrashFile,
-            ):
-                tables[model.__tablename__] = [
-                    dict(row)
-                    for row in connection.execute(
-                        select(model.__table__).order_by(*model.__table__.primary_key.columns)
-                    ).mappings()
-                ]
-            roots = {"managed": {"kind": "managed"}}
-            roots.update(
-                {
-                    row["root"]: {"kind": "external"}
-                    for row in tables["asset"]
-                    if row["root"] != "managed"
-                }
-            )
-            roots.update({row["root"]: {"kind": "external"} for row in tables["inbox_candidate"]})
-            roots.update(
-                {row["root"]: {"kind": "external"} for row in tables["intake_job"] if row["root"]}
-            )
-            return {"schema_version": 15, "roots": roots, "tables": tables}
+        """Small-catalog inspection helper; production downloads use write_catalog."""
+        import tempfile
+
+        from stacks.portable import write_catalog
+
+        with tempfile.TemporaryDirectory(prefix="stacks-export-") as directory:
+            path = Path(directory) / "catalog.json"
+            write_catalog(self, path)
+            return json.loads(path.read_text())

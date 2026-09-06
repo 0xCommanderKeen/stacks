@@ -17,6 +17,7 @@ from stacks.inspection import FORMATS
 from stacks.intake import Intake
 from stacks.library import Library
 from stacks.models import Asset, InboxCandidate, IntakeItem, IntakeJob
+from stacks.portable import SCHEMA_VERSION
 from stacks.schemas import AcceptanceRequest, JobChange, ScanRequest
 
 
@@ -233,7 +234,7 @@ def run(args):
                 )
                 .where(or_(InboxCandidate.id.is_(None), InboxCandidate.sha256 != Asset.sha256))
             )
-        report["schema_version"] = library.export()["schema_version"]
+        report["schema_version"] = SCHEMA_VERSION
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2) + "\n")
         print(json.dumps(report), flush=True)

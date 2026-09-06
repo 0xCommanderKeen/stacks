@@ -4,6 +4,7 @@ from pathlib import Path
 
 from stacks.backup import backup, restore
 from stacks.library import Library
+from stacks.portable import import_catalog, write_catalog
 from stacks.thumbnails import rebuild
 
 
@@ -22,6 +23,10 @@ def main():
     command.add_argument("archive", type=Path)
     command.add_argument("--data-dir", type=Path, required=True)
     command.add_argument("--allow-missing-originals", action="store_true")
+    command = commands.add_parser("import-catalog")
+    command.add_argument("catalog", type=Path)
+    command.add_argument("--data-dir", type=Path, required=True)
+    command.add_argument("--allow-missing-originals", action="store_true")
     command = commands.add_parser("rebuild-thumbnails")
     command.add_argument("--data-dir", type=Path, required=True)
     command.add_argument(
@@ -30,6 +35,10 @@ def main():
     args = parser.parse_args()
     if args.command == "restore":
         restore(args.archive, args.data_dir, allow_missing_originals=args.allow_missing_originals)
+    elif args.command == "import-catalog":
+        import_catalog(
+            args.catalog, args.data_dir, allow_missing_originals=args.allow_missing_originals
+        )
     else:
         if not (args.data_dir / "catalog.sqlite3").is_file():
             parser.error("No catalog exists at this data directory.")
@@ -50,8 +59,7 @@ def main():
                 if result["unavailable"]:
                     raise SystemExit(1)
             else:
-                with args.output.open("x") as output:
-                    json.dump(library.export(), output, ensure_ascii=False, indent=2)
+                write_catalog(library, args.output)
         finally:
             library.close()
     print(f"{args.command.capitalize()} complete.")
