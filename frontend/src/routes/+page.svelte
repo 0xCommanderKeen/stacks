@@ -540,7 +540,7 @@
         onnavigate={setUrl}
       />
     {:else if view === 'inbox'}
-      <Inbox />
+      <Inbox onopen={open} />
     {:else if view === 'settings'}
       <div class="eyebrow">LOOK AFTER YOUR LIBRARY</div>
       <h1>Keep it <em>safe.</em></h1>

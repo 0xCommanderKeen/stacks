@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { json } from './api';
+  import Acceptance from './Acceptance.svelte';
+  import { json, type Book } from './api';
   import type { components } from './schema';
+  let { onopen }: { onopen: (book: Book) => void } = $props();
   type Job = components['schemas']['JobOut'];
   type Candidates = components['schemas']['CandidatePage'];
   type Jobs = components['schemas']['JobPage'];
@@ -13,6 +15,9 @@
   let appliedQuery = $state('');
   let filter = $state('');
   let selectedJob = $state('');
+  let acceptanceJob = $state('');
+  let selectedIds = $state<string[]>([]);
+  let editingCandidate = $state<components['schemas']['CandidateOut'] | null>(null);
   let offset = $state(0);
   let jobsOffset = $state(0);
   let page = $state<Candidates | null>(null);
@@ -22,15 +27,32 @@
   let notice = $state('');
   let active = false;
   let sequence = 0;
+  let navigationSequence = 0;
   let controller: AbortController | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
 
+  async function openWork(event: MouseEvent, id: string) {
+    if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    const navigation = ++navigationSequence;
+    const origin = location.href;
+    try {
+      const book = await json<Book>(`/works/${encodeURIComponent(id)}`);
+      if (active && navigation === navigationSequence && location.href === origin) onopen(book);
+    } catch (cause) {
+      if (active && navigation === navigationSequence) error = String(cause);
+    }
+  }
   function readUrl() {
+    navigationSequence++;
     const params = new URLSearchParams(location.search);
     query = params.get('inbox_q') || '';
     appliedQuery = query;
     filter = params.get('inbox_state') || '';
     selectedJob = params.get('inbox_job') || '';
+    acceptanceJob = params.get('acceptance') || '';
+    selectedIds = [];
+    editingCandidate = null;
     const number = (key: string) => {
       const value = Number(params.get(key) || 0);
       return Number.isSafeInteger(value) && value >= 0 ? value : 0;
@@ -42,11 +64,13 @@
     void load();
   }
   function writeUrl() {
+    navigationSequence++;
     const params = new URLSearchParams(location.search);
     for (const [key, value] of Object.entries({
       inbox_q: appliedQuery,
       inbox_state: filter,
       inbox_job: selectedJob,
+      acceptance: acceptanceJob,
       inbox_offset: offset ? String(offset) : '',
       jobs_offset: jobsOffset ? String(jobsOffset) : '',
     })) {
@@ -201,11 +225,14 @@
                 selectedJob = job.id;
                 offset = 0;
                 writeUrl();
-              }}>{job.root}{job.prefix ? ` / ${job.prefix}` : ''}</button
+              }}
+              >{job.kind === 'accept' ? 'Acceptance · ' : ''}{job.root ||
+                'Selected files'}{job.prefix ? ` / ${job.prefix}` : ''}</button
             ><span class="state">{job.state}</span>
           </div>
           <p>
-            {job.discovered} discovered · {job.completed} inspected · {job.remaining} remaining · {job.skipped}
+            {job.discovered} files · {job.completed}
+            {job.kind === 'accept' ? 'accepted' : 'inspected'} · {job.remaining} remaining · {job.skipped}
             skipped or waiting · {job.failed} failed
           </p>
           <div class="batch-bottom">
@@ -214,13 +241,20 @@
                 job.created_at,
               ).toLocaleString()}</span
             >
-            <button
-              class="secondary"
-              disabled={busy}
-              onclick={() =>
-                change(job, ['queued', 'running'].includes(job.state) ? 'cancel' : 'retry')}
-              >{['queued', 'running'].includes(job.state) ? 'Cancel scan' : 'Retry scan'}</button
-            >
+            {#if job.kind === 'accept'}<button
+                class="secondary"
+                onclick={() => {
+                  acceptanceJob = job.id;
+                  writeUrl();
+                }}>Review acceptance</button
+              >{:else}
+              <button
+                class="secondary"
+                disabled={busy}
+                onclick={() =>
+                  change(job, ['queued', 'running'].includes(job.state) ? 'cancel' : 'retry')}
+                >{['queued', 'running'].includes(job.state) ? 'Cancel scan' : 'Retry scan'}</button
+              >{/if}
           </div>
           {#if job.error}<p class="error">{job.error}</p>{/if}
         </article>
@@ -281,7 +315,7 @@
             writeUrl();
           }}
           ><option value="">All states</option
-          >{#each ['pending', 'ready', 'review', 'duplicate', 'waiting', 'error'] as state}<option
+          >{#each ['pending', 'ready', 'review', 'duplicate', 'accepted', 'waiting', 'error'] as state}<option
               value={state}>{state}</option
             >{/each}</select
         >
@@ -292,13 +326,56 @@
       Ready files have inspected metadata. Audio needs a recording-boundary review. Duplicates match
       original bytes; titles alone never establish a match.
     </p>
+    <Acceptance
+      selected={selectedIds}
+      query={appliedQuery}
+      {filter}
+      scanId={selectedJob}
+      jobId={acceptanceJob}
+      onopen={openWork}
+      bind:editing={editingCandidate}
+      onjob={(id) => {
+        acceptanceJob = id;
+        writeUrl();
+      }}
+      onclear={() => (selectedIds = [])}
+      onrefresh={() => {
+        void load();
+      }}
+    />
     {#if page}
       <p class="count">{page.total} files{selectedJob ? ' in this scan' : ''}</p>
       <div class="files">
         {#each page.items as item (item.id)}
           <article>
+            {#if ['ready', 'review', 'duplicate'].includes(item.state)}
+              <div class="candidate-actions">
+                <label
+                  ><input
+                    type="checkbox"
+                    aria-label={`Select ${item.relative_path}`}
+                    checked={selectedIds.includes(item.id)}
+                    onchange={(event) => {
+                      selectedIds = event.currentTarget.checked
+                        ? [...selectedIds, item.id]
+                        : selectedIds.filter((id) => id !== item.id);
+                      if (event.currentTarget.checked && acceptanceJob) {
+                        acceptanceJob = '';
+                        writeUrl();
+                      }
+                    }}
+                  /> Select file</label
+                ><button class="secondary" onclick={() => (editingCandidate = item)}
+                  >Edit acceptance metadata</button
+                >
+              </div>
+            {/if}
             <div class="file-title">
-              <h3>{String(item.facts.title || item.relative_path.split('/').pop())}</h3>
+              <h3>
+                {String(
+                  item.edits.title || item.facts.title || item.relative_path.split('/').pop(),
+                )}
+              </h3>
               <span class="state">{item.state}</span>
             </div>
             <p class="path">{item.root} / {item.relative_path}</p>
@@ -309,7 +386,9 @@
               {#if item.sha256}<p class="checksum">SHA-256 {item.sha256}</p>{/if}
               {#if item.work_id}<p>
                   Matching catalog work: <a
-                    href={`/?book=${encodeURIComponent(item.work_id)}&scope=all`}>Open work</a
+                    data-sveltekit-reload
+                    href={`/?book=${encodeURIComponent(item.work_id)}&scope=all`}
+                    onclick={(event) => openWork(event, item.work_id!)}>Open work</a
                   >
                 </p>{/if}
               <dl>
@@ -471,6 +550,24 @@
   .path,
   .checksum {
     overflow-wrap: anywhere;
+  }
+  .candidate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+  .candidate-actions label {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .candidate-actions input {
+    width: auto;
+    margin: 0;
   }
   .files p {
     margin: 0.4rem 0;

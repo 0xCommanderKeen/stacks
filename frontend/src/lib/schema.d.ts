@@ -243,6 +243,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/intake/acceptance/{job_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Acceptance Page */
+    get: operations['acceptance_page_api_intake_acceptance__job_id__get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/intake/candidates': {
     parameters: {
       query?: never;
@@ -258,6 +275,23 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  '/api/intake/candidates/{candidate_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Edit Candidate */
+    patch: operations['edit_candidate_api_intake_candidates__candidate_id__patch'];
     trace?: never;
   };
   '/api/intake/jobs': {
@@ -288,6 +322,23 @@ export interface paths {
     put?: never;
     /** Change Job */
     post: operations['change_job_api_intake_jobs__job_id__post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/intake/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Preview Acceptance */
+    post: operations['preview_acceptance_api_intake_preview_post'];
     delete?: never;
     options?: never;
     head?: never;
@@ -745,6 +796,120 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AcceptanceItemOut */
+    AcceptanceItemOut: {
+      candidate: components['schemas']['CandidateOut'];
+      /** Error */
+      error: string | null;
+      /** Group Id */
+      group_id: string;
+      /** Id */
+      id: string;
+      metadata: components['schemas']['AcceptedMetadata'];
+      series: components['schemas']['SeriesOut'] | null;
+      /** State */
+      state: string;
+      /** Work Id */
+      work_id: string | null;
+    };
+    /** AcceptancePage */
+    AcceptancePage: {
+      /** Confirmed */
+      confirmed: boolean;
+      /** Grouped Audio */
+      grouped_audio: boolean;
+      /** Items */
+      items: components['schemas']['AcceptanceItemOut'][];
+      job: components['schemas']['JobOut'];
+      /** Limit */
+      limit: number;
+      /**
+       * Mode
+       * @enum {string}
+       */
+      mode: 'register' | 'copy';
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
+    /** AcceptanceRequest */
+    AcceptanceRequest: {
+      /**
+       * Audio Singles Confirmed
+       * @default false
+       */
+      audio_singles_confirmed: boolean;
+      /** Candidate Ids */
+      candidate_ids?: string[] | null;
+      /**
+       * Group Audio
+       * @default false
+       */
+      group_audio: boolean;
+      metadata?: components['schemas']['AcceptedMetadata'];
+      /**
+       * Mode
+       * @default register
+       * @enum {string}
+       */
+      mode: 'register' | 'copy';
+      /**
+       * Q
+       * @default
+       */
+      q: string;
+      /**
+       * Root
+       * @default
+       */
+      root: string;
+      /**
+       * Scan Id
+       * @default
+       */
+      scan_id: string;
+      /**
+       * State
+       * @default ready
+       */
+      state: string;
+    };
+    /** AcceptedMetadata */
+    AcceptedMetadata: {
+      /** Authors */
+      authors?: string[] | null;
+      /** Description */
+      description?: string | null;
+      /**
+       * Designation
+       * @default
+       */
+      designation: string;
+      /** Identifier */
+      identifier?: string | null;
+      /** Language */
+      language?: string | null;
+      /** Narrator */
+      narrator?: string | null;
+      /**
+       * Position
+       * @default 0
+       */
+      position: number;
+      /** Publisher */
+      publisher?: string | null;
+      /** Series Id */
+      series_id?: string | null;
+      /**
+       * Shelf
+       * @default default
+       * @enum {string}
+       */
+      shelf: 'default' | 'library' | 'archive';
+      /** Title */
+      title?: string | null;
+    };
     /** AssetAvailability */
     AssetAvailability: {
       /** Asset Id */
@@ -779,6 +944,12 @@ export interface components {
       original_name: string;
       /** Title */
       title: string;
+    };
+    /** CandidateEdit */
+    CandidateEdit: {
+      metadata: components['schemas']['AcceptedMetadata'];
+      /** Revision */
+      revision: number;
     };
     /** CandidateOut */
     CandidateOut: {
@@ -1063,7 +1234,7 @@ export interface components {
        * Action
        * @enum {string}
        */
-      action: 'cancel' | 'retry';
+      action: 'cancel' | 'retry' | 'confirm';
       /** Revision */
       revision: number;
     };
@@ -1083,6 +1254,8 @@ export interface components {
       failed: number;
       /** Id */
       id: string;
+      /** Kind */
+      kind: string;
       /** Prefix */
       prefix: string;
       /** Remaining */
@@ -1991,6 +2164,40 @@ export interface operations {
       };
     };
   };
+  acceptance_page_api_intake_acceptance__job_id__get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AcceptancePage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   inbox_candidates_api_intake_candidates_get: {
     parameters: {
       query?: {
@@ -2014,6 +2221,41 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['CandidatePage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  edit_candidate_api_intake_candidates__candidate_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        candidate_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CandidateEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CandidateOut'];
         };
       };
       /** @description Validation Error */
@@ -2071,6 +2313,39 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['JobChange'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['JobOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  preview_acceptance_api_intake_preview_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AcceptanceRequest'];
       };
     };
     responses: {

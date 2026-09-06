@@ -212,6 +212,8 @@ class CollectionEntry(Base):
 class IntakeJob(Base):
     __tablename__ = "intake_job"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    kind: Mapped[str] = mapped_column(default="scan", server_default="scan", index=True)
+    options_json: Mapped[str] = mapped_column(Text, default="{}", server_default="{}")
     root: Mapped[str] = mapped_column(String(64))
     prefix: Mapped[str] = mapped_column(Text, default="")
     state: Mapped[str] = mapped_column(default="queued", index=True)
@@ -255,8 +257,14 @@ class IntakeItem(Base):
     __table_args__ = (
         UniqueConstraint("job_id", "candidate_id"),
         Index("ix_intake_item_pending", "job_id", "state", "id"),
+        Index("ix_intake_item_group", "job_id", "group_id", "state"),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
     job_id: Mapped[str] = mapped_column(ForeignKey("intake_job.id"), index=True)
     candidate_id: Mapped[str] = mapped_column(ForeignKey("inbox_candidate.id"), index=True)
+    snapshot_json: Mapped[str | None] = mapped_column(Text, default=None)
+    candidate_revision: Mapped[int | None] = mapped_column(default=None)
+    group_id: Mapped[str | None] = mapped_column(String(36), default=None)
+    result_work_id: Mapped[str | None] = mapped_column(String(36), default=None)
+    error: Mapped[str | None] = mapped_column(Text, default=None)
     state: Mapped[str] = mapped_column(default="pending", index=True)

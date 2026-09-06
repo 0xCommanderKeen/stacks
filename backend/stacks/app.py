@@ -31,7 +31,11 @@ from stacks.models import Asset, ImportOperation, LoginSession, Representation, 
 from stacks.operations import CatalogOperations
 from stacks.reading import Reading
 from stacks.schemas import (
+    AcceptancePage,
+    AcceptanceRequest,
     AssetAvailability,
+    CandidateEdit,
+    CandidateOut,
     CandidatePage,
     CatalogPage,
     CollectionChange,
@@ -428,6 +432,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         offset: int = Query(default=0, ge=0),
     ):
         return CatalogOperations(lib).list(limit, offset, work_id)
+
+    @app.post("/api/intake/preview", response_model=JobOut)
+    def preview_acceptance(body: AcceptanceRequest, request: Request, lib: Auth):
+        try:
+            return request.app.state.intake.preview_acceptance(body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/intake/acceptance/{job_id}", response_model=AcceptancePage)
+    def acceptance_page(
+        job_id: str,
+        request: Request,
+        lib: Auth,
+        limit: int = Query(24, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        return request.app.state.intake.acceptance(job_id, limit, offset)
+
+    @app.patch("/api/intake/candidates/{candidate_id}", response_model=CandidateOut)
+    def edit_candidate(candidate_id: str, body: CandidateEdit, request: Request, lib: Auth):
+        try:
+            return request.app.state.intake.edit_candidate(candidate_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
 
     @app.post("/api/intake/scans", response_model=JobOut)
     def start_scan(body: ScanRequest, request: Request, lib: Auth):

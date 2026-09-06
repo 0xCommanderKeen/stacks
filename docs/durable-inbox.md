@@ -1,6 +1,6 @@
 # Durable Inbox discovery
 
-Inbox discovers configured read-only sources without creating catalog works or changing original files. Choose a source alias and optional relative folder, then start a scan. The page shows saved job progress and paged file candidates; it is safe to navigate away or restart Stacks. Batch metadata editing and acceptance are the next intake slice, tracked under #22.
+Inbox discovers configured read-only sources without creating catalog works or changing original files. Choose a source alias and optional relative folder, then start a scan. The page shows saved job progress and paged file candidates; it is safe to navigate away or restart Stacks. The [batch acceptance workflow](batch-acceptance.md) previews metadata, storage choices, and explicit audio groups before catalog publication.
 
 Each source-relative file has one stable candidate identity. Internal file aliases resolve to the same identity. Directory symlinks are skipped to avoid cycles; files escaping their configured root become explicit errors. Rescans revisit previously seen paths under the chosen prefix, so missing originals become visible rather than silently retaining a ready state. Missing roots never delete catalog facts or files.
 
