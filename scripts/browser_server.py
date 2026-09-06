@@ -1,6 +1,7 @@
 """Disposable real backend serving the production web build for browser tests."""
 
 import io
+import os
 import tempfile
 import zipfile
 from pathlib import Path
@@ -42,6 +43,13 @@ with (
         Path(source_directory, f"Registered {viewport}.epub").write_bytes(
             epub_bytes(f"A registered book {viewport}")
         )
+    for viewport in ("desktop", "phone"):
+        folder = Path(source_directory, f"Inbox {viewport}")
+        folder.mkdir()
+        for index in range(26):
+            publication = folder / f"{index:02}.epub"
+            publication.write_bytes(epub_bytes(f"Inbox {viewport} {index:02}", cover=False))
+            os.utime(publication, (1, 1))
     library = Library(Path(directory))
     library.import_files(
         [

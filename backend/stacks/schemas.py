@@ -390,3 +390,58 @@ class AssetAvailability(BaseModel):
     asset_id: str
     available: bool
     detail: str
+
+
+class ScanRequest(BaseModel):
+    root: str = Field(min_length=1, max_length=64)
+    prefix: str = Field(default="", max_length=1024)
+
+
+class JobChange(BaseModel):
+    action: Literal["cancel", "retry"]
+    revision: int = Field(ge=1)
+
+
+class JobOut(BaseModel):
+    id: str
+    root: str
+    prefix: str
+    state: str
+    revision: int
+    error: str | None
+    created_at: str
+    updated_at: str
+    discovered: int
+    completed: int
+    remaining: int
+    skipped: int
+    failed: int
+    directories_remaining: int
+
+
+class JobPage(BaseModel):
+    items: list[JobOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class CandidateOut(BaseModel):
+    id: str
+    root: str
+    relative_path: str
+    state: str
+    revision: int
+    sha256: str | None
+    facts: dict
+    edits: dict
+    work_id: str | None
+    error: str | None
+    updated_at: str
+
+
+class CandidatePage(BaseModel):
+    items: list[CandidateOut]
+    total: int
+    limit: int
+    offset: int

@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import BigInteger, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -207,3 +207,56 @@ class CollectionEntry(Base):
     collection_id: Mapped[str] = mapped_column(ForeignKey("collection.id"), index=True)
     work_id: Mapped[str] = mapped_column(ForeignKey("work.id"), index=True)
     position: Mapped[int]
+
+
+class IntakeJob(Base):
+    __tablename__ = "intake_job"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    root: Mapped[str] = mapped_column(String(64))
+    prefix: Mapped[str] = mapped_column(Text, default="")
+    state: Mapped[str] = mapped_column(default="queued", index=True)
+    revision: Mapped[int] = mapped_column(default=1)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(default=now, index=True)
+    updated_at: Mapped[str] = mapped_column(default=now)
+
+
+class ScanDirectory(Base):
+    __tablename__ = "scan_directory"
+    __table_args__ = (
+        UniqueConstraint("job_id", "path"),
+        Index("ix_scan_directory_pending", "job_id", "done", "id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    job_id: Mapped[str] = mapped_column(ForeignKey("intake_job.id"), index=True)
+    path: Mapped[str] = mapped_column(Text)
+    done: Mapped[bool] = mapped_column(default=False, index=True)
+    skipped: Mapped[int] = mapped_column(default=0)
+
+
+class InboxCandidate(Base):
+    __tablename__ = "inbox_candidate"
+    __table_args__ = (UniqueConstraint("root", "relative_path"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    root: Mapped[str] = mapped_column(String(64), index=True)
+    relative_path: Mapped[str] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(default="pending", index=True)
+    revision: Mapped[int] = mapped_column(default=1)
+    observation_json: Mapped[str] = mapped_column(Text, default="{}")
+    sha256: Mapped[str | None] = mapped_column(String(64), index=True)
+    facts_json: Mapped[str] = mapped_column(Text, default="{}")
+    edits_json: Mapped[str] = mapped_column(Text, default="{}")
+    error: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[str] = mapped_column(default=now)
+
+
+class IntakeItem(Base):
+    __tablename__ = "intake_item"
+    __table_args__ = (
+        UniqueConstraint("job_id", "candidate_id"),
+        Index("ix_intake_item_pending", "job_id", "state", "id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    job_id: Mapped[str] = mapped_column(ForeignKey("intake_job.id"), index=True)
+    candidate_id: Mapped[str] = mapped_column(ForeignKey("inbox_candidate.id"), index=True)
+    state: Mapped[str] = mapped_column(default="pending", index=True)
