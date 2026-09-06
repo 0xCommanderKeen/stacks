@@ -41,7 +41,6 @@ def upgrade():
         sa.Column("sha256", sa.String(64)),
         sa.Column("facts_json", sa.Text(), nullable=False),
         sa.Column("edits_json", sa.Text(), nullable=False),
-        sa.Column("work_id", sa.String(36)),
         sa.Column("error", sa.Text()),
         sa.Column("updated_at", sa.String(), nullable=False),
         sa.UniqueConstraint("root", "relative_path"),

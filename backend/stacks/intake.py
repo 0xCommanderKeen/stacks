@@ -209,7 +209,17 @@ class Intake:
 
     def candidates(self, q="", state="", root="", job_id="", limit=24, offset=0):
         with self.library.sessions() as session:
-            query = select(InboxCandidate)
+            current_owner = (
+                select(Edition.work_id)
+                .join(Representation)
+                .join(Asset)
+                .where(Asset.sha256 == InboxCandidate.sha256)
+                .order_by(Asset.id)
+                .limit(1)
+                .correlate(InboxCandidate)
+                .scalar_subquery()
+            )
+            query = select(InboxCandidate, current_owner)
             if q.strip():
                 query = query.where(
                     or_(
@@ -243,15 +253,15 @@ class Intake:
                             "state",
                             "revision",
                             "sha256",
-                            "work_id",
                             "error",
                             "updated_at",
                         )
                     },
                     facts=json.loads(candidate.facts_json),
                     edits=json.loads(candidate.edits_json),
+                    work_id=current_work_id,
                 )
-                for candidate in session.scalars(
+                for candidate, current_work_id in session.execute(
                     query.order_by(
                         InboxCandidate.root, InboxCandidate.relative_path, InboxCandidate.id
                     )
@@ -486,7 +496,6 @@ class Intake:
             )
             if state not in {"error", "waiting"}:
                 candidate.facts_json, candidate.sha256 = json.dumps(facts), sha
-                candidate.work_id = work_id
             candidate.revision += 1
             candidate.updated_at = now()
             session.get(IntakeItem, item_id).state = (

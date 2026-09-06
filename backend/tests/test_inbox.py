@@ -257,3 +257,40 @@ def test_nested_discovery_keeps_active_iterator_and_restores_missing_alias(inbox
     roots = Sources(library).list()
     assert len(roots) == 1 and roots[0].alias == "books"
     assert roots[0].configured is False and roots[0].registered_assets == 0
+
+
+def test_duplicate_evidence_follows_split_and_undo_without_rescan(client, tmp_path):
+    from .test_operations import commit, pair, preview
+
+    source, target = pair(client)
+    representation = source["editions"][0]["representations"][0]
+    commit(client, preview(client, source, target))
+    library = client.app.state.library
+    folder = tmp_path / "duplicate"
+    folder.mkdir()
+    original = client.get(f"/api/assets/{representation['assets'][0]['id']}/download").content
+    (folder / "same.epub").write_bytes(original)
+    library.sources["duplicates"] = folder
+    worker = client.app.state.intake
+    worker.stable_seconds = 0
+    worker.scan(ScanRequest(root="duplicates"))
+    import time
+
+    for _ in range(100):
+        candidates = worker.candidates(state="duplicate")
+        if candidates.total:
+            break
+        time.sleep(0.02)
+    candidate = candidates.items[0]
+    assert candidate.work_id == target["id"]
+    grouped = client.get(f"/api/works/{target['id']}").json()
+    split = preview(client, grouped, mode="split", representation_id=representation["id"])
+    result = commit(client, split)
+    separate_id = result["work_ids"][1]
+    current = worker.candidates(state="duplicate").items[0]
+    assert current.id == candidate.id and current.work_id == separate_id
+    assert client.get(f"/api/works/{current.work_id}").status_code == 200
+    assert client.post(f"/api/operations/{split['id']}/undo").status_code == 200
+    current = worker.candidates(state="duplicate").items[0]
+    assert current.work_id == target["id"]
+    assert client.get(f"/api/works/{separate_id}").status_code == 404

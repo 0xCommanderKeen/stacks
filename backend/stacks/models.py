@@ -246,7 +246,6 @@ class InboxCandidate(Base):
     sha256: Mapped[str | None] = mapped_column(String(64), index=True)
     facts_json: Mapped[str] = mapped_column(Text, default="{}")
     edits_json: Mapped[str] = mapped_column(Text, default="{}")
-    work_id: Mapped[str | None] = mapped_column(String(36))
     error: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[str] = mapped_column(default=now)
 
