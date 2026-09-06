@@ -319,15 +319,46 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   await page.keyboard.press('ArrowLeft');
   await expect.poll(async () => (await progress()).position).toBeLessThan(10);
   await page.getByRole('button', { name: 'Home', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Continue Listening Practice' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Continue Listening Practice' }).first(),
+  ).toBeVisible();
   await page.reload();
-  await page.getByRole('button', { name: 'Continue Listening Practice' }).click();
+  await page.getByRole('button', { name: 'Continue Listening Practice' }).first().click();
   await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
   await player.getByRole('button', { name: 'Pause audio' }).click();
   await expect(player.getByRole('combobox', { name: 'Speed', exact: true })).toHaveValue('1.5');
   expect(
     Number(await player.getByRole('slider', { name: 'Listening position' }).inputValue()),
   ).toBeGreaterThan(9);
+  // Keep the old recording and its dirty position when a save fails during a switch.
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.locator('input[type=file]').setInputFiles('../backend/tests/fixtures/listening.m4b');
+  await expect(page.getByRole('status')).toContainText(/added/);
+  await page.locator('button.book').filter({ hasText: 'M4B' }).click();
+  await page.getByRole('button', { name: 'Listen · M4B', exact: true }).waitFor();
+  const saveRoute = `**/api/representations/${representation.id}/progress`;
+  await page.route(saveRoute, (route) =>
+    route.fulfill({ status: 503, json: { detail: 'Save unavailable' } }),
+  );
+  await player.getByRole('slider', { name: 'Listening position' }).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(player.getByRole('alert')).toContainText('Save unavailable');
+  const unsaved = await player.getByRole('slider', { name: 'Listening position' }).inputValue();
+  await page.getByRole('button', { name: 'Listen · M4B', exact: true }).click();
+  await expect(
+    player.getByRole('combobox', { name: 'Track', exact: true }).locator('option'),
+  ).toHaveCount(2);
+  await expect(player.getByRole('slider', { name: 'Listening position' })).toHaveValue(unsaved);
+  await page.unroute(saveRoute);
+  await page.getByRole('button', { name: 'Listen · M4B', exact: true }).click();
+  await expect(
+    player.getByRole('combobox', { name: 'Track', exact: true }).locator('option'),
+  ).toHaveCount(1);
+  await expect.poll(async () => (await progress()).position).toBe(Number(unsaved));
+  await page.goto(`/?book=${work.id}`);
+  await page.getByRole('button', { name: 'Listen · AUDIO-SET', exact: true }).click();
+  await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
+  await player.getByRole('button', { name: 'Pause audio' }).click();
   // A second device saves after this player's last acknowledged revision.
   await expect.poll(async () => (await progress()).speed).toBe(1.5);
   await expect(player.getByText('Place saved', { exact: true })).toBeVisible();

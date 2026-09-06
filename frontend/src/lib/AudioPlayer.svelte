@@ -63,12 +63,15 @@
   export async function pauseAndFlush() {
     audio?.pause();
     await flush();
+    if (dirty && !conflicted)
+      throw new Error('Listening position is not saved. Retry before signing out.');
   }
 
   export async function start(representationId: string, play = true) {
     const sequence = ++generation;
+    audio?.pause();
     await flush();
-    if (sequence !== generation) return;
+    if (sequence !== generation || (dirty && !conflicted)) return;
     loading = true;
     if (audio) audio.pause();
     error = '';
@@ -135,8 +138,9 @@
   async function changeTrack(next: number, play = playing) {
     if (!data || next < 0 || next >= data.tracks.length) return;
     const sequence = ++generation;
+    audio.pause();
     await flush();
-    if (conflicted || sequence !== generation) return;
+    if (dirty || conflicted || sequence !== generation) return;
     loading = true;
     audio.pause();
     index = next;
