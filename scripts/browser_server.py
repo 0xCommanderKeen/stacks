@@ -15,6 +15,9 @@ writer = PdfWriter()
 writer.add_blank_page(width=400, height=600)
 writer.add_metadata({"/Title": "An Open Page", "/Author": "Stacks Samples"})
 writer.write("samples/An Open Page.pdf")
+writer.add_metadata({"/Title": "A Different Format"})
+writer.write("samples/A Different Format.pdf")
+Path("samples/Ways to Read.epub").write_bytes(epub_bytes("Ways to Read"))
 Path("samples/The Quiet Library — phone.epub").write_bytes(epub_bytes("The Quiet Library — phone"))
 for index in range(26):
     Path(f"samples/Page Test {index:02d}.epub").write_bytes(

@@ -5,8 +5,8 @@ A personal library for books, comics, and audiobooks.
 Stacks is a clean-start project focused on safe imports, useful cataloging,
 comic series, and dependable audiobook playback. The current development version supports
 **EPUB, PDF, CBZ, CBR, MP3, M4A, and M4B import, catalog search, edition/series editing,
-original downloads, and backup/restore**. Playback, bulk intake, and reversible grouping
-are subsequent milestones.
+original downloads, reversible grouping/splitting, and backup/restore**. Playback and
+bulk intake are subsequent milestones.
 
 - [Implementation plan](docs/rebuild/PLAN.md)
 - [Proposed domain language](CONTEXT.md)
@@ -99,3 +99,5 @@ schemas generate the committed TypeScript contract through `make types`.
 Implementation targets Linux/NAS and macOS. Windows is not currently supported.
 
 Current format and series behavior is documented in [Formats and series](docs/formats-and-series.md).
+
+[Grouping and undo](docs/grouping.md) explains previews, conflict choices, and stable format identity.

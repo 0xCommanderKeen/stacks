@@ -18,6 +18,7 @@ from stacks.epub import InvalidBook, safe_member
 from stacks.inspection import inspect_file, natural_key
 from stacks.models import (
     Asset,
+    CatalogOperation,
     Contributor,
     Credit,
     Edition,
@@ -26,6 +27,7 @@ from stacks.models import (
     Series,
     SeriesMembership,
     Work,
+    WorkRedirect,
     identity,
 )
 from stacks.schemas import (
@@ -111,6 +113,7 @@ def work_out(work: Work) -> WorkOut:
                 ],
             )
             for e in work.editions
+            if e.representations
         ],
     )
 
@@ -153,7 +156,9 @@ class Library:
         self, q: str = "", limit: int = 60, offset: int = 0, series_id: str | None = None
     ) -> CatalogPage:
         with self.sessions() as session:
-            query = select(Work)
+            query = select(Work).where(
+                ~select(WorkRedirect.source_id).where(WorkRedirect.source_id == Work.id).exists()
+            )
             ordering = (Work.created_at.desc(), Work.id)
             if series_id:
                 if session.get(Series, series_id) is None:
@@ -196,6 +201,12 @@ class Library:
 
     def get(self, work_id: str) -> WorkOut:
         with self.sessions() as session:
+            seen = set()
+            while redirect := session.get(WorkRedirect, work_id):
+                if work_id in seen:
+                    raise ValueError("Catalog redirect cycle detected.")
+                seen.add(work_id)
+                work_id = redirect.target_id
             work = session.get(Work, work_id)
             if work is None:
                 raise KeyError(work_id)
@@ -206,6 +217,8 @@ class Library:
             work = session.get(Work, work_id)
             if work is None:
                 raise KeyError(work_id)
+            if session.get(WorkRedirect, work_id):
+                raise ValueError("This work was regrouped. Open its current page before saving.")
             if work.revision != edit.revision:
                 raise ValueError("This book changed in another tab. Reload before saving.")
             if edit.editions is not None:
@@ -467,18 +480,22 @@ class Library:
             tables = {}
             for model in (
                 Work,
+                WorkRedirect,
                 Contributor,
+                CatalogOperation,
                 Credit,
                 Edition,
                 Representation,
                 Asset,
                 Series,
                 SeriesMembership,
+                WorkRedirect,
+                CatalogOperation,
             ):
                 tables[model.__tablename__] = [
                     dict(row)
                     for row in connection.execute(
-                        select(model.__table__).order_by(model.__table__.c.id)
+                        select(model.__table__).order_by(*model.__table__.primary_key.columns)
                     ).mappings()
                 ]
-            return {"schema_version": 2, "roots": {"managed": "managed/"}, "tables": tables}
+            return {"schema_version": 3, "roots": {"managed": "managed/"}, "tables": tables}

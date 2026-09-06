@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Cover from '$lib/Cover.svelte';
   import Organization from '$lib/Organization.svelte';
+  import CatalogGroups from '$lib/CatalogGroups.svelte';
   import {
     ApiError,
     json,
@@ -410,6 +411,14 @@
                 void load().catch(fail);
               }}
             />
+            {#key selected.id}<CatalogGroups
+                book={selected}
+                onchange={async (id) => {
+                  selected = await json<Book>(`/works/${id}`);
+                  await load();
+                  setUrl();
+                }}
+              />{/key}
             <dl class="book-facts">
               <div>
                 <dt>Language</dt>

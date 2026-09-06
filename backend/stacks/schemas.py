@@ -128,3 +128,44 @@ class StatusOut(BaseModel):
     books: int
     import_errors: int
     version: str = "0.1.0"
+
+
+class GroupRequest(BaseModel):
+    mode: Literal["editions", "representation", "split"]
+    source_work_id: str
+    target_work_id: str | None = None
+    representation_id: str | None = None
+    target_edition_id: str | None = None
+
+
+class ConflictOut(BaseModel):
+    field: str
+    source: str
+    target: str
+
+
+class GroupPreview(BaseModel):
+    id: str
+    mode: str
+    source: WorkOut
+    target: WorkOut | None
+    conflicts: list[ConflictOut]
+    explanation: str
+
+
+class GroupCommit(BaseModel):
+    resolutions: dict[str, Literal["source", "target"]] = Field(default_factory=dict)
+
+
+class OperationOut(BaseModel):
+    id: str
+    state: str
+    work_ids: list[str]
+    created_at: str
+
+
+class OperationPage(BaseModel):
+    items: list[OperationOut]
+    total: int
+    limit: int
+    offset: int
