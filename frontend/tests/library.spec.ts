@@ -184,7 +184,9 @@ test('PDF details and distinct series survive reload', async ({ page }, testInfo
   await page.screenshot({ path: testInfo.outputPath('editions-series.png'), fullPage: true });
 });
 
-test('group alternate formats, split, undo, and preserve separate narrations', async ({ page }) => {
+test('group alternate formats, split, undo, and preserve separate narrations', async ({
+  page,
+}, testInfo) => {
   await page.goto('/');
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
@@ -208,6 +210,10 @@ test('group alternate formats, split, undo, and preserve separate narrations', a
   await page.getByRole('button', { name: /Ways to Read.*EPUB/ }).click();
   await page.getByRole('button', { name: 'Preview changes' }).click();
   await expect(page.getByRole('region', { name: 'Grouping preview' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('group-preview.png'), fullPage: true });
   for (const choice of await page
     .getByRole('region', { name: 'Grouping preview' })
     .locator('select')
