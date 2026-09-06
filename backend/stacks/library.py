@@ -252,8 +252,10 @@ class Library:
             raise OSError("Import original missing or checksum mismatch; copies retained.")
         if location == stage:
             os.rename(stage, destination)
-            sync_dir(self.managed)
-            sync_dir(self.staging)
+        # Recovery may observe a rename whose directory sync failed before the crash.
+        # Re-establish durability on both paths before acknowledging the catalog commit.
+        sync_dir(self.managed)
+        sync_dir(self.staging)
         with self.sessions.begin() as session:
             operation = session.get(ImportOperation, operation_id)
             metadata = json.loads(operation.extracted_json)

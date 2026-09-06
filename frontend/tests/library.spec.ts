@@ -56,6 +56,8 @@ test('catalog layout works with multiple books and a missing search result', asy
       ].map((name) => path.resolve(`../samples/${name}.epub`)),
     );
   await expect(page.getByRole('status')).toContainText(/added/);
+  await page.getByLabel('Search books or authors').fill('Alex Reed');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Open Small Hours', exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -64,4 +66,37 @@ test('catalog layout works with multiple books and a missing search result', asy
   await page.getByLabel('Search books or authors').fill('there-is-no-such-book');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'No books found.' })).toBeVisible();
+});
+
+test('catalog page survives detail, back, reload, and unsubmitted search text', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page
+    .getByLabel('Choose EPUB books')
+    .setInputFiles(
+      Array.from({ length: 26 }, (_, i) =>
+        path.resolve(`../samples/Page Test ${String(i).padStart(2, '0')}.epub`),
+      ),
+    );
+  await expect(page.getByRole('status')).toContainText(/added/);
+  await page.getByLabel('Search books or authors').fill('Page Test');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page).toHaveURL(/q=Page/);
+  await page.getByLabel('Search books or authors').fill('unsubmitted');
+  await page.getByRole('button', { name: 'Next →', exact: true }).click();
+  await expect(page).toHaveURL(/offset=24/);
+  await expect(page.getByLabel('Search books or authors')).toHaveValue('Page Test');
+  const book = page.getByRole('button', { name: /^Open Page Test/ }).first();
+  const name = await book.getAttribute('aria-label');
+  await book.click();
+  await expect(page).toHaveURL(/book=/);
+  await page.goBack();
+  await expect(page.getByRole('button', { name: name!, exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/offset=24/);
+  await page.reload();
+  await expect(page.getByRole('button', { name: name!, exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/offset=24/);
 });

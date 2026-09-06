@@ -11,6 +11,10 @@ from stacks.samples import main as samples
 
 samples()
 Path("samples/The Quiet Library — phone.epub").write_bytes(epub_bytes("The Quiet Library — phone"))
+for index in range(26):
+    Path(f"samples/Page Test {index:02d}.epub").write_bytes(
+        epub_bytes(f"Page Test {index:02d}", authors=("Pagination Fixture",), cover=False)
+    )
 with tempfile.TemporaryDirectory(prefix="stacks-browser-") as directory:
     uvicorn.run(
         create_app(

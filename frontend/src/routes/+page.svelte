@@ -39,9 +39,8 @@
     error = cause instanceof Error ? cause.message : 'Something went wrong.';
   }
 
-  async function load(nextOffset = 0) {
+  async function load(nextOffset = offset, query = appliedQuery) {
     const sequence = ++loadSequence;
-    const query = q;
     const result = await json<Page>(
       `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}`,
     );
@@ -56,10 +55,12 @@
   async function openFromUrl() {
     const params = new URLSearchParams(location.search);
     q = params.get('q') || '';
+    const requestedOffset = Number(params.get('offset') || 0);
+    offset = Number.isSafeInteger(requestedOffset) && requestedOffset >= 0 ? requestedOffset : 0;
     view = params.get('view') === 'settings' ? 'settings' : 'library';
     selected = null;
     editing = false;
-    await load();
+    await load(offset, q);
     if (params.get('book'))
       selected = await json<Book>(`/works/${encodeURIComponent(params.get('book')!)}`);
   }
@@ -85,7 +86,8 @@
 
   function setUrl() {
     const params = new URLSearchParams();
-    if (q) params.set('q', q);
+    if (appliedQuery) params.set('q', appliedQuery);
+    if (offset) params.set('offset', String(offset));
     if (selected) params.set('book', selected.id);
     if (view === 'settings') params.set('view', 'settings');
     history.pushState({}, '', params.size ? `/?${params}` : '/');
@@ -152,6 +154,8 @@
       busy = '';
       upload.value = '';
       q = '';
+      appliedQuery = '';
+      offset = 0;
       selected = null;
       view = 'library';
       setUrl();
@@ -163,9 +167,19 @@
     event.preventDefault();
     error = '';
     selected = null;
-    setUrl();
     try {
-      await load();
+      await load(0, q);
+      setUrl();
+    } catch (cause) {
+      fail(cause);
+    }
+  }
+
+  async function paginate(nextOffset: number) {
+    try {
+      await load(nextOffset);
+      q = appliedQuery;
+      setUrl();
     } catch (cause) {
       fail(cause);
     }
@@ -473,11 +487,11 @@
             <button
               class="secondary"
               disabled={offset === 0}
-              onclick={() => load(Math.max(0, offset - pageSize)).catch(fail)}>← Previous</button
+              onclick={() => paginate(Math.max(0, offset - pageSize))}>← Previous</button
             ><span>{offset + 1}–{Math.min(offset + pageSize, total)} of {total}</span><button
               class="secondary"
               disabled={offset + pageSize >= total}
-              onclick={() => load(offset + pageSize).catch(fail)}>Next →</button
+              onclick={() => paginate(offset + pageSize)}>Next →</button
             >
           </div>{/if}
       {/if}

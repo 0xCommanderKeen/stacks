@@ -282,3 +282,35 @@ def test_reupload_resumes_pending_publication(tmp_path, publication, monkeypatch
             assert len(list(session.scalars(select(ImportOperation)))) == 1
     finally:
         library.close()
+
+
+def test_recovered_destination_syncs_before_catalog_commit(tmp_path, publication, monkeypatch):
+    import stacks.library as module
+
+    source = tmp_path / "source.epub"
+    source.write_bytes(publication)
+    library = Library(tmp_path / "library")
+    actual_sync = module.sync_dir
+    calls = []
+    failures = 0
+
+    def fail_twice(path):
+        nonlocal failures
+        calls.append(path)
+        if path == library.managed and failures < 2:
+            failures += 1
+            raise OSError("directory fsync failed")
+        actual_sync(path)
+
+    monkeypatch.setattr(module, "sync_dir", fail_twice)
+    try:
+        for _ in range(2):
+            with pytest.raises(OSError, match="fsync"):
+                library.import_file(source, "book.epub")
+            assert library.list().total == 0
+        calls.clear()
+        library.import_file(source, "book.epub")
+        assert calls == [library.managed, library.staging]
+        assert library.list().total == 1
+    finally:
+        library.close()
