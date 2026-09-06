@@ -8,6 +8,7 @@
   import Inbox from '$lib/Inbox.svelte';
   import Trash from '$lib/Trash.svelte';
   import TrashAction from '$lib/TrashAction.svelte';
+  import Devices from '$lib/Devices.svelte';
   import SourceRoots from '$lib/SourceRoots.svelte';
   import OriginalStatus from '$lib/OriginalStatus.svelte';
   import RunBrowser from '$lib/RunBrowser.svelte';
@@ -595,6 +596,7 @@
           <a class="button secondary" href="/api/export" download>Export catalog <span>↓</span></a>
         </section>
       </div>
+      <Devices />
       <SourceRoots onopen={open} />
     {:else if selected}
       <button

@@ -1151,3 +1151,35 @@ test('removing a regrouped playing audiobook saves and releases its player', asy
   );
   expect(position).toBeGreaterThan(0);
 });
+
+test('connect and revoke a reader without sharing owner access', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const name = `Reading tablet ${testInfo.project.name}`;
+  await page.getByLabel('Reader name', { exact: true }).fill(name);
+  await page.getByRole('button', { name: 'Create reader password' }).click();
+  const password = page.getByLabel('Reader password', { exact: true });
+  await expect(password).toBeVisible();
+  const secret = await password.inputValue();
+  const url = await page.getByLabel('Catalog URL', { exact: true }).inputValue();
+  const authorization = `Basic ${Buffer.from(`stacks:${secret}`).toString('base64')}`;
+  const feed = await page.request.get(url, { headers: { Authorization: authorization } });
+  expect(feed.status()).toBe(200);
+  expect(feed.headers()['content-type']).toContain('kind=navigation');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.getByRole('button', { name: 'I saved the password' }).click();
+  await expect(password).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByLabel('Reader devices')).toContainText(name);
+  await expect(password).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath('reader-devices.png'), fullPage: true });
+  await page.getByRole('button', { name: `Revoke ${name}`, exact: true }).click();
+  await expect(page.getByRole('button', { name: `Revoke ${name}`, exact: true })).toHaveCount(0);
+  expect(
+    (await page.request.get(url, { headers: { Authorization: authorization } })).status(),
+  ).toBe(401);
+});

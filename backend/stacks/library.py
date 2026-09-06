@@ -102,6 +102,7 @@ def work_out(work: Work) -> WorkOut:
     return WorkOut(
         id=work.id,
         trashed_at=work.trashed_at,
+        updated_at=work.updated_at,
         personal=personal_out(work.personal),
         title=work.title,
         authors=[c.contributor.name for c in work.credits],
@@ -906,4 +907,4 @@ class Library:
             roots.update(
                 {row["root"]: {"kind": "external"} for row in tables["intake_job"] if row["root"]}
             )
-            return {"schema_version": 11, "roots": roots, "tables": tables}
+            return {"schema_version": 12, "roots": roots, "tables": tables}

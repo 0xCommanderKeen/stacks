@@ -7,6 +7,7 @@ import shutil
 import sqlite3
 import tempfile
 import zipfile
+from contextlib import closing
 from pathlib import Path
 from uuid import uuid4
 
@@ -47,10 +48,11 @@ def backup(library: Library, output: Path):
                             "An original file has changed; backup verification failed."
                         )
             db = Path(scratch) / "catalog.sqlite3"
-            with sqlite3.connect(library.data_dir / "catalog.sqlite3") as source:
-                with sqlite3.connect(db) as target:
+            with closing(sqlite3.connect(library.data_dir / "catalog.sqlite3")) as source:
+                with closing(sqlite3.connect(db)) as target:
                     source.backup(target)
                     target.execute("DELETE FROM login_session")
+                    target.execute("DELETE FROM device_credential")
                     target.commit()
             files = {"catalog.sqlite3": db}
             for file in library.managed.rglob("*"):
@@ -135,6 +137,7 @@ def restore(archive_path: Path, destination: Path):
                 ("0009",),
                 ("0010",),
                 ("0011",),
+                ("0012",),
             }:
                 raise ValueError("This Stacks version cannot restore the backup schema.")
             external_roots = {}
