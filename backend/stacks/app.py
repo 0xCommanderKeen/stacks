@@ -250,10 +250,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/operations", response_model=OperationPage)
     def operations(
         lib: Auth,
+        work_id: str | None = Query(default=None, max_length=36),
         limit: int = Query(default=60, ge=1, le=100),
         offset: int = Query(default=0, ge=0),
     ):
-        return CatalogOperations(lib).list(limit, offset)
+        return CatalogOperations(lib).list(limit, offset, work_id)
 
     @app.post(
         "/api/import",

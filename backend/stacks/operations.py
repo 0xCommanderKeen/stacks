@@ -2,7 +2,7 @@
 
 import json
 
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import delete, func, insert, or_, select, update
 
 from stacks.library import work_out
 from stacks.models import (
@@ -343,9 +343,18 @@ class CatalogOperations:
                 update(Work).where(Work.id == work["id"]).values(revision=work["revision"] + 1)
             )
 
-    def list(self, limit=60, offset=0):
+    def list(self, limit=60, offset=0, work_id=None):
         with self.library.sessions() as session:
             query = select(CatalogOperation).where(CatalogOperation.state != "preview")
+            if work_id:
+                query = query.where(
+                    or_(
+                        func.json_extract(CatalogOperation.request_json, "$.work_ids[0]")
+                        == work_id,
+                        func.json_extract(CatalogOperation.request_json, "$.work_ids[1]")
+                        == work_id,
+                    )
+                )
             total = session.scalar(select(func.count()).select_from(query.subquery()))
             return OperationPage(
                 items=[

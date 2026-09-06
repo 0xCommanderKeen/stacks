@@ -238,3 +238,69 @@ def test_shared_series_conflict_requires_explicit_resolution(client):
         client.get(f"/api/works/{target['id']}").json()["memberships"][0]["designation"]
         == "Special"
     )
+
+
+def test_duplicate_tracks_current_ownership_after_split_and_restore(client, tmp_path):
+    from stacks.backup import backup, restore
+    from stacks.library import Library
+    from stacks.operations import CatalogOperations
+
+    source, target = pair(client)
+    rep = source["editions"][0]["representations"][0]
+    original = client.get(f"/api/assets/{rep['assets'][0]['id']}/download").content
+    group = preview(
+        client,
+        source,
+        target,
+        mode="representation",
+        representation_id=rep["id"],
+        target_edition_id=target["editions"][0]["id"],
+    )
+    commit(client, group)
+    split = preview(
+        client,
+        client.get(f"/api/works/{target['id']}").json(),
+        mode="split",
+        representation_id=rep["id"],
+    )
+    result = commit(client, split)
+    assert upload(client, original).json()["work"]["id"] == result["work_ids"][1]
+    archive = tmp_path / "backup.zip"
+    backup(client.app.state.library, archive)
+    restore(archive, tmp_path / "restored")
+    source_file = tmp_path / "source.epub"
+    source_file.write_bytes(original)
+    lib = Library(tmp_path / "restored")
+    try:
+        assert lib.import_file(source_file, source_file.name).work.id == result["work_ids"][1]
+        CatalogOperations(lib).undo(split["id"])
+        assert lib.import_file(source_file, source_file.name).work.id == target["id"]
+        CatalogOperations(lib).undo(group["id"])
+        assert lib.import_file(source_file, source_file.name).work.id == source["id"]
+    finally:
+        lib.close()
+
+
+def test_work_history_filters_before_pagination(client):
+    import json
+
+    from stacks.models import CatalogOperation
+
+    source, target = pair(client)
+    plan = preview(client, source, target)
+    commit(client, plan)
+    with client.app.state.library.sessions.begin() as session:
+        session.get(CatalogOperation, plan["id"]).created_at = "2000-01-01T00:00:00Z"
+        for _ in range(70):
+            session.add(
+                CatalogOperation(
+                    state="applied",
+                    request_json=json.dumps({"work_ids": ["other", "unrelated"]}),
+                    before_json="{}",
+                    after_json="{}",
+                )
+            )
+    for work in (source, target):
+        page = client.get(f"/api/operations?work_id={work['id']}&limit=1").json()
+        assert page["total"] == 1 and page["items"][0]["id"] == plan["id"]
+    assert client.get("/api/operations?limit=1&offset=70").json()["items"][0]["id"] == plan["id"]

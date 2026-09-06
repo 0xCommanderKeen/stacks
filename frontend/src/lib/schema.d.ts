@@ -866,6 +866,7 @@ export interface operations {
   operations_api_operations_get: {
     parameters: {
       query?: {
+        work_id?: string | null;
         limit?: number;
         offset?: number;
       };

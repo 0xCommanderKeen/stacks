@@ -22,9 +22,9 @@
   async function loadHistory(more = false) {
     try {
       const result = await json<components['schemas']['OperationPage']>(
-        `/operations?offset=${more ? historyOffset : 0}`,
+        `/operations?work_id=${encodeURIComponent(book.id)}&offset=${more ? historyOffset : 0}`,
       );
-      const items = result.items.filter((o) => o.work_ids.includes(book.id));
+      const items = result.items;
       history = more ? [...history, ...items] : items;
       historyOffset = result.offset + result.items.length;
       historyTotal = result.total;

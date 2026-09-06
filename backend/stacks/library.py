@@ -326,7 +326,9 @@ class Library:
             with self.sessions() as session:
                 existing = session.scalar(
                     select(Work.id)
-                    .join(ImportOperation, ImportOperation.work_id == Work.id)
+                    .join(Edition)
+                    .join(Representation)
+                    .join(ImportOperation, ImportOperation.id == Representation.id)
                     .where(ImportOperation.sha256 == sha, ImportOperation.state == "complete")
                 )
             if existing:
