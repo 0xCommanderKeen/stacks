@@ -1315,3 +1315,53 @@ test('review provider fields while preserving a manual title', async ({ page }, 
     page.getByRole('heading', { name: `${title} suggested 1`, exact: true }),
   ).toBeVisible();
 });
+
+test('keyboard-only login, search, details, cancelled edit and navigation', async ({ page }) => {
+  async function tabTo(target: ReturnType<typeof page.getByRole>) {
+    await expect(target).toBeVisible();
+    for (let step = 0; step < 80; step++) {
+      if (await target.evaluate((element) => element === document.activeElement)) {
+        await expect(target).toBeInViewport();
+        return;
+      }
+      await page.keyboard.press('Tab');
+    }
+    await expect(target).toBeFocused();
+  }
+
+  await page.goto('/');
+  await tabTo(page.getByLabel('Library password'));
+  await page.keyboard.type('browser-test-password');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await tabTo(page.getByLabel('Search books or authors'));
+  await page.keyboard.type('A Standalone Comic');
+  await page.keyboard.press('Enter');
+  await tabTo(page.getByRole('button', { name: 'Open A Standalone Comic', exact: true }));
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('heading', { name: 'A Standalone Comic', exact: true }),
+  ).toBeVisible();
+  await tabTo(page.getByRole('button', { name: 'Edit details', exact: true }));
+  await page.keyboard.press('Enter');
+  await tabTo(page.getByLabel('Title', { exact: true }));
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.type('Discard this keyboard edit');
+  await tabTo(page.getByRole('button', { name: 'Cancel', exact: true }));
+  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('heading', { name: 'A Standalone Comic', exact: true }),
+  ).toBeVisible();
+  await tabTo(page.getByRole('button', { name: '← Back to library', exact: true }));
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Search books or authors')).toHaveValue('A Standalone Comic');
+  await tabTo(page.getByRole('button', { name: 'Settings', exact: true }));
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('region', { name: 'Library backups' })).toBeVisible();
+  await tabTo(page.getByRole('button', { name: 'Library', exact: true }));
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await tabTo(page.getByRole('button', { name: /Sign out/ }));
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Library password')).toBeVisible();
+});

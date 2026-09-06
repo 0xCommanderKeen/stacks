@@ -1,6 +1,6 @@
 # Stacks: clean-start implementation plan
 
-Date: 2026-09-06. Status: implementation underway; the first EPUB workflow is described in [first-book.md](../first-book.md). Later phases remain planned; no live NAS deployment has been performed. Owner decisions: start from scratch with no migration; name the app Stacks and the repository `stacks`; make the repository public.
+Date: 2026-09-06. Status: core implementation and NAS scale/recovery qualification delivered through PR46; release acceptance remains open for owner UI review, actual devices and persistent adoption. See the [acceptance evidence matrix](ACCEPTANCE.md) and [behavioral reuse ledger](PORTING.md). Owner decisions: start from scratch with no migration; name the app and public repository `stacks`. The Mac is the current live review environment; the persistent installation target is awaiting clarification.
 
 ## 1. Recommendation
 
