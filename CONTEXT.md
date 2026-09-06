@@ -109,3 +109,11 @@ Manual corrections are protected. Provider proposals are separate bounded cached
 records and never refresh selected values automatically. Group/split/undo retain
 the origins of selected values; covers keep their own manual provenance.
 See `docs/metadata-suggestions.md`.
+
+### Recovery archive (implemented)
+
+A catalog archive protects a consistent catalog and retained chosen cover originals;
+publication storage is explicitly separate. A full archive also protects managed
+originals. BackupRecord is operational history, not authority. SQLite pre-upgrade
+snapshots prevent schema changes from preceding a recovery point. Thumbnails are
+rebuildable from verified originals. See `docs/backup-recovery.md`.

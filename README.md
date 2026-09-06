@@ -56,13 +56,17 @@ must be writable by that UID. Keep the SQLite database on a local filesystem.
 
 ## Back up and restore
 
-Use Settings → Download backup for a full backup of the current small library.
+Use Settings → Create backup, then download the completed archive. The default
+includes catalog data and chosen cover originals; publication originals require
+separate protection. Select the full option to include managed originals.
+See [backup and recovery](docs/backup-recovery.md) for restore modes, history,
+pre-upgrade snapshots, rollback, and thumbnail rebuilding.
 The JSON catalog export includes metadata and references, not original book bytes.
 
 For offline maintenance, stop Stacks first:
 
 ```sh
-uv run stacks backup --data-dir ./data --output /path/to/stacks.backup.zip
+uv run stacks backup --mode full --data-dir ./data --output /path/to/stacks.backup.zip
 uv run stacks restore /path/to/stacks.backup.zip --data-dir ./restored-data
 ```
 
@@ -76,7 +80,7 @@ For a Compose library, stop the app, then run the packaged CLI against its volum
 
 ```sh
 docker compose stop stacks
-docker compose run --rm stacks stacks backup --data-dir /data --output /data/library.backup.zip
+docker compose run --rm stacks stacks backup --mode full --data-dir /data --output /data/library.backup.zip
 ```
 
 Copy that backup to separate storage. A backup stored only beside the live library
@@ -115,7 +119,7 @@ comics, and audio, including Home choices and grouping-safe membership.
 
 [Read-only sources](docs/read-only-sources.md) explains fresh registration without
 copying, source relocation, and the separate backup policy for external originals.
-Library backups include catalog and Stacks-owned originals/covers. Registered
+Full library backups include catalog and Stacks-owned originals/covers. Registered
 external originals require their own source-folder backup or snapshot.
 
 Recoverable removal is described in [Trash and restore](docs/recoverable-trash.md).

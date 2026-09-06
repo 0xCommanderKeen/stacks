@@ -31,6 +31,7 @@ from stacks.epub import InvalidBook
 from stacks.inspection import FORMATS
 from stacks.intake import Intake
 from stacks.library import Library
+from stacks.maintenance import Backups
 from stacks.models import (
     Asset,
     Edition,
@@ -48,6 +49,9 @@ from stacks.schemas import (
     AcceptancePage,
     AcceptanceRequest,
     AssetAvailability,
+    BackupCreate,
+    BackupOut,
+    BackupPage,
     CandidateEdit,
     CandidateOut,
     CandidatePage,
@@ -71,6 +75,7 @@ from stacks.schemas import (
     JobOut,
     JobPage,
     Login,
+    MaintenanceOut,
     MetadataAccept,
     MetadataSearch,
     MetadataState,
@@ -122,10 +127,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.enrichment = Enrichment(app.state.library, OpenLibrary(settings.provider_contact))
         app.state.intake = Intake(app.state.library)
         app.state.intake.start()
+        app.state.backups = Backups(app.state.library)
+        app.state.backups.start()
         try:
             yield
         finally:
+            app.state.backups.stop()
             await to_thread.run_sync(app.state.intake.close)
+            await to_thread.run_sync(app.state.backups.close)
             app.state.library.close()
 
     app = FastAPI(
@@ -843,6 +852,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             lib.export(),
             headers={"Content-Disposition": 'attachment; filename="stacks-catalog.json"'},
         )
+
+    @app.get("/api/maintenance", response_model=MaintenanceOut)
+    def maintenance(request: Request, lib: Auth):
+        return request.app.state.backups.health()
+
+    @app.get("/api/backups", response_model=BackupPage)
+    def backups(
+        request: Request,
+        lib: Auth,
+        limit: int = Query(12, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        return request.app.state.backups.list(limit, offset)
+
+    @app.post("/api/backups", response_model=BackupOut)
+    def queue_backup(body: BackupCreate, request: Request, lib: Auth):
+        try:
+            return request.app.state.backups.create(body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/backups/{backup_id}/download")
+    def download_backup(backup_id: str, request: Request, lib: Auth):
+        path, name = request.app.state.backups.download(backup_id)
+        return FileResponse(path, filename=name, media_type="application/zip")
+
+    @app.delete("/api/backups/{backup_id}/copy", status_code=204)
+    def remove_backup_copy(backup_id: str, request: Request, lib: Auth):
+        try:
+            request.app.state.backups.remove_copy(backup_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+        return Response(status_code=204)
 
     @app.post("/api/backup")
     def create_backup(lib: Auth):

@@ -11,6 +11,7 @@
   import Trash from '$lib/Trash.svelte';
   import TrashAction from '$lib/TrashAction.svelte';
   import Devices from '$lib/Devices.svelte';
+  import Backups from '$lib/Backups.svelte';
   import SourceRoots from '$lib/SourceRoots.svelte';
   import OriginalStatus from '$lib/OriginalStatus.svelte';
   import RunBrowser from '$lib/RunBrowser.svelte';
@@ -367,18 +368,6 @@
       busy = '';
     }
   }
-  async function makeBackup() {
-    busy = 'backup';
-    error = '';
-    try {
-      saveBlob(await (await request('/backup', { method: 'POST' })).blob(), 'stacks.backup.zip');
-      notice = 'Your library backup is ready. Registered originals need separate protection.';
-    } catch (cause) {
-      fail(cause);
-    } finally {
-      busy = '';
-    }
-  }
   function formats(book: Book) {
     return [
       ...new Set(
@@ -572,22 +561,8 @@
       <div class="eyebrow">LOOK AFTER YOUR LIBRARY</div>
       <h1>Keep it <em>safe.</em></h1>
       <p class="intro">Your books and your choices belong to you.</p>
+      <Backups />
       <div class="settings-grid">
-        <section class="settings-card">
-          <span class="index">01</span>
-          <h2>Library backup</h2>
-          <p>
-            Save your catalog, covers, and Stacks-owned original files together. Registered source
-            originals are not included; protect them separately. Keep this backup on separate
-            storage.
-          </p>
-          <button class="primary" onclick={makeBackup} disabled={!!busy}
-            >{busy === 'backup' ? 'Preparing backup…' : 'Download backup'} <span>↓</span></button
-          >
-          <p class="small muted">
-            Restore into a new data directory using the documented Stacks restore command.
-          </p>
-        </section>
         <section class="settings-card">
           <span class="index">02</span>
           <h2>Catalog export</h2>

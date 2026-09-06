@@ -55,6 +55,58 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/backups': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Backups */
+    get: operations['backups_api_backups_get'];
+    put?: never;
+    /** Queue Backup */
+    post: operations['queue_backup_api_backups_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/backups/{backup_id}/copy': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Remove Backup Copy */
+    delete: operations['remove_backup_copy_api_backups__backup_id__copy_delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/backups/{backup_id}/download': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download Backup */
+    get: operations['download_backup_api_backups__backup_id__download_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/browse/series': {
     parameters: {
       query?: never;
@@ -425,6 +477,23 @@ export interface paths {
     put?: never;
     /** Logout */
     post: operations['logout_api_logout_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/maintenance': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Maintenance */
+    get: operations['maintenance_api_maintenance_get'];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1257,6 +1326,51 @@ export interface components {
       /** Title */
       title: string;
     };
+    /** BackupCreate */
+    BackupCreate: {
+      /**
+       * Mode
+       * @default catalog
+       * @enum {string}
+       */
+      mode: 'catalog' | 'full';
+    };
+    /** BackupOut */
+    BackupOut: {
+      /** Available */
+      available: boolean;
+      /** Bytes */
+      bytes: number;
+      /** Created At */
+      created_at: string;
+      /** Error */
+      error: string | null;
+      /** Finished At */
+      finished_at: string | null;
+      /** Id */
+      id: string;
+      /**
+       * Mode
+       * @enum {string}
+       */
+      mode: 'catalog' | 'full';
+      /**
+       * State
+       * @enum {string}
+       */
+      state: 'queued' | 'running' | 'complete' | 'error';
+    };
+    /** BackupPage */
+    BackupPage: {
+      /** Items */
+      items: components['schemas']['BackupOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
     /** CandidateEdit */
     CandidateEdit: {
       metadata: components['schemas']['AcceptedMetadata'];
@@ -1661,6 +1775,20 @@ export interface components {
     Login: {
       /** Password */
       password: string;
+    };
+    /** MaintenanceOut */
+    MaintenanceOut: {
+      /** Disk Free Bytes */
+      disk_free_bytes: number;
+      /** Failed Intake */
+      failed_intake: number;
+      last_backup: components['schemas']['BackupOut'] | null;
+      /** Pending Intake */
+      pending_intake: number;
+      /** Pending Trash */
+      pending_trash: number;
+      /** Sources */
+      sources: components['schemas']['SourceOut'][];
     };
     /** MembershipEdit */
     MembershipEdit: {
@@ -2277,6 +2405,131 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+    };
+  };
+  backups_api_backups_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BackupPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  queue_backup_api_backups_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BackupCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['BackupOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  remove_backup_copy_api_backups__backup_id__copy_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        backup_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  download_backup_api_backups__backup_id__download_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        backup_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };
@@ -3041,6 +3294,26 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  maintenance_api_maintenance_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MaintenanceOut'];
+        };
       };
     };
   };
