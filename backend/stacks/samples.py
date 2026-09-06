@@ -11,8 +11,14 @@ from PIL import Image, ImageDraw
 def epub_bytes(title="The Quiet Library", authors=("Alex Reed",), cover=True) -> bytes:
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w") as archive:
-        archive.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
-        archive.writestr(
+
+        def write(name, content, **options):
+            # Repeated fixture imports must have identical bytes across clock boundaries.
+            entry = zipfile.ZipInfo(name, date_time=(2026, 9, 6, 0, 0, 0))
+            archive.writestr(entry, content, **options)
+
+        write("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
+        write(
             "META-INF/container.xml",
             """<?xml version="1.0"?>
 <container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
@@ -25,7 +31,7 @@ def epub_bytes(title="The Quiet Library", authors=("Alex Reed",), cover=True) ->
             if cover
             else ""
         )
-        archive.writestr(
+        write(
             "OEBPS/content.opf",
             f"""<?xml version="1.0"?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id">
@@ -41,14 +47,14 @@ Created for Stacks development and testing.</dc:description>
 {cover_item}</manifest>
 <spine><itemref idref="text"/></spine></package>""",
         )
-        archive.writestr(
+        write(
             "OEBPS/chapter.xhtml",
             f"""<html xmlns="http://www.w3.org/1999/xhtml">
 <head><title>{escape(title)}</title></head><body><h1>{escape(title)}</h1>
 <p>The afternoon light fell across the reading table. One book was enough to begin.</p>
 </body></html>""",
         )
-        archive.writestr(
+        write(
             "OEBPS/nav.xhtml",
             """<html xmlns="http://www.w3.org/1999/xhtml"
 xmlns:epub="http://www.idpf.org/2007/ops">
@@ -77,7 +83,7 @@ xmlns:epub="http://www.idpf.org/2007/ops">
             draw.text((40, 530), "STACKS  /  SAMPLE EDITION", fill="#eee7d5", font_size=13)
             content = io.BytesIO()
             image.save(content, "JPEG")
-            archive.writestr("OEBPS/cover.jpg", content.getvalue())
+            write("OEBPS/cover.jpg", content.getvalue())
     return output.getvalue()
 
 
