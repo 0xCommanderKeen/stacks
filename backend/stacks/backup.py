@@ -22,6 +22,8 @@ from stacks.snapshots import snapshot_database
 def backup(library: Library, output: Path, mode="full", checkpoint=lambda size: None):
     if mode not in {"full", "catalog"}:
         raise ValueError("Choose full or catalog backup.")
+    if output.resolve().is_relative_to(library.managed.resolve()):
+        raise ValueError("Backup output must be outside managed publication storage.")
     if output.exists():
         raise ValueError("Backup destination already exists.")
     output.parent.mkdir(parents=True, exist_ok=True)

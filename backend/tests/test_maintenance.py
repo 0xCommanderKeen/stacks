@@ -197,3 +197,15 @@ def test_backup_api_queues_downloads_and_removes_only_server_copy(client):
     assert client.delete(f"/api/backups/{identifier}/copy").status_code == 204
     assert client.get(f"/api/backups/{identifier}/download").status_code == 404
     assert client.get("/api/backups").json()["items"][0]["state"] == "complete"
+
+
+def test_backup_rejects_output_inside_managed_storage_before_writing(client, tmp_path):
+    library = client.app.state.library
+    before = set(library.managed.rglob("*"))
+    alias = tmp_path / "managed-alias"
+    alias.symlink_to(library.managed, target_is_directory=True)
+    for root in (library.managed, alias):
+        for mode in ("full", "catalog"):
+            with pytest.raises(ValueError, match="outside managed"):
+                backup(library, root / "new-directory" / "recovery.zip", mode)
+    assert set(library.managed.rglob("*")) == before
