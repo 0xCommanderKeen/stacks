@@ -258,3 +258,43 @@ def test_manual_field_protection_survives_equal_value_grouping_and_split(client)
         assert client.get(f"/api/works/{work['id']}/metadata").json()["origins"]["title"][
             "protected"
         ]
+
+
+@pytest.mark.parametrize(
+    "overrides, protected",
+    [
+        ({}, set()),
+        ({"title": "Batch title"}, {"title"}),
+        ({"authors": ["Chosen writer"]}, {"authors"}),
+    ],
+)
+def test_inbox_resolved_facts_only_protect_explicit_overrides(tmp_path, overrides, protected):
+    from stacks.intake import Intake
+    from stacks.library import Library
+    from stacks.models import Work
+    from stacks.provenance import origins
+    from stacks.schemas import AcceptanceRequest, AcceptedMetadata, JobChange, ScanRequest
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "book.epub").write_bytes(epub_bytes("Embedded title"))
+    library = Library(tmp_path / "catalog", {"sample": source})
+    worker = Intake(library, stable_seconds=0)
+    try:
+        worker.scan(ScanRequest(root="sample"))
+        while worker.step():
+            pass
+        preview = worker.preview_acceptance(
+            AcceptanceRequest(root="sample", metadata=AcceptedMetadata(**overrides))
+        )
+        worker.change(preview.id, JobChange(action="confirm", revision=preview.revision))
+        while worker.step():
+            pass
+        work = library.list(scope="all").items[0]
+        with library.sessions() as session:
+            actual = origins(session.get(Work, work.id))
+        assert {field for field, origin in actual.items() if origin["protected"]} == protected
+        assert actual["description"]["source"] == "embedded"
+    finally:
+        worker.close()
+        library.close()

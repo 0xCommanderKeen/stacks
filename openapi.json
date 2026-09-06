@@ -248,6 +248,26 @@
             ],
             "title": "Language"
           },
+          "manual_fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "title",
+                    "authors",
+                    "description"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Fields"
+          },
           "narrator": {
             "anyOf": [
               {

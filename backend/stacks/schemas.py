@@ -456,6 +456,9 @@ class CandidatePage(BaseModel):
 
 
 class AcceptedMetadata(BaseModel):
+    manual_fields: list[Literal["title", "authors", "description"]] | None = Field(
+        default=None, max_length=3
+    )
     title: str | None = Field(default=None, min_length=1, max_length=1024)
     authors: list[str] | None = Field(default=None, max_length=20)
     description: str | None = Field(default=None, max_length=20000)

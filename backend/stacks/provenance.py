@@ -22,11 +22,13 @@ def manual_changes(work, before, after):
 
 
 def imported(accepted):
+    explicit = accepted.get("manual_fields")
+    manual = set(explicit) if explicit is not None else set(accepted)
     return json.dumps(
         {
             field: {
-                "source": "manual" if field in accepted else "embedded",
-                "protected": field in accepted,
+                "source": "manual" if field in manual else "embedded",
+                "protected": field in manual,
                 "selected_at": now(),
             }
             for field in FIELDS

@@ -773,6 +773,12 @@ class Intake:
         }
         values.update(data["edits"])
         values.update(options.get("metadata", {}))
+        overrides = data["edits"] | options.get("metadata", {})
+        values["manual_fields"] = [
+            field
+            for field in ("title", "authors", "description")
+            if field in overrides and overrides[field] is not None
+        ]
         if values.get("series_id"):
             hint = data["facts"].get("series_hint") or {}
             if "designation" not in values:

@@ -1200,6 +1200,8 @@ export interface components {
       identifier?: string | null;
       /** Language */
       language?: string | null;
+      /** Manual Fields */
+      manual_fields?: ('title' | 'authors' | 'description')[] | null;
       /** Narrator */
       narrator?: string | null;
       /**
