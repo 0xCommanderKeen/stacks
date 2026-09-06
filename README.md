@@ -7,11 +7,13 @@ comic series, and dependable audiobook playback. The current development version
 **EPUB, PDF, CBZ, CBR, MP3, M4A, and M4B import, catalog search, edition/series editing,
 original downloads, reversible grouping/splitting, audiobook playback with saved progress,
 personal shelves and reading history, followed comic runs, ordered collections, durable Inbox scans,
-previewed batch acceptance, read-only source registration, and backup/restore**. NAS qualification
-and the remaining release gates are still underway.
+previewed batch acceptance, read-only source registration, backup/restore, protected metadata suggestions, chosen covers, scoped OPDS access,
+and bounded portable catalog export/import**. NAS scale and recovery qualification are
+recorded; actual-device and persistent-adoption gates remain open. See the
+[release acceptance matrix](docs/rebuild/ACCEPTANCE.md).
 
 - [Implementation plan](docs/rebuild/PLAN.md)
-- [Proposed domain language](CONTEXT.md)
+- [Domain language](CONTEXT.md)
 - [First-book scope, guarantees, and limitations](docs/first-book.md)
 - [Audiobook playback and progress](docs/audio.md)
 - [Personal shelves and reading history](docs/personal-library.md)
