@@ -670,6 +670,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/trash': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Trash List */
+    get: operations['trash_list_api_trash_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/trash/operations/{operation_id}/retry': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Retry Trash */
+    post: operations['retry_trash_api_trash_operations__operation_id__retry_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/works/{work_id}': {
     parameters: {
       query?: never;
@@ -756,6 +790,24 @@ export interface paths {
     head?: never;
     /** Edit Record */
     patch: operations['edit_record_api_works__work_id__records__record_id__patch'];
+    trace?: never;
+  };
+  '/api/works/{work_id}/trash': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Trash For Work */
+    get: operations['trash_for_work_api_works__work_id__trash_get'];
+    put?: never;
+    /** Change Trash */
+    post: operations['change_trash_api_works__work_id__trash_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/health/live': {
@@ -1645,6 +1697,58 @@ export interface components {
        */
       version: string;
     };
+    /** TrashEntryOut */
+    TrashEntryOut: {
+      operation: components['schemas']['TrashOperationOut'];
+      work: components['schemas']['WorkOut'];
+    };
+    /** TrashOperationOut */
+    TrashOperationOut: {
+      /** Action */
+      action: string;
+      /** Completed */
+      completed: number;
+      /** Created At */
+      created_at: string;
+      /** Error */
+      error: string | null;
+      /** Id */
+      id: string;
+      /** Revision */
+      revision: number;
+      /** State */
+      state: string;
+      /** Total */
+      total: number;
+      /** Work Id */
+      work_id: string;
+    };
+    /** TrashPage */
+    TrashPage: {
+      /** Items */
+      items: components['schemas']['TrashEntryOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
+    /** TrashRequest */
+    TrashRequest: {
+      /**
+       * Action
+       * @enum {string}
+       */
+      action: 'trash' | 'restore';
+      /** Revision */
+      revision: number;
+    };
+    /** TrashRetry */
+    TrashRetry: {
+      /** Revision */
+      revision: number;
+    };
     /** ValidationError */
     ValidationError: {
       /** Context */
@@ -1692,6 +1796,8 @@ export interface components {
       revision: number;
       /** Title */
       title: string;
+      /** Trashed At */
+      trashed_at: string | null;
     };
   };
   responses: never;
@@ -2996,6 +3102,74 @@ export interface operations {
       };
     };
   };
+  trash_list_api_trash_get: {
+    parameters: {
+      query?: {
+        q?: string;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrashPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  retry_trash_api_trash_operations__operation_id__retry_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        operation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TrashRetry'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrashOperationOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   work_api_works__work_id__get: {
     parameters: {
       query?: never;
@@ -3252,6 +3426,72 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['RecordOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  trash_for_work_api_works__work_id__trash_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrashOperationOut'] | null;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  change_trash_api_works__work_id__trash_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TrashRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrashOperationOut'];
         };
       };
       /** @description Validation Error */

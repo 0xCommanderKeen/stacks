@@ -72,6 +72,8 @@ class Reading:
             representation = self._representation(session, representation_id)
             edition = session.get(Edition, representation.edition_id)
             work = session.get(Work, edition.work_id)
+            if work.trashed_at:
+                raise ValueError("Restore this audiobook from Trash before listening.")
             tracks = _tracks(representation)
             progress = session.get(Progress, representation_id)
             return PlaybackOut(
@@ -121,7 +123,13 @@ class Reading:
 
     def continue_list(self, limit=24, offset=0):
         with self.library.sessions() as session:
-            query = select(Progress).where(Progress.completed.is_(False))
+            query = (
+                select(Progress)
+                .join(Representation)
+                .join(Edition)
+                .join(Work)
+                .where(Progress.completed.is_(False), Work.trashed_at.is_(None))
+            )
             total = session.scalar(select(func.count()).select_from(query.subquery()))
             rows = session.scalars(
                 query.order_by(Progress.updated_at.desc(), Progress.representation_id)
@@ -147,5 +155,8 @@ class Reading:
             asset = session.get(Asset, asset_id)
             if asset is None:
                 raise KeyError(asset_id)
-            self._representation(session, asset.representation_id)
+            representation = self._representation(session, asset.representation_id)
+            edition = session.get(Edition, representation.edition_id)
+            if session.get(Work, edition.work_id).trashed_at:
+                raise ValueError("Restore this audiobook from Trash before listening.")
             return self.library.resolve_asset(asset), asset.original_name

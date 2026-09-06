@@ -1035,3 +1035,119 @@ test('review selected audio tracks in natural disc order before acceptance', asy
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Listen · AUDIO-SET', exact: true })).toBeVisible();
 });
+
+test('remove deliberately, inspect paginated Trash, and restore the original', async ({
+  page,
+}, testInfo) => {
+  const viewport = testInfo.project.name;
+  const title = `Trash journey ${viewport}`;
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(path.resolve(`../samples/${title}.epub`));
+  await expect(page.getByRole('status')).toContainText('added');
+  await page.getByLabel('Search books or authors').fill(title);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
+  const workUrl = page.url();
+  const downloadUrl = await page.getByRole('link', { name: /^Download EPUB/ }).getAttribute('href');
+  const original = await (await page.request.get(downloadUrl!)).body();
+  await page.getByText('Remove from your catalog', { exact: true }).click();
+  await page.getByRole('button', { name: 'Move to Trash', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'In Trash', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Restore book', exact: true })).toBeVisible();
+  expect((await page.request.get(downloadUrl!)).status()).toBe(409);
+  await page.getByRole('button', { name: 'Trash', exact: true }).click();
+  await page.getByLabel('Search Trash', { exact: true }).fill(`Recovery shelf ${viewport}`);
+  await page.getByRole('button', { name: 'Search Trash', exact: true }).click();
+  await expect(page.getByText('13 books in Trash', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Next trashed books', exact: true }).click();
+  await expect(page).toHaveURL(/trash_offset=12/);
+  const pagedUrl = page.url();
+  await page.reload();
+  await expect(page.getByText('13 books in Trash', { exact: true })).toBeVisible();
+  const entry = page.locator('.entries article').first();
+  const lastTitle = await entry.getByRole('button').first().innerText();
+  await entry.getByRole('button', { name: lastTitle, exact: true }).click();
+  await expect(page.getByRole('heading', { name: lastTitle, exact: true, level: 1 })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(pagedUrl);
+  await expect(page.locator('.entries article')).toHaveCount(1);
+  await page.screenshot({ path: testInfo.outputPath('trash.png'), fullPage: true });
+  await page
+    .locator('.entries article')
+    .getByRole('button', { name: 'Restore book', exact: true })
+    .click();
+  await expect(page.getByText('12 books in Trash', { exact: true })).toBeVisible();
+  await expect(page).not.toHaveURL(/trash_offset=12/);
+  await page.goto(workUrl);
+  await page.getByRole('button', { name: 'Restore book', exact: true }).click();
+  await expect(page.getByRole('link', { name: /^Download EPUB/ })).toBeVisible();
+  expect(await (await page.request.get(downloadUrl!)).body()).toEqual(original);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
+test('removing a regrouped playing audiobook saves and releases its player', async ({
+  page,
+}, testInfo) => {
+  const title = `Trash audio ${testInfo.project.name}`;
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles([
+      path.resolve(`../samples/Trash audio target ${testInfo.project.name}.epub`),
+      path.resolve(`../samples/${title}.m4b`),
+    ]);
+  await expect(page.getByRole('status')).toContainText('added');
+  await page.getByLabel('Search books or authors').fill(title);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
+  await page.getByRole('button', { name: 'Listen · M4B', exact: true }).click();
+  const player = page.getByRole('region', { name: 'Audiobook player', exact: true });
+  await expect(player.getByRole('button', { name: 'Pause audio', exact: true })).toBeVisible();
+  await player.getByRole('slider', { name: 'Listening position' }).focus();
+  await page.keyboard.press('ArrowRight');
+  const sourceId = new URL(page.url()).searchParams.get('book');
+  const targetTitle = `Trash audio target ${testInfo.project.name}`;
+  const target = (
+    await (await page.request.get(`/api/catalog?q=${encodeURIComponent(targetTitle)}`)).json()
+  ).items[0];
+  const planned = await page.request.post('/api/operations/preview', {
+    headers: { 'X-Stacks-Request': '1' },
+    data: { mode: 'editions', source_work_id: sourceId, target_work_id: target.id },
+  });
+  expect(planned.ok()).toBe(true);
+  const plan = await planned.json();
+  const grouped = await page.request.post(`/api/operations/${plan.id}/commit`, {
+    headers: { 'X-Stacks-Request': '1' },
+    data: {
+      resolutions: Object.fromEntries(
+        plan.conflicts.map((conflict: { field: string }) => [conflict.field, 'target']),
+      ),
+    },
+  });
+  expect(grouped.ok()).toBe(true);
+  // Navigate through the UI so the player deliberately keeps its cached pre-group work ID.
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.getByLabel('Search books or authors').fill(targetTitle);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: `Open ${targetTitle}`, exact: true }).click();
+  await expect(player).toBeVisible();
+  await page.getByText('Remove from your catalog', { exact: true }).click();
+  await page.getByRole('button', { name: 'Move to Trash', exact: true }).click();
+  await expect(player).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Restore book', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Restore book', exact: true }).click();
+  await page.getByRole('button', { name: 'Listen · M4B', exact: true }).click();
+  await expect(player.getByRole('button', { name: 'Pause audio', exact: true })).toBeVisible();
+  const position = Number(
+    await player.getByRole('slider', { name: 'Listening position' }).inputValue(),
+  );
+  expect(position).toBeGreaterThan(0);
+});

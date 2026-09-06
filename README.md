@@ -117,3 +117,5 @@ comics, and audio, including Home choices and grouping-safe membership.
 copying, source relocation, and the separate backup policy for external originals.
 Library backups include catalog and Stacks-owned originals/covers. Registered
 external originals require their own source-folder backup or snapshot.
+
+Recoverable removal is described in [Trash and restore](docs/recoverable-trash.md).

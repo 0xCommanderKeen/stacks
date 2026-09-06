@@ -9,6 +9,7 @@ from pathlib import Path
 import uvicorn
 from mutagen.id3 import TIT2
 from mutagen.mp3 import MP3
+from mutagen.mp4 import MP4
 from PIL import Image, ImageDraw
 from pypdf import PdfWriter
 from stacks.app import create_app
@@ -16,7 +17,8 @@ from stacks.config import Settings
 from stacks.library import Library
 from stacks.samples import epub_bytes
 from stacks.samples import main as samples
-from stacks.schemas import MembershipEdit, SeriesEdit, WorkEdit
+from stacks.schemas import MembershipEdit, SeriesEdit, TrashRequest, WorkEdit
+from stacks.trash import Trash
 
 samples()
 writer = PdfWriter()
@@ -116,6 +118,28 @@ with (
                     ],
                 ),
             )
+    trash = Trash(library)
+    for viewport in ("desktop", "phone"):
+        Path(f"samples/Trash audio target {viewport}.epub").write_bytes(
+            epub_bytes(f"Trash audio target {viewport}")
+        )
+        track = Path(f"samples/Trash audio {viewport}.m4b")
+        track.write_bytes(Path("backend/tests/fixtures/listening.m4b").read_bytes())
+        audio = MP4(track)
+        audio["\xa9nam"] = [track.stem]
+        audio["\xa9alb"] = [track.stem]
+        audio.save()
+    for viewport in ("desktop", "phone"):
+        Path(f"samples/Trash journey {viewport}.epub").write_bytes(
+            epub_bytes(f"Trash journey {viewport}")
+        )
+        for index in range(13):
+            path = Path(f"samples/Recovery shelf {viewport} {index:02d}.epub")
+            path.write_bytes(epub_bytes(path.stem, cover=False))
+            work = library.import_file(path, path.name).work
+            trash.request(work.id, TrashRequest(revision=work.revision, action="trash"))
+            while trash.step():
+                pass
     library.close()
     uvicorn.run(
         create_app(

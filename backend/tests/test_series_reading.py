@@ -142,7 +142,7 @@ def test_media_unassigned_and_following_backup(client, tmp_path):
     library = Library(tmp_path / "restored")
     try:
         assert SeriesCatalog(library).get(run["id"]).following is True
-        assert library.export()["schema_version"] == 10
+        assert library.export()["schema_version"] == 11
     finally:
         library.close()
 

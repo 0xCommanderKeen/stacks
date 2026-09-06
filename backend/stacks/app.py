@@ -27,7 +27,15 @@ from stacks.epub import InvalidBook
 from stacks.inspection import FORMATS
 from stacks.intake import Intake
 from stacks.library import Library
-from stacks.models import Asset, ImportOperation, LoginSession, Representation, Work, WorkRedirect
+from stacks.models import (
+    Asset,
+    Edition,
+    ImportOperation,
+    LoginSession,
+    Representation,
+    Work,
+    WorkRedirect,
+)
 from stacks.operations import CatalogOperations
 from stacks.reading import Reading
 from stacks.schemas import (
@@ -73,6 +81,10 @@ from stacks.schemas import (
     SourceOut,
     SourceRegistration,
     StatusOut,
+    TrashOperationOut,
+    TrashPage,
+    TrashRequest,
+    TrashRetry,
     WorkEdit,
     WorkOut,
 )
@@ -543,12 +555,48 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     503, "Import could not finish. Check storage and restart to recover."
                 ) from None
 
+    @app.get("/api/trash", response_model=TrashPage)
+    def trash_list(
+        lib: Auth,
+        request: Request,
+        q: str = Query("", max_length=300),
+        limit: int = Query(24, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        return request.app.state.intake.trash.list(q, limit, offset)
+
+    @app.get("/api/works/{work_id}/trash", response_model=TrashOperationOut | None)
+    def trash_for_work(work_id: str, lib: Auth, request: Request):
+        return request.app.state.intake.trash.for_work(work_id)
+
+    @app.post("/api/works/{work_id}/trash", response_model=TrashOperationOut)
+    def change_trash(work_id: str, edit: TrashRequest, lib: Auth, request: Request):
+        try:
+            result = request.app.state.intake.trash.request(work_id, edit)
+            request.app.state.intake.wake.set()
+            return result
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post("/api/trash/operations/{operation_id}/retry", response_model=TrashOperationOut)
+    def retry_trash(operation_id: str, edit: TrashRetry, lib: Auth, request: Request):
+        try:
+            result = request.app.state.intake.trash.retry(operation_id, edit.revision)
+            request.app.state.intake.wake.set()
+            return result
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
     @app.get("/api/assets/{asset_id}/download")
     def download(asset_id: str, lib: Auth):
         with lib.sessions() as session:
             asset = session.get(Asset, asset_id)
             if asset is None:
                 raise HTTPException(404, "File not found.")
+            representation = session.get(Representation, asset.representation_id)
+            edition = session.get(Edition, representation.edition_id)
+            if session.get(Work, edition.work_id).trashed_at:
+                raise HTTPException(409, "Restore this book from Trash before downloading.")
             return FileResponse(
                 lib.resolve_asset(asset),
                 filename=asset.original_name,
@@ -610,9 +658,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     select(func.count())
                     .select_from(Work)
                     .where(
+                        Work.trashed_at.is_(None),
                         ~select(WorkRedirect.source_id)
                         .where(WorkRedirect.source_id == Work.id)
-                        .exists()
+                        .exists(),
                     )
                 ),
                 import_errors=session.scalar(

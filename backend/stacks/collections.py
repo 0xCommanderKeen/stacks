@@ -59,7 +59,8 @@ def collection_out(session, collection):
         count=session.scalar(
             select(func.count())
             .select_from(CollectionEntry)
-            .where(CollectionEntry.collection_id == collection.id)
+            .join(Work)
+            .where(CollectionEntry.collection_id == collection.id, Work.trashed_at.is_(None))
         ),
     )
 
@@ -134,6 +135,8 @@ class Collections:
                     raise ValueError("Choose an available series.")
                 query = (
                     select(SeriesMembership.work_id)
+                    .join(Work)
+                    .where(Work.trashed_at.is_(None))
                     .where(
                         SeriesMembership.series_id == edit.series_id,
                         ~select(WorkRedirect.source_id)
@@ -153,7 +156,7 @@ class Collections:
                     append_work(session, collection_id, work_id)
             else:
                 work = session.get(Work, edit.work_id) if edit.work_id else None
-                if work is None or session.get(WorkRedirect, work.id):
+                if work is None or work.trashed_at or session.get(WorkRedirect, work.id):
                     raise ValueError("Choose an available work from its current page.")
                 entry = session.scalar(
                     select(CollectionEntry).where(
@@ -173,7 +176,9 @@ class Collections:
                         previous = edit.action == "up"
                         adjacent = session.scalar(
                             select(CollectionEntry)
+                            .join(Work)
                             .where(
+                                Work.trashed_at.is_(None),
                                 CollectionEntry.collection_id == collection_id,
                                 CollectionEntry.position < entry.position
                                 if previous
@@ -210,7 +215,7 @@ class Collections:
             query = _loaded(
                 select(CollectionEntry, Work, _finished())
                 .join(Work, Work.id == CollectionEntry.work_id)
-                .where(CollectionEntry.collection_id == collection_id)
+                .where(CollectionEntry.collection_id == collection_id, Work.trashed_at.is_(None))
                 .order_by(CollectionEntry.position)
                 .limit(limit)
                 .offset(offset)
@@ -244,6 +249,7 @@ class Collections:
                 .outerjoin(PersonalState, PersonalState.work_id == Work.id)
                 .where(
                     Collection.home.is_(True),
+                    Work.trashed_at.is_(None),
                     ~_finished(),
                     func.coalesce(
                         PersonalState.shelf_override, PersonalState.default_shelf, "library"

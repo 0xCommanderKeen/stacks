@@ -131,6 +131,7 @@ class RecordPage(BaseModel):
 
 
 class WorkOut(BaseModel):
+    trashed_at: str | None
     id: str
     title: str
     authors: list[str]
@@ -512,6 +513,39 @@ class AcceptancePage(BaseModel):
     mode: Literal["register", "copy"]
     grouped_audio: bool
     items: list[AcceptanceItemOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class TrashRequest(BaseModel):
+    revision: int = Field(ge=1)
+    action: Literal["trash", "restore"]
+
+
+class TrashRetry(BaseModel):
+    revision: int = Field(ge=1)
+
+
+class TrashOperationOut(BaseModel):
+    id: str
+    work_id: str
+    action: str
+    state: str
+    revision: int
+    error: str | None
+    created_at: str
+    completed: int
+    total: int
+
+
+class TrashEntryOut(BaseModel):
+    work: WorkOut
+    operation: TrashOperationOut
+
+
+class TrashPage(BaseModel):
+    items: list[TrashEntryOut]
     total: int
     limit: int
     offset: int

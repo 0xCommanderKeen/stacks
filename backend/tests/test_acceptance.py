@@ -407,7 +407,7 @@ def test_queued_acceptance_restores_with_relocated_sources(source_library, tmp_p
         finish(resumed)
         assert resumed.acceptance(job.id).job.completed == 1
         assert restored.list(scope="all").items[0].title == "Restored acceptance"
-        assert restored.export()["schema_version"] == 10
+        assert restored.export()["schema_version"] == 11
     finally:
         resumed.close()
         restored.close()

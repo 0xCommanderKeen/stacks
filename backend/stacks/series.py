@@ -34,6 +34,7 @@ def _members(scope="all", medium=None):
             finished.label("finished"),
         )
         .join(Work, Work.id == SeriesMembership.work_id)
+        .where(Work.trashed_at.is_(None))
         .where(~select(WorkRedirect.source_id).where(WorkRedirect.source_id == Work.id).exists())
     )
     if scope != "all":
@@ -69,11 +70,16 @@ class SeriesCatalog:
             series.following = edit.following
             series.revision += 1
             if edit.following:
-                members = select(SeriesMembership.work_id).where(
-                    SeriesMembership.series_id == series_id,
-                    ~select(WorkRedirect.source_id)
-                    .where(WorkRedirect.source_id == SeriesMembership.work_id)
-                    .exists(),
+                members = (
+                    select(SeriesMembership.work_id)
+                    .join(Work)
+                    .where(
+                        Work.trashed_at.is_(None),
+                        SeriesMembership.series_id == series_id,
+                        ~select(WorkRedirect.source_id)
+                        .where(WorkRedirect.source_id == SeriesMembership.work_id)
+                        .exists(),
+                    )
                 )
                 eligible = select(PersonalState.work_id).where(
                     PersonalState.work_id.in_(members), PersonalState.default_shelf == "archive"
