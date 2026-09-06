@@ -1,6 +1,7 @@
 """SIGKILL recovery at file checkpoints, exclusively in fresh synthetic directories."""
 
 import argparse
+import errno
 import hashlib
 import json
 import os
@@ -11,6 +12,7 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import patch
 
 import stacks.library as library_module
 import stacks.trash as trash_module
@@ -200,6 +202,120 @@ def run_case(root, operation, point):
         library.close()
 
 
+def fault_case(root, fault):
+    root.mkdir()
+    source = root / "original.epub"
+    original = epub_bytes(f"Storage fault {fault}")
+    source.write_bytes(original)
+    library = Library(root / "data")
+    try:
+        work = library.import_file(source, source.name).work
+        rep = work.editions[0].representations[0]
+        ids = (work.id, rep.id, rep.assets[0].id)
+        trash = Trash(library)
+        operation = trash.request(work.id, TrashRequest(revision=work.revision, action="trash"))
+        with library.sessions() as session:
+            file = session.scalar(select(TrashFile))
+        managed, destination = library.managed / file.source, library.managed / file.destination
+        if fault in ("enospc", "eacces"):
+            code = errno.ENOSPC if fault == "enospc" else errno.EACCES
+            with patch.object(trash_module.os, "link", side_effect=OSError(code, "Injected")):
+                assert trash.step()
+            assert managed.read_bytes() == original and not destination.exists()
+        elif fault == "collision":
+            destination.parent.mkdir(parents=True)
+            destination.write_bytes(original)
+            assert not managed.samefile(destination)
+            assert trash.step()
+            assert managed.read_bytes() == destination.read_bytes() == original
+            destination.unlink()  # Only the deliberately created unrelated fixture collision.
+        elif fault == "changed_original":
+            managed.write_bytes(b"synthetic unexpected replacement")
+            assert trash.step()
+            assert managed.read_bytes() == b"synthetic unexpected replacement"
+            assert not destination.exists()
+            managed.write_bytes(original)  # Restore this synthetic fault fixture before retry.
+        failed = trash.operation(operation.id)
+        assert failed.state == "error" and failed.completed == 0
+    finally:
+        library.close()
+    library = Library(root / "data")
+    try:
+        trash = Trash(library)
+        failed = trash.operation(operation.id)
+        trash.retry(operation.id, failed.revision)
+        finish(trash)
+        assert trash.operation(operation.id).state == "complete"
+        hidden = library.get(work.id)
+        trash.request(work.id, TrashRequest(revision=hidden.revision, action="restore"))
+        finish(trash)
+        work = library.get(work.id)
+        rep = work.editions[0].representations[0]
+        assert (work.id, rep.id, rep.assets[0].id) == ids
+        with library.sessions() as session:
+            asset = session.get(Asset, rep.assets[0].id)
+            assert library.resolve_asset(asset).read_bytes() == original
+        check_database(library)
+        return {
+            "fault": fault,
+            "classification": "simulated errno"
+            if fault in ("enospc", "eacces")
+            else "actual synthetic filesystem condition",
+            "explicit_error": True,
+            "retry_after_restart": "complete",
+            "identity_preserved": True,
+        }
+    finally:
+        library.close()
+
+
+def source_faults(root):
+    root.mkdir()
+    external = root / "external"
+    external.mkdir()
+    original = epub_bytes("External fault qualification")
+    (external / "book.epub").write_bytes(original)
+    library = Library(root / "data", {"archive": external})
+    try:
+        work = library.register_files("archive", ["book.epub"]).work
+        rep = work.editions[0].representations[0]
+        with library.sessions() as session:
+            asset = session.get(Asset, rep.assets[0].id)
+        relocated = root / "relocated"
+        external.rename(relocated)
+        try:
+            library.resolve_asset(asset).read_bytes()
+        except (OSError, ValueError):
+            pass
+        else:
+            raise AssertionError("Missing source root unexpectedly resolved")
+        assert library.get(work.id).id == work.id
+        library.sources["archive"] = relocated
+        assert library.resolve_asset(asset).read_bytes() == original
+        path = relocated / "book.epub"
+        path.chmod(0)
+        try:
+            try:
+                library.resolve_asset(asset).read_bytes()
+            except PermissionError:
+                pass
+            else:
+                raise AssertionError("Permission fault requires an unprivileged process")
+            assert library.get(work.id).id == work.id
+        finally:
+            path.chmod(0o444)
+        assert library.resolve_asset(asset).read_bytes() == original
+        assert library.register_files("archive", ["book.epub"]).duplicate
+        check_database(library)
+        return {
+            "missing_root": "catalog retained; relocated root restored byte access",
+            "unreadable_original": "actual mode000 read denied; bytes retained",
+            "duplicate_catalog_growth": 0,
+        }
+    finally:
+        library.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
@@ -219,8 +335,15 @@ def main():
     ):
         for point in points:
             cases.append(run_case(args.root / f"{operation}-{point}", operation, point))
+    faults = [
+        fault_case(args.root / fault, fault)
+        for fault in ("enospc", "eacces", "collision", "changed_original")
+    ]
+    sources = source_faults(args.root / "source-faults")
     report = {
         "cases": cases,
+        "storage_faults": faults,
+        "source_faults": sources,
         "seconds": round(time.monotonic() - started, 3),
         "limitations": "Actual SIGKILL of a separate application-library process at instrumented "
         "file checkpoints. Parent opens a new Library and resumes journals. This is not host "

@@ -1,0 +1,261 @@
+{
+  "date": "2026-09-06",
+  "application_commit": "1cf2943e106a53e956503d0c40e336518754e824",
+  "image": "stacks:qualification-1cf2943",
+  "image_id": "sha256:fb9783dc470cda9a60f34788f75792c8f690c472876829d2810204c58e05f24c",
+  "resources": {
+    "cpus": 2,
+    "memory_gib": 2,
+    "uid": 10001
+  },
+  "faults": {
+    "cases": [
+      {
+        "operation": "import",
+        "checkpoint": "staged",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "a44e5ba01666b23e2bcf29cb4680a0e05dd6c74bb137782504828d927d3b76db",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "import",
+        "checkpoint": "journaled",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "d9bfa776f133b710a8ba52fd6672bfe7110247ede44624b39abfb3f9e92f4e44",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "import",
+        "checkpoint": "renamed",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "732812e56364be1dce9ab3e706b0681a36677094b5fdc5ad362d6d2487d975f0",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "import",
+        "checkpoint": "synced",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "9bd0af5213382fabf27fade5b8c03e9af0f2b697a39dddfaa4112fe04b36eaeb",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "import",
+        "checkpoint": "committed",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "2b90925f61590a56637e85063dd5da4b2e7e72e3b92131568e4894177667e5d5",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "trash",
+        "checkpoint": "queued",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "8e261539cb7b8e10654922d2b9bfa6b9d764c98c34df2df7445bd522d71cbc2e",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "trash",
+        "checkpoint": "linked",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 2,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "118dbb093534a9f0cb53d43e4673e83489ae94e1dd7bd50eb09060db80639872",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "trash",
+        "checkpoint": "destination_synced",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 2,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "813ecb4ebdfb75655997c52400aa4c5cef9687cae11eea29fdc2d87d97619019",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "trash",
+        "checkpoint": "unlinked",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "fd574ec4d6043ca9dd1345f5bb8b24e7157780bbfe6c3863aa724699ac4a15bf",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "trash",
+        "checkpoint": "source_synced",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "6b9e4f7a556d6fe9975ace077349f2c3d20bcbc00be2b9e77b46fe613b16aa6c",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "trash",
+        "checkpoint": "receipted",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "a66fd92ba976e49d0997bd7cd8d523473866eb0c5ddb24326877df1dbea756bb",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "restore",
+        "checkpoint": "queued",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "e744876cf26532f8a6f49ebe6c0847f2e05b98563ae6556cc88aea312c7518d6",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "restore",
+        "checkpoint": "linked",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 2,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "f770e5b34ef7422842be3f893ec102468ca2577b35af05e4f1f8289eadfc2d0e",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "restore",
+        "checkpoint": "destination_synced",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 2,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "fc4b8e90b84ac22065783d721d9b243e399be886290e9d475334e9da1a0618df",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "restore",
+        "checkpoint": "unlinked",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "e4402fd30b86b3f5ff38c3a93aa5652068aa5dfc3343eade61def6c0fdcf542b",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "restore",
+        "checkpoint": "source_synced",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "5f4bcb2398deff5eda337bca3513e039e2d28e93440311c5e4c03f5980f412de",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      },
+      {
+        "operation": "restore",
+        "checkpoint": "receipted",
+        "exit_signal": "SIGKILL",
+        "verified_original_names_after_crash": 1,
+        "stable_identity": true,
+        "duplicate_catalog_growth": 0,
+        "original_sha256": "4f0d0cdcfedd4411dd25b89e3a289e2b84fd68e5e25c602e73002907a283df78",
+        "integrity": "ok",
+        "foreign_key_errors": 0
+      }
+    ],
+    "storage_faults": [
+      {
+        "fault": "enospc",
+        "classification": "simulated errno",
+        "explicit_error": true,
+        "retry_after_restart": "complete",
+        "identity_preserved": true
+      },
+      {
+        "fault": "eacces",
+        "classification": "simulated errno",
+        "explicit_error": true,
+        "retry_after_restart": "complete",
+        "identity_preserved": true
+      },
+      {
+        "fault": "collision",
+        "classification": "actual synthetic filesystem condition",
+        "explicit_error": true,
+        "retry_after_restart": "complete",
+        "identity_preserved": true
+      },
+      {
+        "fault": "changed_original",
+        "classification": "actual synthetic filesystem condition",
+        "explicit_error": true,
+        "retry_after_restart": "complete",
+        "identity_preserved": true
+      }
+    ],
+    "source_faults": {
+      "missing_root": "catalog retained; relocated root restored byte access",
+      "unreadable_original": "actual mode000 read denied; bytes retained",
+      "duplicate_catalog_growth": 0
+    },
+    "seconds": 52.396,
+    "limitations": "Actual SIGKILL of a separate application-library process at instrumented file checkpoints. Parent opens a new Library and resumes journals. This is not host power loss or a storage-controller durability test. All originals are synthetic."
+  },
+  "restore": {
+    "image": "stacks:qualification-1cf2943",
+    "fresh": true,
+    "restored": true,
+    "cache_rebuild": {
+      "removed": 4,
+      "rebuilt": 4,
+      "without_cover": 3,
+      "unavailable": 0
+    },
+    "verified": [
+      "managed bytes",
+      "read-only relocated external bytes",
+      "work/representation/asset IDs",
+      "notes/rating/tags",
+      "collection membership",
+      "chosen cover original and rebuilt thumbnail",
+      "audio progress and Range",
+      "unauthenticated and pre-backup session denial",
+      "built frontend assets"
+    ]
+  }
+}
