@@ -169,7 +169,8 @@ def test_read_only_removal_does_not_require_mount_and_never_touches_source(libra
     source = tmp_path / "source"
     source.mkdir()
     original = source / "external.epub"
-    original.write_bytes(epub_bytes("External"))
+    original_bytes = epub_bytes("External")
+    original.write_bytes(original_bytes)
     before = original.stat()
     library.sources["source"] = source
     work = library.register_files("source", [original.name]).work
@@ -182,7 +183,7 @@ def test_read_only_removal_does_not_require_mount_and_never_touches_source(libra
     finish(trash)
     assert library.list().total == 1
     assert original.stat().st_mtime_ns == before.st_mtime_ns
-    assert original.read_bytes() == epub_bytes("External")
+    assert original.read_bytes() == original_bytes
 
 
 def test_trash_backup_restores_and_worker_restarts_queued_operations(library, tmp_path):
@@ -302,7 +303,8 @@ def test_mixed_managed_and_external_work_preserves_source_and_run_membership(cli
     source = tmp_path / "source"
     source.mkdir()
     original = source / "source.epub"
-    original.write_bytes(epub_bytes("External edition"))
+    original_bytes = epub_bytes("External edition")
+    original.write_bytes(original_bytes)
     before = original.stat()
     library.sources["source"] = source
     external = library.register_files("source", [original.name]).work.model_dump()
@@ -331,7 +333,7 @@ def test_mixed_managed_and_external_work_preserves_source_and_run_membership(cli
     assert library.get(work.id).memberships == work.memberships
     assert SeriesCatalog(library).works(series.id).total == 1
     assert original.stat().st_mtime_ns == before.st_mtime_ns
-    assert original.read_bytes() == epub_bytes("External edition")
+    assert original.read_bytes() == original_bytes
 
 
 def test_trash_verification_keeps_catalog_available(library, tmp_path, monkeypatch):
