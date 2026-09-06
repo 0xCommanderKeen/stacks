@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -12,6 +14,8 @@ class RepresentationOut(BaseModel):
     id: str
     format: str
     has_cover: bool
+    facts: dict
+    capabilities: list[str]
     assets: list[AssetOut]
 
 
@@ -21,7 +25,45 @@ class EditionOut(BaseModel):
     language: str
     publisher: str
     identifier: str
+    narrator: str
+    abridgement: str
     representations: list[RepresentationOut]
+
+
+class SeriesEdit(BaseModel):
+    revision: int = Field(default=1, ge=1)
+    name: str = Field(min_length=1, max_length=1024)
+    run: str = Field(default="", max_length=1024)
+
+    @field_validator("name")
+    @classmethod
+    def not_blank(cls, value):
+        if not value.strip():
+            raise ValueError("A series name is required.")
+        return value.strip()
+
+
+class SeriesOut(SeriesEdit):
+    id: str
+
+
+class MembershipEdit(BaseModel):
+    series_id: str
+    designation: str = Field(default="", max_length=128)
+    position: float = Field(allow_inf_nan=False, ge=-1e9, le=1e9)
+
+
+class MembershipOut(MembershipEdit):
+    series: SeriesOut
+
+
+class EditionEdit(BaseModel):
+    id: str
+    language: str = Field(max_length=64)
+    publisher: str = Field(max_length=1024)
+    identifier: str = Field(max_length=1024)
+    narrator: str = Field(default="", max_length=1024)
+    abridgement: Literal["unknown", "unabridged", "abridged"] = "unknown"
 
 
 class WorkOut(BaseModel):
@@ -32,6 +74,7 @@ class WorkOut(BaseModel):
     revision: int
     created_at: str
     editions: list[EditionOut]
+    memberships: list[MembershipOut]
 
 
 class CatalogPage(BaseModel):
@@ -47,6 +90,8 @@ class ImportResult(BaseModel):
 
 
 class WorkEdit(BaseModel):
+    editions: list[EditionEdit] | None = Field(default=None, max_length=100)
+    memberships: list[MembershipEdit] | None = Field(default=None, max_length=100)
     revision: int = Field(ge=1)
     title: str = Field(min_length=1, max_length=1024)
     authors: list[str] = Field(max_length=20)

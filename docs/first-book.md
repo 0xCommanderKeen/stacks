@@ -1,5 +1,7 @@
 # First book: scope and operational notes
 
+Historical milestone: current additions are covered in [Formats and series](formats-and-series.md).
+
 This slice implements the foundation and first complete EPUB workflow from the [rebuild plan](rebuild/PLAN.md). It is a development milestone, not the archive-scale release.
 
 ## What works

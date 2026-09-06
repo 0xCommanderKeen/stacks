@@ -18,7 +18,9 @@
     <div class="cover-type">
       <span class="cover-rule"></span><span class="cover-author"
         >{book.authors[0] || 'A BOOK FROM YOUR LIBRARY'}</span
-      ><span class="cover-title">{book.title}</span><span class="cover-bottom">STACKS · EPUB</span>
+      ><span class="cover-title">{book.title}</span><span class="cover-bottom"
+        >STACKS · {representation?.format.toUpperCase() || 'BOOK'}</span
+      >
     </div>
   {/if}
 </div>

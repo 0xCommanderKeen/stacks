@@ -4,12 +4,17 @@ import tempfile
 from pathlib import Path
 
 import uvicorn
+from pypdf import PdfWriter
 from stacks.app import create_app
 from stacks.config import Settings
 from stacks.samples import epub_bytes
 from stacks.samples import main as samples
 
 samples()
+writer = PdfWriter()
+writer.add_blank_page(width=400, height=600)
+writer.add_metadata({"/Title": "An Open Page", "/Author": "Stacks Samples"})
+writer.write("samples/An Open Page.pdf")
 Path("samples/The Quiet Library — phone.epub").write_bytes(epub_bytes("The Quiet Library — phone"))
 for index in range(26):
     Path(f"samples/Page Test {index:02d}.epub").write_bytes(

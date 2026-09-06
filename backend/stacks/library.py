@@ -1,5 +1,7 @@
 """Catalog and managed imports. One durable journal hides the DB/filesystem seam."""
 
+from __future__ import annotations
+
 import fcntl
 import hashlib
 import json
@@ -12,7 +14,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
 from stacks.db import initialize
-from stacks.epub import InvalidBook, inspect_epub
+from stacks.epub import InvalidBook, safe_member
+from stacks.inspection import inspect_file, natural_key
 from stacks.models import (
     Asset,
     Contributor,
@@ -20,10 +23,12 @@ from stacks.models import (
     Edition,
     ImportOperation,
     Representation,
+    Series,
+    SeriesMembership,
     Work,
     identity,
 )
-from stacks.schemas import CatalogPage, ImportResult, WorkEdit, WorkOut
+from stacks.schemas import CatalogPage, ImportResult, SeriesEdit, SeriesOut, WorkEdit, WorkOut
 
 
 def digest(path: Path) -> str:
@@ -46,6 +51,10 @@ def write_durable(path: Path, content: bytes):
         os.fsync(output.fileno())
 
 
+def series_out(series: Series) -> SeriesOut:
+    return SeriesOut(id=series.id, name=series.name, run=series.run, revision=series.revision)
+
+
 def work_out(work: Work) -> WorkOut:
     return WorkOut(
         id=work.id,
@@ -54,10 +63,21 @@ def work_out(work: Work) -> WorkOut:
         description=work.description,
         revision=work.revision,
         created_at=work.created_at,
+        memberships=[
+            dict(
+                series_id=m.series_id,
+                designation=m.designation,
+                position=m.position,
+                series=series_out(m.series),
+            )
+            for m in work.memberships
+        ],
         editions=[
             dict(
                 id=e.id,
                 medium=e.medium,
+                narrator=e.narrator,
+                abridgement=e.abridgement,
                 language=e.language,
                 publisher=e.publisher,
                 identifier=e.identifier,
@@ -65,7 +85,13 @@ def work_out(work: Work) -> WorkOut:
                     dict(
                         id=r.id,
                         format=r.format,
+                        facts={
+                            k: v
+                            for k, v in json.loads(r.extracted_json).items()
+                            if k in {"page_count", "duration_seconds", "series_hint"}
+                        },
                         has_cover=bool(r.cover_path),
+                        capabilities=["download"],
                         assets=[
                             dict(
                                 id=a.id, original_name=a.original_name, size=a.size, sha256=a.sha256
@@ -135,6 +161,7 @@ class Library:
             total = session.scalar(select(func.count()).select_from(query.subquery()))
             query = (
                 query.options(
+                    selectinload(Work.memberships).selectinload(SeriesMembership.series),
                     selectinload(Work.credits).selectinload(Credit.contributor),
                     selectinload(Work.editions)
                     .selectinload(Edition.representations)
@@ -165,6 +192,28 @@ class Library:
                 raise KeyError(work_id)
             if work.revision != edit.revision:
                 raise ValueError("This book changed in another tab. Reload before saving.")
+            if edit.editions is not None:
+                editions = {e.id: e for e in work.editions}
+                if len({e.id for e in edit.editions}) != len(edit.editions):
+                    raise ValueError("An edition was specified twice.")
+                for details in edit.editions:
+                    if details.id not in editions:
+                        raise ValueError("Edition does not belong to this work.")
+                    for name, value in details.model_dump(exclude={"id"}).items():
+                        setattr(editions[details.id], name, value)
+            if edit.memberships is not None:
+                if len({m.series_id for m in edit.memberships}) != len(edit.memberships):
+                    raise ValueError("A work can belong to each series only once.")
+                existing = {m.series_id: m for m in work.memberships}
+                updated = []
+                for details in edit.memberships:
+                    series = session.get(Series, details.series_id)
+                    if series is None:
+                        raise ValueError("Series no longer exists.")
+                    member = existing.get(details.series_id) or SeriesMembership(series=series)
+                    member.designation, member.position = details.designation, details.position
+                    updated.append(member)
+                work.memberships = updated
             work.title, work.description = edit.title, edit.description
             work.revision += 1
             # Names aren't identities: update ordered credits without globally merging names.
@@ -177,18 +226,87 @@ class Library:
             session.flush()
             return work_out(work)
 
+    def series(self, q: str = "") -> list[SeriesOut]:
+        with self.sessions() as session:
+            query = select(Series).order_by(Series.name, Series.run, Series.id).limit(1000)
+            if q:
+                query = query.where(Series.name.contains(q, autoescape=True))
+            return [series_out(s) for s in session.scalars(query)]
+
+    def save_series(self, edit: SeriesEdit, series_id: str | None = None) -> SeriesOut:
+        with self.lock, self.sessions.begin() as session:
+            series = session.get(Series, series_id) if series_id else Series()
+            if series is None:
+                raise KeyError(series_id)
+            if series_id and series.revision != edit.revision:
+                raise ValueError("Series changed. Reload before saving.")
+            series.name, series.run = edit.name, edit.run
+            series.revision = (series.revision + 1) if series_id else 1
+            session.add(series)
+            session.flush()
+            return series_out(series)
+
+    def series_works(self, series_id: str) -> list[WorkOut]:
+        with self.sessions() as session:
+            if session.get(Series, series_id) is None:
+                raise KeyError(series_id)
+            return [
+                work_out(w)
+                for w in session.scalars(
+                    select(Work)
+                    .join(SeriesMembership)
+                    .where(SeriesMembership.series_id == series_id)
+                    .order_by(SeriesMembership.position, Work.id)
+                    .limit(1000)
+                )
+            ]
+
     def import_file(self, source: Path, original_name: str) -> ImportResult:
         """Source is an owned temporary upload. Caller cleans it up; never touch external files."""
-        metadata, cover = inspect_epub(source, original_name)
-        sha = digest(source)
+        return self.import_files([(source, original_name)])
+
+    def import_files(self, sources: list[tuple[Path, str]]) -> ImportResult:
+        """An ordered audio set is one representation; other formats have exactly one asset."""
+        if not sources or len(sources) > 2000:
+            raise InvalidBook("Choose between 1 and 2000 files.")
+        sources = sorted(sources, key=lambda item: natural_key(item[1]))
+        if any(not safe_member(name) or len(name) > 1024 for _, name in sources):
+            raise InvalidBook("Invalid original filename.")
+        inspections = [inspect_file(path, name) for path, name in sources]
+        if len(sources) > 1 and any(i.facts["medium"] != "audio" for i in inspections):
+            raise InvalidBook("Only audio tracks can be imported as one file set.")
+        metadata = dict(inspections[0].facts)
+        cover = next((i.cover for i in inspections if i.cover), None)
+        entries = []
+        for index, ((source, name), inspection) in enumerate(
+            zip(sources, inspections, strict=True)
+        ):
+            fmt = inspection.facts["format"]
+            entries.append(
+                dict(
+                    filename=f"original.{fmt}" if len(sources) == 1 else f"track-{index:04d}.{fmt}",
+                    original_name=name,
+                    sha256=digest(source),
+                    size=source.stat().st_size,
+                    facts=inspection.facts,
+                )
+            )
+        metadata["assets"] = entries
+        if len(entries) > 1:
+            metadata["format"] = "audio-set"
+            metadata["duration_seconds"] = sum(i.facts["duration_seconds"] for i in inspections)
+        sha = (
+            entries[0]["sha256"]
+            if len(entries) == 1
+            else hashlib.sha256("".join(e["sha256"] for e in entries).encode()).hexdigest()
+        )
+        original_name = sources[0][1]
         with self.lock:
             with self.sessions() as session:
                 existing = session.scalar(
                     select(Work.id)
-                    .join(Edition)
-                    .join(Representation)
-                    .join(Asset)
-                    .where(Asset.sha256 == sha)
+                    .join(ImportOperation, ImportOperation.work_id == Work.id)
+                    .where(ImportOperation.sha256 == sha, ImportOperation.state == "complete")
                 )
             if existing:
                 return ImportResult(work=self.get(existing), duplicate=True)
@@ -205,13 +323,14 @@ class Library:
             stage = self.staging / operation_id
             stage.mkdir()
             try:
-                destination = stage / "original.epub"
-                with source.open("rb") as incoming, destination.open("xb") as out:
-                    shutil.copyfileobj(incoming, out, 1024**2)
-                    out.flush()
-                    os.fsync(out.fileno())
-                if digest(destination) != sha:
-                    raise OSError("File verification failed; the upload was not imported.")
+                for (source, _), entry in zip(sources, entries, strict=True):
+                    destination = stage / entry["filename"]
+                    with source.open("rb") as incoming, destination.open("xb") as out:
+                        shutil.copyfileobj(incoming, out, 1024**2)
+                        out.flush()
+                        os.fsync(out.fileno())
+                    if digest(destination) != entry["sha256"]:
+                        raise OSError("File verification failed; the upload was not imported.")
                 if cover:
                     write_durable(stage / "cover.jpg", cover)
                 sync_dir(stage)
@@ -221,7 +340,7 @@ class Library:
                         ImportOperation(
                             id=operation_id,
                             sha256=sha,
-                            size=destination.stat().st_size,
+                            size=sum(e["size"] for e in entries),
                             original_name=original_name,
                             extracted_json=json.dumps(metadata, ensure_ascii=False),
                         )
@@ -241,15 +360,30 @@ class Library:
             operation = session.get(ImportOperation, operation_id)
             if operation.state == "complete":
                 return operation.work_id
-            sha, size = operation.sha256, operation.size
+            metadata = json.loads(operation.extracted_json)
+            entries = metadata.get("assets") or [
+                dict(
+                    filename="original.epub",
+                    sha256=operation.sha256,
+                    size=operation.size,
+                    original_name=operation.original_name,
+                )
+            ]
         stage = self.staging / operation_id
         destination = self.managed / operation_id
         if destination.exists() and stage.exists():
             raise OSError("Import destination collision; staged copy retained.")
         location = destination if destination.exists() else stage
-        original = location / "original.epub"
-        if not original.is_file() or original.stat().st_size != size or digest(original) != sha:
-            raise OSError("Import original missing or checksum mismatch; copies retained.")
+        for entry in entries:
+            if not safe_member(entry["filename"]):
+                raise OSError("Unsafe journal path; copies retained.")
+            original = location / entry["filename"]
+            if (
+                not original.is_file()
+                or original.stat().st_size != entry["size"]
+                or digest(original) != entry["sha256"]
+            ):
+                raise OSError("Import original missing or checksum mismatch; copies retained.")
         if location == stage:
             os.rename(stage, destination)
         # Recovery may observe a rename whose directory sync failed before the crash.
@@ -265,12 +399,14 @@ class Library:
                 for i, name in enumerate(metadata["authors"])
             ]
             edition = Edition(
+                medium=metadata.get("medium", "ebook"),
                 language=metadata["language"],
                 publisher=metadata["publisher"],
                 identifier=metadata["identifier"],
             )
             representation = Representation(
                 id=operation_id,
+                format=metadata.get("format", "epub"),
                 extracted_json=operation.extracted_json,
                 cover_path=f"{operation_id}/cover.jpg"
                 if (destination / "cover.jpg").is_file()
@@ -278,11 +414,13 @@ class Library:
             )
             representation.assets = [
                 Asset(
-                    relative_path=f"{operation_id}/original.epub",
-                    original_name=operation.original_name,
-                    sha256=sha,
-                    size=size,
+                    relative_path=f"{operation_id}/{entry['filename']}",
+                    original_name=entry["original_name"],
+                    sha256=entry["sha256"],
+                    size=entry["size"],
+                    position=index,
                 )
+                for index, entry in enumerate(entries)
             ]
             edition.representations = [representation]
             work.editions = [edition]
@@ -319,11 +457,20 @@ class Library:
         """Versioned portable catalog. No sessions, secrets, or machine-specific paths."""
         with self.lock, self.engine.connect() as connection:
             tables = {}
-            for model in (Work, Contributor, Credit, Edition, Representation, Asset):
+            for model in (
+                Work,
+                Contributor,
+                Credit,
+                Edition,
+                Representation,
+                Asset,
+                Series,
+                SeriesMembership,
+            ):
                 tables[model.__tablename__] = [
                     dict(row)
                     for row in connection.execute(
                         select(model.__table__).order_by(model.__table__.c.id)
                     ).mappings()
                 ]
-            return {"schema_version": 1, "roots": {"managed": "managed/"}, "tables": tables}
+            return {"schema_version": 2, "roots": {"managed": "managed/"}, "tables": tables}

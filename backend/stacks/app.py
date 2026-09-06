@@ -22,9 +22,19 @@ from starlette.background import BackgroundTask
 from stacks.backup import backup
 from stacks.config import Settings
 from stacks.epub import InvalidBook
+from stacks.inspection import FORMATS
 from stacks.library import Library
 from stacks.models import Asset, ImportOperation, LoginSession, Representation, Work
-from stacks.schemas import CatalogPage, ImportResult, Login, StatusOut, WorkEdit, WorkOut
+from stacks.schemas import (
+    CatalogPage,
+    ImportResult,
+    Login,
+    SeriesEdit,
+    SeriesOut,
+    StatusOut,
+    WorkEdit,
+    WorkOut,
+)
 
 COOKIE = "stacks_session"
 SESSION_SECONDS = 7 * 86400
@@ -180,6 +190,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from None
 
+    @app.get("/api/series", response_model=list[SeriesOut])
+    def series(lib: Auth, q: str = Query(default="", max_length=300)):
+        return lib.series(q)
+
+    @app.post("/api/series", response_model=SeriesOut)
+    def create_series(body: SeriesEdit, lib: Auth):
+        return lib.save_series(body)
+
+    @app.patch("/api/series/{series_id}", response_model=SeriesOut)
+    def edit_series(series_id: str, body: SeriesEdit, lib: Auth):
+        try:
+            return lib.save_series(body, series_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/series/{series_id}/works", response_model=list[WorkOut])
+    def series_works(series_id: str, lib: Auth):
+        return lib.series_works(series_id)
+
     @app.post(
         "/api/import",
         response_model=ImportResult,
@@ -187,7 +216,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "requestBody": {
                 "required": True,
                 "content": {
-                    "application/epub+zip": {"schema": {"type": "string", "format": "binary"}}
+                    "application/octet-stream": {"schema": {"type": "string", "format": "binary"}}
                 },
             }
         },
@@ -198,15 +227,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             .replace("\\", "/")
             .split("/")[-1]
         )
-        if not name.lower().endswith(".epub") or len(name) > 255 or any(ord(c) < 32 for c in name):
-            raise HTTPException(400, "Choose an EPUB file with a valid filename.")
+        if (
+            Path(name).suffix.lower().lstrip(".") not in FORMATS
+            or len(name) > 255
+            or any(ord(c) < 32 for c in name)
+        ):
+            raise HTTPException(400, "Choose a supported publication with a valid filename.")
         content_length = request.headers.get("content-length")
         if content_length and (
             not content_length.isdigit() or int(content_length) > settings.max_upload_bytes
         ):
             raise HTTPException(413, "This file exceeds the upload limit.")
         with tempfile.NamedTemporaryFile(
-            dir=lib.staging, prefix="upload-", suffix=".epub"
+            dir=lib.staging, prefix="upload-", suffix=Path(name).suffix
         ) as temporary:
             size = 0
             async for chunk in request.stream():
@@ -233,7 +266,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return FileResponse(
                 lib.resolve(asset.relative_path),
                 filename=asset.original_name,
-                media_type="application/epub+zip",
+                media_type=FORMATS.get(
+                    Path(asset.original_name).suffix.lower().lstrip("."),
+                    ("", "application/octet-stream"),
+                )[1],
             )
 
     @app.get("/api/representations/{representation_id}/cover")

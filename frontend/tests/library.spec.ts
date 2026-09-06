@@ -9,7 +9,7 @@ test('import, search, edit, download, reload and back up a book', async ({ page 
   const originalTitle =
     testInfo.project.name === 'phone' ? 'The Quiet Library — phone' : 'The Quiet Library';
   await page
-    .getByLabel('Choose EPUB books')
+    .getByLabel('Choose publications')
     .setInputFiles(path.resolve(`../samples/${originalTitle}.epub`));
   await expect(page.getByRole('status')).toContainText(/added/);
   await page.getByLabel('Search books or authors').fill('Quiet');
@@ -45,7 +45,7 @@ test('catalog layout works with multiple books and a missing search result', asy
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
   await page
-    .getByLabel('Choose EPUB books')
+    .getByLabel('Choose publications')
     .setInputFiles(
       [
         'A Field Guide to Rain',
@@ -75,7 +75,7 @@ test('catalog page survives detail, back, reload, and unsubmitted search text', 
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
   await page
-    .getByLabel('Choose EPUB books')
+    .getByLabel('Choose publications')
     .setInputFiles(
       Array.from({ length: 26 }, (_, i) =>
         path.resolve(`../samples/Page Test ${String(i).padStart(2, '0')}.epub`),
@@ -99,4 +99,34 @@ test('catalog page survives detail, back, reload, and unsubmitted search text', 
   await page.reload();
   await expect(page.getByRole('button', { name: name!, exact: true })).toBeVisible();
   await expect(page).toHaveURL(/offset=24/);
+});
+
+test('PDF details and distinct series survive reload', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(path.resolve('../samples/An Open Page.pdf'));
+  await expect(page.getByRole('status')).toContainText(/added/);
+  await page.getByLabel('Search books or authors').fill('An Open Page');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Open An Open Page', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Download PDF' })).toBeVisible();
+  await page.getByRole('button', { name: 'Organize editions & series' }).click();
+  await page.getByLabel('Language', { exact: true }).fill('sl');
+  await page.getByText('Create a separate series', { exact: true }).click();
+  await page.getByLabel('Series name', { exact: true }).fill('Reading Rooms');
+  await page.getByLabel('Run label').fill(testInfo.project.name);
+  await page.getByRole('button', { name: 'Create series', exact: true }).click();
+  await page.getByLabel('Issue or volume label').last().fill('Annual 2024');
+  await page.getByLabel('Reading order').last().fill('2.5');
+  await page.getByRole('button', { name: 'Save editions & series', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Organize editions & series' })).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByText(new RegExp(`Reading Rooms · ${testInfo.project.name} · Annual 2024`)),
+  ).toBeVisible();
+  await expect(page.getByText('EBOOK · sl', { exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('editions-series.png'), fullPage: true });
 });

@@ -110,9 +110,10 @@ def restore(archive_path: Path, destination: Path):
                 raise ValueError("Backup database failed integrity checking.")
             if connection.execute("PRAGMA foreign_key_check").fetchall():
                 raise ValueError("Backup database has broken relationships.")
-            if connection.execute("SELECT version_num FROM alembic_version").fetchone() != (
-                "0001",
-            ):
+            if connection.execute("SELECT version_num FROM alembic_version").fetchone() not in {
+                ("0001",),
+                ("0002",),
+            }:
                 raise ValueError("This Stacks version cannot restore the backup schema.")
             for root, relative, sha, size in connection.execute(
                 "SELECT root, relative_path, sha256, size FROM asset"

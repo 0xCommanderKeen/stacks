@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Cover from '$lib/Cover.svelte';
+  import Organization from '$lib/Organization.svelte';
   import {
     ApiError,
     json,
@@ -138,7 +139,7 @@
         const result = await json<ImportResult>('/import', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/epub+zip',
+            'Content-Type': 'application/octet-stream',
             'X-Filename': encodeURIComponent(file.name),
           },
           body: file,
@@ -242,6 +243,13 @@
     } finally {
       busy = '';
     }
+  }
+  function formats(book: Book) {
+    return [
+      ...new Set(
+        book.editions.flatMap((e) => e.representations.map((r) => r.format.toUpperCase())),
+      ),
+    ].join(' · ');
   }
   function bytes(size: number) {
     return size > 1024 * 1024
@@ -353,7 +361,7 @@
       <div class="detail">
         <div class="detail-cover"><Cover book={selected} large /></div>
         <section class="detail-copy">
-          <div class="eyebrow">IN YOUR LIBRARY · EPUB</div>
+          <div class="eyebrow">IN YOUR LIBRARY · {formats(selected)}</div>
           {#if editing}
             <form onsubmit={save} class="edit-form">
               <h1>Edit book</h1>
@@ -382,7 +390,7 @@
               {#each selected.editions as edition}{#each edition.representations as representation}{#each representation.assets as asset}<a
                       class="button primary"
                       href="/api/assets/{asset.id}/download"
-                      download>Download EPUB <span>↓</span></a
+                      download>Download {representation.format.toUpperCase()} <span>↓</span></a
                     >{/each}{/each}{/each}<button class="secondary" onclick={startEdit}
                 >Edit details</button
               >
@@ -391,6 +399,13 @@
               {selected.description ||
                 'A good book needs no introduction. Add a description to make this one easier to find again.'}
             </p>
+            <Organization
+              book={selected}
+              onupdate={(book) => {
+                selected = book;
+                void load().catch(fail);
+              }}
+            />
             <dl class="book-facts">
               <div>
                 <dt>Language</dt>
@@ -432,11 +447,11 @@
             class="file-input"
             bind:this={upload}
             type="file"
-            accept=".epub,application/epub+zip"
+            accept=".epub,.pdf,.cbz,.cbr,.mp3,.m4a,.m4b"
             multiple
             onchange={importFiles}
-            aria-label="Choose EPUB books"
-          /><span class="small muted">EPUB files · originals kept intact</span>
+            aria-label="Choose publications"
+          /><span class="small muted">Books, comics & audio · originals kept intact</span>
         </div>
       </div>
       <div class="catalog-toolbar">
@@ -457,7 +472,7 @@
           <p>
             {appliedQuery
               ? 'Try a different title or author.'
-              : 'Add a few EPUBs. We’ll keep the details in order and the originals safe.'}
+              : 'Add a book, comic, or audiobook. We’ll keep the details in order and the originals safe.'}
           </p>
           {#if !appliedQuery}<button
               class="secondary"
@@ -479,7 +494,7 @@
               <div class="book-caption">
                 <h2>{book.title}</h2>
                 <p>{book.authors.join(', ') || 'Unknown author'}</p>
-                <span>EPUB</span>
+                <span>{formats(book)}</span>
               </div></button
             >{/each}
         </div>

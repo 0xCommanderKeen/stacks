@@ -157,6 +157,58 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/series': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Series */
+    get: operations['series_api_series_get'];
+    put?: never;
+    /** Create Series */
+    post: operations['create_series_api_series_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/series/{series_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Edit Series */
+    patch: operations['edit_series_api_series__series_id__patch'];
+    trace?: never;
+  };
+  '/api/series/{series_id}/works': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Series Works */
+    get: operations['series_works_api_series__series_id__works_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/session': {
     parameters: {
       query?: never;
@@ -269,8 +321,32 @@ export interface components {
       /** Total */
       total: number;
     };
+    /** EditionEdit */
+    EditionEdit: {
+      /**
+       * Abridgement
+       * @default unknown
+       * @enum {string}
+       */
+      abridgement: 'unknown' | 'unabridged' | 'abridged';
+      /** Id */
+      id: string;
+      /** Identifier */
+      identifier: string;
+      /** Language */
+      language: string;
+      /**
+       * Narrator
+       * @default
+       */
+      narrator: string;
+      /** Publisher */
+      publisher: string;
+    };
     /** EditionOut */
     EditionOut: {
+      /** Abridgement */
+      abridgement: string;
       /** Id */
       id: string;
       /** Identifier */
@@ -279,6 +355,8 @@ export interface components {
       language: string;
       /** Medium */
       medium: string;
+      /** Narrator */
+      narrator: string;
       /** Publisher */
       publisher: string;
       /** Representations */
@@ -300,16 +378,79 @@ export interface components {
       /** Password */
       password: string;
     };
+    /** MembershipEdit */
+    MembershipEdit: {
+      /**
+       * Designation
+       * @default
+       */
+      designation: string;
+      /** Position */
+      position: number;
+      /** Series Id */
+      series_id: string;
+    };
+    /** MembershipOut */
+    MembershipOut: {
+      /**
+       * Designation
+       * @default
+       */
+      designation: string;
+      /** Position */
+      position: number;
+      series: components['schemas']['SeriesOut'];
+      /** Series Id */
+      series_id: string;
+    };
     /** RepresentationOut */
     RepresentationOut: {
       /** Assets */
       assets: components['schemas']['AssetOut'][];
+      /** Capabilities */
+      capabilities: string[];
+      /** Facts */
+      facts: {
+        [key: string]: unknown;
+      };
       /** Format */
       format: string;
       /** Has Cover */
       has_cover: boolean;
       /** Id */
       id: string;
+    };
+    /** SeriesEdit */
+    SeriesEdit: {
+      /** Name */
+      name: string;
+      /**
+       * Revision
+       * @default 1
+       */
+      revision: number;
+      /**
+       * Run
+       * @default
+       */
+      run: string;
+    };
+    /** SeriesOut */
+    SeriesOut: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /**
+       * Revision
+       * @default 1
+       */
+      revision: number;
+      /**
+       * Run
+       * @default
+       */
+      run: string;
     };
     /** StatusOut */
     StatusOut: {
@@ -342,6 +483,10 @@ export interface components {
       authors: string[];
       /** Description */
       description: string;
+      /** Editions */
+      editions?: components['schemas']['EditionEdit'][] | null;
+      /** Memberships */
+      memberships?: components['schemas']['MembershipEdit'][] | null;
       /** Revision */
       revision: number;
       /** Title */
@@ -359,6 +504,8 @@ export interface components {
       editions: components['schemas']['EditionOut'][];
       /** Id */
       id: string;
+      /** Memberships */
+      memberships: components['schemas']['MembershipOut'][];
       /** Revision */
       revision: number;
       /** Title */
@@ -486,7 +633,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        'application/epub+zip': string;
+        'application/octet-stream': string;
       };
     };
     responses: {
@@ -588,6 +735,136 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  series_api_series_get: {
+    parameters: {
+      query?: {
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SeriesOut'][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_series_api_series_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SeriesEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SeriesOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  edit_series_api_series__series_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        series_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SeriesEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SeriesOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  series_works_api_series__series_id__works_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        series_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkOut'][];
         };
       };
       /** @description Validation Error */

@@ -60,8 +60,59 @@
         "title": "CatalogPage",
         "type": "object"
       },
+      "EditionEdit": {
+        "properties": {
+          "abridgement": {
+            "default": "unknown",
+            "enum": [
+              "unknown",
+              "unabridged",
+              "abridged"
+            ],
+            "title": "Abridgement",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "identifier": {
+            "maxLength": 1024,
+            "title": "Identifier",
+            "type": "string"
+          },
+          "language": {
+            "maxLength": 64,
+            "title": "Language",
+            "type": "string"
+          },
+          "narrator": {
+            "default": "",
+            "maxLength": 1024,
+            "title": "Narrator",
+            "type": "string"
+          },
+          "publisher": {
+            "maxLength": 1024,
+            "title": "Publisher",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "language",
+          "publisher",
+          "identifier"
+        ],
+        "title": "EditionEdit",
+        "type": "object"
+      },
       "EditionOut": {
         "properties": {
+          "abridgement": {
+            "title": "Abridgement",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -76,6 +127,10 @@
           },
           "medium": {
             "title": "Medium",
+            "type": "string"
+          },
+          "narrator": {
+            "title": "Narrator",
             "type": "string"
           },
           "publisher": {
@@ -96,6 +151,8 @@
           "language",
           "publisher",
           "identifier",
+          "narrator",
+          "abridgement",
           "representations"
         ],
         "title": "EditionOut",
@@ -145,6 +202,62 @@
         "title": "Login",
         "type": "object"
       },
+      "MembershipEdit": {
+        "properties": {
+          "designation": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Designation",
+            "type": "string"
+          },
+          "position": {
+            "maximum": 1000000000.0,
+            "minimum": -1000000000.0,
+            "title": "Position",
+            "type": "number"
+          },
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series_id",
+          "position"
+        ],
+        "title": "MembershipEdit",
+        "type": "object"
+      },
+      "MembershipOut": {
+        "properties": {
+          "designation": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Designation",
+            "type": "string"
+          },
+          "position": {
+            "maximum": 1000000000.0,
+            "minimum": -1000000000.0,
+            "title": "Position",
+            "type": "number"
+          },
+          "series": {
+            "$ref": "#/components/schemas/SeriesOut"
+          },
+          "series_id": {
+            "title": "Series Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "series_id",
+          "position",
+          "series"
+        ],
+        "title": "MembershipOut",
+        "type": "object"
+      },
       "RepresentationOut": {
         "properties": {
           "assets": {
@@ -153,6 +266,18 @@
             },
             "title": "Assets",
             "type": "array"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "facts": {
+            "additionalProperties": true,
+            "title": "Facts",
+            "type": "object"
           },
           "format": {
             "title": "Format",
@@ -171,9 +296,70 @@
           "id",
           "format",
           "has_cover",
+          "facts",
+          "capabilities",
           "assets"
         ],
         "title": "RepresentationOut",
+        "type": "object"
+      },
+      "SeriesEdit": {
+        "properties": {
+          "name": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "revision": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "run": {
+            "default": "",
+            "maxLength": 1024,
+            "title": "Run",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SeriesEdit",
+        "type": "object"
+      },
+      "SeriesOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "revision": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "run": {
+            "default": "",
+            "maxLength": 1024,
+            "title": "Run",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "id"
+        ],
+        "title": "SeriesOut",
         "type": "object"
       },
       "StatusOut": {
@@ -254,6 +440,36 @@
             "title": "Description",
             "type": "string"
           },
+          "editions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EditionEdit"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Editions"
+          },
+          "memberships": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MembershipEdit"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memberships"
+          },
           "revision": {
             "minimum": 1.0,
             "title": "Revision",
@@ -303,6 +519,13 @@
             "title": "Id",
             "type": "string"
           },
+          "memberships": {
+            "items": {
+              "$ref": "#/components/schemas/MembershipOut"
+            },
+            "title": "Memberships",
+            "type": "array"
+          },
           "revision": {
             "title": "Revision",
             "type": "integer"
@@ -319,7 +542,8 @@
           "description",
           "revision",
           "created_at",
-          "editions"
+          "editions",
+          "memberships"
         ],
         "title": "WorkOut",
         "type": "object"
@@ -470,7 +694,7 @@
         "operationId": "import_book_api_import_post",
         "requestBody": {
           "content": {
-            "application/epub+zip": {
+            "application/octet-stream": {
               "schema": {
                 "format": "binary",
                 "type": "string"
@@ -587,6 +811,179 @@
           }
         },
         "summary": "Cover"
+      }
+    },
+    "/api/series": {
+      "get": {
+        "operationId": "series_api_series_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 300,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SeriesOut"
+                  },
+                  "title": "Response Series Api Series Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Series"
+      },
+      "post": {
+        "operationId": "create_series_api_series_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriesEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Series"
+      }
+    },
+    "/api/series/{series_id}": {
+      "patch": {
+        "operationId": "edit_series_api_series__series_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriesEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Series"
+      }
+    },
+    "/api/series/{series_id}/works": {
+      "get": {
+        "operationId": "series_works_api_series__series_id__works_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkOut"
+                  },
+                  "title": "Response Series Works Api Series  Series Id  Works Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Series Works"
       }
     },
     "/api/session": {
