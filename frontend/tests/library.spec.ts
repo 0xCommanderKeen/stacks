@@ -334,6 +334,8 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   await page.getByRole('button', { name: 'Library', exact: true }).click();
   await page.locator('input[type=file]').setInputFiles('../backend/tests/fixtures/listening.m4b');
   await expect(page.getByRole('status')).toContainText(/added/);
+  await page.getByLabel('Search books or authors').fill('Listening Practice');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.locator('button.book').filter({ hasText: 'M4B' }).click();
   await page.getByRole('button', { name: 'Listen · M4B', exact: true }).waitFor();
   const saveRoute = `**/api/representations/${representation.id}/progress`;
@@ -413,4 +415,107 @@ test('audio persists through navigation, seeks, resumes and detects stale device
     true,
   );
   await page.screenshot({ path: testInfo.outputPath('audio-player.png'), fullPage: true });
+});
+
+test('personal shelves and repeated records survive reload and scope navigation', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(path.resolve('../samples/The Long Way Home.epub'));
+  await expect(page.getByRole('status')).toContainText(/added/);
+  await page.getByRole('combobox', { name: 'Library scope' }).selectOption('all');
+  await page.getByLabel('Search books or authors').fill('The Long Way Home');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Open The Long Way Home', exact: true }).click();
+  const personal = page.getByRole('region', { name: 'Personal library details' });
+  const workId = new URL(page.url()).searchParams.get('book');
+  const beforeCount = (await (await page.request.get(`/api/works/${workId}/records`)).json()).total;
+  await personal.getByRole('button', { name: 'Edit personal details' }).click();
+  await personal.getByRole('combobox', { name: 'Shelf', exact: true }).selectOption('archive');
+  await personal.getByRole('combobox', { name: 'Rating', exact: true }).selectOption('4');
+  await personal.getByLabel('Tags, separated by commas').fill('summer, return to');
+  await personal
+    .getByLabel('Personal notes')
+    .fill('For a long afternoon. Keep the original edition.');
+  await personal.getByRole('button', { name: 'Save personal details' }).click();
+  await expect(personal.getByRole('status')).toContainText('Personal details saved');
+  for (const kind of ['read', 'listen']) {
+    await personal.getByRole('button', { name: 'Add reading record' }).click();
+    await personal.getByRole('combobox', { name: 'Activity', exact: true }).selectOption(kind);
+    await personal.getByLabel('Started', { exact: true }).fill('2026-08-01');
+    await personal.getByLabel('Finished (optional)').fill('2026-08-15');
+    await personal.getByRole('button', { name: 'Save reading record' }).click();
+    await expect(personal.getByRole('status')).toContainText('Reading record saved');
+  }
+  await page.reload();
+  await expect(personal.getByText('In your archive · Your choice · 4 / 5')).toBeVisible();
+  await expect(
+    personal.getByText('For a long afternoon. Keep the original edition.'),
+  ).toBeVisible();
+  await expect(personal.locator('li')).toHaveCount(Math.min(beforeCount + 2, 5));
+  expect((await (await page.request.get(`/api/works/${workId}/records`)).json()).total).toBe(
+    beforeCount + 2,
+  );
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Library scope' }).selectOption('library');
+  await expect(
+    page.getByRole('button', { name: 'Open The Long Way Home', exact: true }),
+  ).toBeHidden();
+  await page.getByRole('combobox', { name: 'Library scope' }).selectOption('archive');
+  await expect(
+    page.getByRole('button', { name: 'Open The Long Way Home', exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('combobox', { name: 'Library scope' })).toHaveValue('archive');
+  await page.getByRole('button', { name: 'Open The Long Way Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  await expect(page.getByRole('combobox', { name: 'Library scope' })).toHaveValue('archive');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.getByRole('button', { name: 'Open The Long Way Home', exact: true }).click();
+  await personal.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath('personal-library.png'), fullPage: true });
+});
+
+test('archiving the final book on a page returns to the last populated page', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  const prefix = `Shelf Test ${testInfo.project.name}`;
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(
+      Array.from({ length: 25 }, (_, i) =>
+        path.resolve(`../samples/${prefix} ${String(i).padStart(2, '0')}.epub`),
+      ),
+    );
+  await expect(page.getByRole('status')).toContainText('25 books added');
+  await page.getByLabel('Search books or authors').fill(prefix);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Next →', exact: true }).click();
+  await expect(page).toHaveURL(/offset=24/);
+  await page.locator('button.book').click();
+  const personal = page.getByRole('region', { name: 'Personal library details' });
+  await personal.getByRole('button', { name: 'Edit personal details' }).click();
+  await personal.getByRole('combobox', { name: 'Shelf', exact: true }).selectOption('archive');
+  await personal.getByRole('button', { name: 'Save personal details' }).click();
+  await expect(personal.getByRole('status')).toContainText('Personal details saved');
+  await expect(page).not.toHaveURL(/offset=/);
+  await expect(page).toHaveURL(/book=/);
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  await expect(page.locator('button.book')).toHaveCount(24);
+  await page.reload();
+  await expect(page.locator('button.book')).toHaveCount(24);
+  // An invalid empty-result deep link also normalizes its offset.
+  await page.goto('/?q=nothing-owned-with-this-name&offset=240');
+  await expect(page.getByRole('heading', { name: 'No books found.' })).toBeVisible();
+  await expect(page).not.toHaveURL(/offset=/);
 });

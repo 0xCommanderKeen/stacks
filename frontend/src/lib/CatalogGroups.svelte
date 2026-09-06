@@ -148,7 +148,9 @@
           </p>{/if}
         {#each preview.conflicts as conflict}
           <label
-            >{conflict.field}<select bind:value={resolutions[conflict.field]}
+            >{conflict.field.startsWith('personal:')
+              ? 'Personal ' + conflict.field.slice(9)
+              : conflict.field}<select bind:value={resolutions[conflict.field]}
               ><option value="">Choose which to keep</option><option value="target"
                 >Keep target: {conflict.target}</option
               ><option value="source">Keep source: {conflict.source}</option></select

@@ -754,3 +754,18 @@ body:has(.player) .workspace {
   border: 0;
   background: transparent;
 }
+
+.scope-selector {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+.scope-selector select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.6rem;
+}

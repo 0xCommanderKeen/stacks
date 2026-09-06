@@ -397,6 +397,59 @@ export interface paths {
     patch: operations['edit_api_works__work_id__patch'];
     trace?: never;
   };
+  '/api/works/{work_id}/personal': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Personal */
+    patch: operations['personal_api_works__work_id__personal_patch'];
+    trace?: never;
+  };
+  '/api/works/{work_id}/records': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Records */
+    get: operations['records_api_works__work_id__records_get'];
+    put?: never;
+    /** Add Record */
+    post: operations['add_record_api_works__work_id__records_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/works/{work_id}/records/{record_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Remove Record */
+    delete: operations['remove_record_api_works__work_id__records__record_id__delete'];
+    options?: never;
+    head?: never;
+    /** Edit Record */
+    patch: operations['edit_record_api_works__work_id__records__record_id__patch'];
+    trace?: never;
+  };
   '/health/live': {
     parameters: {
       query?: never;
@@ -644,6 +697,48 @@ export interface components {
       /** Total */
       total: number;
     };
+    /** PersonalEdit */
+    PersonalEdit: {
+      /**
+       * Notes
+       * @default
+       */
+      notes: string;
+      /** Rating */
+      rating?: number | null;
+      /** Revision */
+      revision: number;
+      /** Shelf Override */
+      shelf_override?: ('library' | 'archive') | null;
+      /** Tags */
+      tags?: string[];
+    };
+    /** PersonalOut */
+    PersonalOut: {
+      /**
+       * Default Shelf
+       * @default library
+       * @enum {string}
+       */
+      default_shelf: 'library' | 'archive';
+      /**
+       * Notes
+       * @default
+       */
+      notes: string;
+      /** Rating */
+      rating?: number | null;
+      /**
+       * Shelf
+       * @default library
+       * @enum {string}
+       */
+      shelf: 'library' | 'archive';
+      /** Shelf Override */
+      shelf_override?: ('library' | 'archive') | null;
+      /** Tags */
+      tags?: string[];
+    };
     /** PlaybackOut */
     PlaybackOut: {
       progress: components['schemas']['ProgressOut'];
@@ -697,6 +792,67 @@ export interface components {
       speed: number;
       /** Updated At */
       updated_at: string | null;
+    };
+    /** RecordEdit */
+    RecordEdit: {
+      /** Finished */
+      finished?: string | null;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'read' | 'listen';
+      /** Representation Id */
+      representation_id?: string | null;
+      /**
+       * Revision
+       * @default 1
+       */
+      revision: number;
+      /**
+       * Started
+       * Format: date
+       */
+      started: string;
+    };
+    /** RecordOut */
+    RecordOut: {
+      /** Created At */
+      created_at: string;
+      /** Finished */
+      finished?: string | null;
+      /** Id */
+      id: string;
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'read' | 'listen';
+      /** Representation Id */
+      representation_id?: string | null;
+      /**
+       * Revision
+       * @default 1
+       */
+      revision: number;
+      /**
+       * Started
+       * Format: date
+       */
+      started: string;
+      /** Work Id */
+      work_id: string;
+    };
+    /** RecordPage */
+    RecordPage: {
+      /** Items */
+      items: components['schemas']['RecordOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
     };
     /** RepresentationOut */
     RepresentationOut: {
@@ -812,6 +968,7 @@ export interface components {
       id: string;
       /** Memberships */
       memberships: components['schemas']['MembershipOut'][];
+      personal: components['schemas']['PersonalOut'];
       /** Revision */
       revision: number;
       /** Title */
@@ -914,6 +1071,7 @@ export interface operations {
         q?: string;
         limit?: number;
         offset?: number;
+        scope?: 'all' | 'library' | 'archive';
       };
       header?: never;
       path?: never;
@@ -1541,6 +1699,178 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['WorkOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  personal_api_works__work_id__personal_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PersonalEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  records_api_works__work_id__records_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RecordPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  add_record_api_works__work_id__records_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RecordEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RecordOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  remove_record_api_works__work_id__records__record_id__delete: {
+    parameters: {
+      query: {
+        revision: number;
+      };
+      header?: never;
+      path: {
+        work_id: string;
+        record_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  edit_record_api_works__work_id__records__record_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+        record_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RecordEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RecordOut'];
         };
       };
       /** @description Validation Error */

@@ -4,6 +4,7 @@
   import Organization from '$lib/Organization.svelte';
   import CatalogGroups from '$lib/CatalogGroups.svelte';
   import AudioPlayer from '$lib/AudioPlayer.svelte';
+  import Personal from '$lib/Personal.svelte';
   import type { components } from '$lib/schema';
   import {
     ApiError,
@@ -26,6 +27,7 @@
   let total = $state(0);
   let q = $state('');
   let appliedQuery = $state('');
+  let scope = $state('library');
   let offset = $state(0);
   let selected = $state<Book | null>(null);
   let view = $state<'library' | 'settings' | 'home'>('library');
@@ -64,10 +66,23 @@
 
   async function load(nextOffset = offset, query = appliedQuery) {
     const sequence = ++loadSequence;
-    const result = await json<Page>(
-      `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}`,
+    let result = await json<Page>(
+      `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}&scope=${scope}`,
     );
     if (sequence !== loadSequence) return;
+    if (!result.items.length && nextOffset > 0) {
+      nextOffset = result.total ? Math.floor((result.total - 1) / pageSize) * pageSize : 0;
+      if (result.total) {
+        result = await json<Page>(
+          `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}&scope=${scope}`,
+        );
+        if (sequence !== loadSequence) return;
+      }
+      const params = new URLSearchParams(location.search);
+      if (nextOffset) params.set('offset', String(nextOffset));
+      else params.delete('offset');
+      history.replaceState({}, '', params.size ? `?${params}` : location.pathname);
+    }
     books = result.items;
     total = result.total;
     offset = nextOffset;
@@ -78,6 +93,9 @@
   async function openFromUrl() {
     const params = new URLSearchParams(location.search);
     q = params.get('q') || '';
+    scope = ['all', 'library', 'archive'].includes(params.get('scope') || '')
+      ? params.get('scope')!
+      : 'library';
     const requestedOffset = Number(params.get('offset') || 0);
     offset = Number.isSafeInteger(requestedOffset) && requestedOffset >= 0 ? requestedOffset : 0;
     view =
@@ -118,6 +136,7 @@
 
   function setUrl() {
     const params = new URLSearchParams();
+    if (scope !== 'library') params.set('scope', scope);
     if (appliedQuery) params.set('q', appliedQuery);
     if (offset) params.set('offset', String(offset));
     if (selected) params.set('book', selected.id);
@@ -441,7 +460,11 @@
       <div class="detail">
         <div class="detail-cover"><Cover book={selected} large /></div>
         <section class="detail-copy">
-          <div class="eyebrow">IN YOUR LIBRARY · {formats(selected)}</div>
+          <div class="eyebrow">
+            IN YOUR {selected.personal.shelf === 'archive' ? 'ARCHIVE' : 'LIBRARY'} · {formats(
+              selected,
+            )}
+          </div>
           {#if editing}
             <form onsubmit={save} class="edit-form">
               <h1>Edit book</h1>
@@ -504,6 +527,13 @@
                   setUrl();
                 }}
               />{/key}
+            {#key selected.id}<Personal
+                book={selected}
+                onupdate={(book) => {
+                  selected = book;
+                  void load().catch(fail);
+                }}
+              />{/key}
             <dl class="book-facts">
               <div>
                 <dt>Language</dt>
@@ -554,6 +584,19 @@
       </div>
       <div class="catalog-toolbar">
         <div class="catalog-count">Your books <span>{status?.books || 0}</span></div>
+        <label class="scope-selector"
+          >Browse<select
+            aria-label="Library scope"
+            bind:value={scope}
+            onchange={async () => {
+              offset = 0;
+              setUrl();
+              await load().catch(fail);
+            }}
+            ><option value="library">Library shelf</option><option value="archive">Archive</option
+            ><option value="all">Everything owned</option></select
+          ></label
+        >
         <form class="search" onsubmit={search}>
           <label class="sr-only" for="search">Search books or authors</label><input
             id="search"
@@ -566,11 +609,17 @@
       {#if !books.length}
         <section class="empty">
           <div class="empty-mark" aria-hidden="true">▥</div>
-          <h2>{appliedQuery ? 'No books found.' : 'Every library begins with one book.'}</h2>
+          <h2>
+            {appliedQuery
+              ? 'No books found.'
+              : scope === 'archive'
+                ? 'Your archive is empty.'
+                : 'Nothing on this shelf yet.'}
+          </h2>
           <p>
             {appliedQuery
               ? 'Try a different title or author.'
-              : 'Add a book, comic, or audiobook. We’ll keep the details in order and the originals safe.'}
+              : 'Add a publication or choose Everything owned to search across your shelves.'}
           </p>
           {#if !appliedQuery}<button
               class="secondary"

@@ -24,6 +24,12 @@ for index in range(26):
     Path(f"samples/Page Test {index:02d}.epub").write_bytes(
         epub_bytes(f"Page Test {index:02d}", authors=("Pagination Fixture",), cover=False)
     )
+for viewport in ("desktop", "phone"):
+    for index in range(25):
+        name = f"Shelf Test {viewport} {index:02d}"
+        Path(f"samples/{name}.epub").write_bytes(
+            epub_bytes(name, authors=("Shelf Pagination Fixture",), cover=False)
+        )
 with tempfile.TemporaryDirectory(prefix="stacks-browser-") as directory:
     library = Library(Path(directory))
     library.import_files(

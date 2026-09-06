@@ -1,6 +1,7 @@
+from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class AssetOut(BaseModel):
@@ -73,6 +74,57 @@ class EditionEdit(BaseModel):
     abridgement: Literal["unknown", "unabridged", "abridged"] = "unknown"
 
 
+class PersonalValues(BaseModel):
+    shelf_override: Literal["library", "archive"] | None = None
+    notes: str = Field(default="", max_length=20000)
+    rating: int | None = Field(default=None, ge=1, le=5)
+    tags: list[str] = Field(default_factory=list, max_length=100)
+
+    @field_validator("tags")
+    @classmethod
+    def clean_tags(cls, values):
+        tags = list(dict.fromkeys(value.strip() for value in values if value.strip()))
+        if any(len(tag) > 100 for tag in tags):
+            raise ValueError("Tags must be 100 characters or fewer.")
+        return tags
+
+
+class PersonalEdit(PersonalValues):
+    revision: int = Field(ge=1)
+
+
+class PersonalOut(PersonalValues):
+    default_shelf: Literal["library", "archive"] = "library"
+    shelf: Literal["library", "archive"] = "library"
+
+
+class RecordEdit(BaseModel):
+    revision: int = Field(default=1, ge=1)
+    representation_id: str | None = None
+    kind: Literal["read", "listen"]
+    started: date
+    finished: date | None = None
+
+    @model_validator(mode="after")
+    def chronological(self):
+        if self.finished is not None and self.finished < self.started:
+            raise ValueError("Finish date cannot precede start date.")
+        return self
+
+
+class RecordOut(RecordEdit):
+    id: str
+    work_id: str
+    created_at: str
+
+
+class RecordPage(BaseModel):
+    items: list[RecordOut]
+    total: int
+    limit: int
+    offset: int
+
+
 class WorkOut(BaseModel):
     id: str
     title: str
@@ -82,6 +134,7 @@ class WorkOut(BaseModel):
     created_at: str
     editions: list[EditionOut]
     memberships: list[MembershipOut]
+    personal: PersonalOut
 
 
 class CatalogPage(BaseModel):

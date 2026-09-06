@@ -7,7 +7,7 @@ import time
 from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import unquote
 
 from anyio import to_thread
@@ -21,6 +21,7 @@ from starlette.background import BackgroundTask
 
 from stacks.backup import backup
 from stacks.config import Settings
+from stacks.curation import Curation
 from stacks.epub import InvalidBook
 from stacks.inspection import FORMATS
 from stacks.library import Library
@@ -37,9 +38,13 @@ from stacks.schemas import (
     Login,
     OperationOut,
     OperationPage,
+    PersonalEdit,
     PlaybackOut,
     ProgressEdit,
     ProgressOut,
+    RecordEdit,
+    RecordOut,
+    RecordPage,
     SeriesEdit,
     SeriesOut,
     SeriesPage,
@@ -190,8 +195,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         q: str = Query(default="", max_length=300),
         limit: int = Query(default=60, ge=1, le=100),
         offset: int = Query(default=0, ge=0),
+        scope: Literal["all", "library", "archive"] = "all",
     ):
-        return lib.list(q, limit, offset)
+        return lib.list(q, limit, offset, scope=scope)
 
     @app.get("/api/works/{work_id}", response_model=WorkOut)
     def work(work_id: str, lib: Auth):
@@ -201,6 +207,43 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def edit(work_id: str, body: WorkEdit, lib: Auth):
         try:
             return lib.edit(work_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.patch("/api/works/{work_id}/personal", response_model=WorkOut)
+    def personal(work_id: str, body: PersonalEdit, lib: Auth):
+        try:
+            return Curation(lib).edit(work_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/works/{work_id}/records", response_model=RecordPage)
+    def records(
+        work_id: str, lib: Auth, limit: int = Query(24, ge=1, le=100), offset: int = Query(0, ge=0)
+    ):
+        try:
+            return Curation(lib).records(work_id, limit, offset)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post("/api/works/{work_id}/records", response_model=RecordOut)
+    def add_record(work_id: str, body: RecordEdit, lib: Auth):
+        try:
+            return Curation(lib).save_record(work_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.patch("/api/works/{work_id}/records/{record_id}", response_model=RecordOut)
+    def edit_record(work_id: str, record_id: str, body: RecordEdit, lib: Auth):
+        try:
+            return Curation(lib).save_record(work_id, body, record_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.delete("/api/works/{work_id}/records/{record_id}", status_code=204)
+    def remove_record(work_id: str, record_id: str, lib: Auth, revision: int = Query(ge=1)):
+        try:
+            Curation(lib).delete_record(work_id, record_id, revision)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from None
 

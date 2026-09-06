@@ -23,7 +23,9 @@ from stacks.models import (
     Credit,
     Edition,
     ImportOperation,
+    PersonalState,
     Progress,
+    ReadingRecord,
     Representation,
     Series,
     SeriesMembership,
@@ -34,6 +36,7 @@ from stacks.models import (
 from stacks.schemas import (
     CatalogPage,
     ImportResult,
+    PersonalOut,
     SeriesEdit,
     SeriesOut,
     SeriesPage,
@@ -66,9 +69,23 @@ def series_out(series: Series) -> SeriesOut:
     return SeriesOut(id=series.id, name=series.name, run=series.run, revision=series.revision)
 
 
+def personal_out(state):
+    if state is None:
+        return PersonalOut()
+    return PersonalOut(
+        default_shelf=state.default_shelf,
+        shelf_override=state.shelf_override,
+        shelf=state.shelf_override or state.default_shelf,
+        notes=state.notes,
+        rating=state.rating,
+        tags=json.loads(state.tags_json),
+    )
+
+
 def work_out(work: Work) -> WorkOut:
     return WorkOut(
         id=work.id,
+        personal=personal_out(work.personal),
         title=work.title,
         authors=[c.contributor.name for c in work.credits],
         description=work.description,
@@ -156,12 +173,24 @@ class Library:
         return path
 
     def list(
-        self, q: str = "", limit: int = 60, offset: int = 0, series_id: str | None = None
+        self,
+        q: str = "",
+        limit: int = 60,
+        offset: int = 0,
+        series_id: str | None = None,
+        scope: str = "all",
     ) -> CatalogPage:
         with self.sessions() as session:
             query = select(Work).where(
                 ~select(WorkRedirect.source_id).where(WorkRedirect.source_id == Work.id).exists()
             )
+            if scope != "all":
+                query = query.outerjoin(PersonalState).where(
+                    func.coalesce(
+                        PersonalState.shelf_override, PersonalState.default_shelf, "library"
+                    )
+                    == scope
+                )
             ordering = (Work.created_at.desc(), Work.id)
             if series_id:
                 if session.get(Series, series_id) is None:
@@ -185,6 +214,7 @@ class Library:
             total = session.scalar(select(func.count()).select_from(query.subquery()))
             query = (
                 query.options(
+                    selectinload(Work.personal),
                     selectinload(Work.memberships).selectinload(SeriesMembership.series),
                     selectinload(Work.credits).selectinload(Credit.contributor),
                     selectinload(Work.editions)
@@ -495,6 +525,8 @@ class Library:
                 WorkRedirect,
                 CatalogOperation,
                 Progress,
+                PersonalState,
+                ReadingRecord,
             ):
                 tables[model.__tablename__] = [
                     dict(row)
@@ -502,4 +534,4 @@ class Library:
                         select(model.__table__).order_by(*model.__table__.primary_key.columns)
                     ).mappings()
                 ]
-            return {"schema_version": 4, "roots": {"managed": "managed/"}, "tables": tables}
+            return {"schema_version": 5, "roots": {"managed": "managed/"}, "tables": tables}
