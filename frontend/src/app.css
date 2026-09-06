@@ -769,3 +769,30 @@ body:has(.player) .workspace {
   border: 1px solid var(--line);
   padding: 0.6rem;
 }
+
+.media-tabs {
+  display: flex;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.media-tabs button {
+  font: inherit;
+  padding: 0.8rem 0.2rem;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+}
+.media-tabs button.active {
+  color: var(--ink);
+  border-bottom: 3px solid var(--ink);
+}
+
+.page-heading.compact {
+  padding-bottom: 1.5rem;
+  gap: 1.5rem;
+}
+.page-heading.compact h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  margin-bottom: 0;
+}

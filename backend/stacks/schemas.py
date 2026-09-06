@@ -46,6 +46,7 @@ class SeriesEdit(BaseModel):
 
 class SeriesOut(SeriesEdit):
     id: str
+    following: bool
 
 
 class SeriesPage(BaseModel):
@@ -269,3 +270,38 @@ class ContinuePage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class FollowEdit(BaseModel):
+    revision: int = Field(ge=1)
+    following: bool
+
+
+class RunOut(BaseModel):
+    series: SeriesOut
+    owned: int
+    finished: int
+
+
+class RunPage(BaseModel):
+    items: list[RunOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class NextOut(BaseModel):
+    series: SeriesOut
+    work: WorkOut
+    designation: str
+
+
+class NextPage(BaseModel):
+    items: list[NextOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class RunWorksPage(CatalogPage):
+    finished_work_ids: list[str]

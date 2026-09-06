@@ -66,7 +66,13 @@ def write_durable(path: Path, content: bytes):
 
 
 def series_out(series: Series) -> SeriesOut:
-    return SeriesOut(id=series.id, name=series.name, run=series.run, revision=series.revision)
+    return SeriesOut(
+        id=series.id,
+        name=series.name,
+        run=series.run,
+        revision=series.revision,
+        following=series.following,
+    )
 
 
 def personal_out(state):
@@ -179,6 +185,8 @@ class Library:
         offset: int = 0,
         series_id: str | None = None,
         scope: str = "all",
+        medium: str | None = None,
+        unassigned: bool = False,
     ) -> CatalogPage:
         with self.sessions() as session:
             query = select(Work).where(
@@ -190,6 +198,12 @@ class Library:
                         PersonalState.shelf_override, PersonalState.default_shelf, "library"
                     )
                     == scope
+                )
+            if unassigned:
+                query = query.where(~Work.memberships.any())
+            if medium:
+                query = query.where(
+                    Work.editions.any((Edition.medium == medium) & Edition.representations.any())
                 )
             ordering = (Work.created_at.desc(), Work.id)
             if series_id:
@@ -275,6 +289,8 @@ class Library:
                     member = existing.get(details.series_id) or SeriesMembership(series=series)
                     member.designation, member.position = details.designation, details.position
                     updated.append(member)
+                    if series.following and work.personal is not None:
+                        work.personal.default_shelf = "library"
                 work.memberships = updated
             work.title, work.description = edit.title, edit.description
             work.revision += 1
@@ -534,4 +550,4 @@ class Library:
                         select(model.__table__).order_by(*model.__table__.primary_key.columns)
                     ).mappings()
                 ]
-            return {"schema_version": 5, "roots": {"managed": "managed/"}, "tables": tables}
+            return {"schema_version": 6, "roots": {"managed": "managed/"}, "tables": tables}
