@@ -1,6 +1,6 @@
 # Stacks: clean-start implementation plan
 
-Date: 2026-09-06. Status: implementation proposal; application development and deployment have not started. Owner decisions: start from scratch with no migration; name the app Stacks and the repository `stacks`; make the repository public.
+Date: 2026-09-06. Status: implementation underway; the first EPUB workflow is described in [first-book.md](../first-book.md). Later phases remain planned; no live NAS deployment has been performed. Owner decisions: start from scratch with no migration; name the app Stacks and the repository `stacks`; make the repository public.
 
 ## 1. Recommendation
 

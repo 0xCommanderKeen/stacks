@@ -1,0 +1,16 @@
+.env
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+data/
+samples/
+node_modules/
+.svelte-kit/
+frontend/build/
+frontend/test-results/
+frontend/playwright-report/
+*.sqlite*
+*.backup.zip
+.DS_Store
