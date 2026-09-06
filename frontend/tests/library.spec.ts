@@ -791,3 +791,40 @@ test('collection history navigation disables edits until the requested identity 
   expect(unchanged.name).toBe(second.name);
   expect(unchanged.revision).toBe(second.revision);
 });
+
+test('register an original in Archive and explain external backup protection', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const sources = page.getByRole('region', { name: 'Read-only sources', exact: true });
+  await expect(sources).toContainText('Protect source originals separately.');
+  await sources.getByLabel('Source', { exact: true }).selectOption('sample');
+  await sources
+    .getByLabel('Paths within this source')
+    .fill(`Registered ${testInfo.project.name}.epub`);
+  await sources.getByRole('button', { name: 'Register originals', exact: true }).click();
+  await expect(sources.getByRole('status')).toContainText('Registered in Archive.');
+  await sources.getByRole('button', { name: 'Open registered work' }).click();
+  await expect(
+    page.getByRole('heading', { name: `A registered book ${testInfo.project.name}`, exact: true }),
+  ).toBeVisible();
+  const originals = page.getByRole('region', { name: 'Original availability', exact: true });
+  await expect(originals).toContainText('Registered in sample');
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Download EPUB', exact: true }).click();
+  expect((await download).suggestedFilename()).toBe(`Registered ${testInfo.project.name}.epub`);
+  await page.reload();
+  await expect(originals).toContainText('Registered in sample');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Library backup', exact: true })).toBeVisible();
+  await expect(
+    page.getByText('Registered source originals are not included;', { exact: false }),
+  ).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('sources.png'), fullPage: true });
+});

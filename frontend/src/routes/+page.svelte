@@ -5,6 +5,8 @@
   import CatalogGroups from '$lib/CatalogGroups.svelte';
   import AudioPlayer from '$lib/AudioPlayer.svelte';
   import Personal from '$lib/Personal.svelte';
+  import SourceRoots from '$lib/SourceRoots.svelte';
+  import OriginalStatus from '$lib/OriginalStatus.svelte';
   import RunBrowser from '$lib/RunBrowser.svelte';
   import Collections from '$lib/Collections.svelte';
   import CollectionNext from '$lib/CollectionNext.svelte';
@@ -350,7 +352,7 @@
     error = '';
     try {
       saveBlob(await (await request('/backup', { method: 'POST' })).blob(), 'stacks.backup.zip');
-      notice = 'Your full library backup is ready.';
+      notice = 'Your library backup is ready. Registered originals need separate protection.';
     } catch (cause) {
       fail(cause);
     } finally {
@@ -533,10 +535,11 @@
       <div class="settings-grid">
         <section class="settings-card">
           <span class="index">01</span>
-          <h2>Full backup</h2>
+          <h2>Library backup</h2>
           <p>
-            Save your catalog, book files, and covers together. Keep the backup somewhere separate
-            from your library.
+            Save your catalog, covers, and Stacks-owned original files together. Registered source
+            originals are not included; protect them separately. Keep this backup on separate
+            storage.
           </p>
           <button class="primary" onclick={makeBackup} disabled={!!busy}
             >{busy === 'backup' ? 'Preparing backup…' : 'Download backup'} <span>↓</span></button
@@ -549,12 +552,13 @@
           <span class="index">02</span>
           <h2>Catalog export</h2>
           <p>
-            Take your book details and file references with you in an open JSON format. Original
-            book files are included in the full backup.
+            Take your book details and file references with you in an open JSON format. This export
+            contains no original files.
           </p>
           <a class="button secondary" href="/api/export" download>Export catalog <span>↓</span></a>
         </section>
       </div>
+      <SourceRoots onopen={open} />
     {:else if selected}
       <button
         class="back"
@@ -621,6 +625,7 @@
               {selected.description ||
                 'A good book needs no introduction. Add a description to make this one easier to find again.'}
             </p>
+            <OriginalStatus book={selected} />
             <Organization
               book={selected}
               onupdate={(book) => {

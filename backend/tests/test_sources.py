@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import zipfile
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -192,3 +193,88 @@ def test_same_relative_name_in_two_roots_and_duplicate_current_owner(source_clie
     assert second["id"] != first["id"]
     commit(client, preview(client, first, second))
     assert register(client)["work"]["id"] == second["id"]
+
+
+def test_populated_previous_schema_keeps_audio_progress_during_asset_rebuild(tmp_path):
+    import stacks.db as db
+    from alembic import command
+    from alembic.config import Config
+    from stacks.models import Progress
+    from stacks.reading import Reading
+
+    directory = tmp_path / "data"
+    library = Library(directory)
+    work = library.import_file(FIXTURES / "listening.m4b", "listening.m4b").work
+    rep = work.editions[0].representations[0]
+    config = Config()
+    config.set_main_option("script_location", str(Path(db.__file__).parent / "migrations"))
+    with library.engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.downgrade(config, "0007")
+    with library.sessions.begin() as session:
+        session.add(
+            Progress(
+                representation_id=rep.id,
+                asset_id=rep.assets[0].id,
+                position=8,
+                speed=1.5,
+                completed=False,
+                revision=3,
+            )
+        )
+    library.close()
+    reopened = Library(directory)
+    try:
+        progress = Reading(reopened).playback(rep.id).progress
+        assert (progress.position, progress.revision, progress.asset_id) == (8, 3, rep.assets[0].id)
+    finally:
+        reopened.close()
+
+
+def test_failed_schema_upgrade_rolls_back_ddl_and_restores_foreign_keys(tmp_path, monkeypatch):
+    import sqlite3
+
+    import stacks.db as db
+    from sqlalchemy.exc import IntegrityError
+    from stacks.models import Progress
+
+    directory = tmp_path / "data"
+    library = Library(directory)
+    work = library.import_file(FIXTURES / "listening.m4b", "listening.m4b").work
+    rep = work.editions[0].representations[0]
+    with library.sessions.begin() as session:
+        session.add(
+            Progress(
+                representation_id=rep.id,
+                asset_id=rep.assets[0].id,
+                position=2,
+                speed=1,
+                completed=False,
+                revision=1,
+            )
+        )
+    library.close()
+    original = db.command.upgrade
+
+    def broken(config, target):
+        original(config, target)
+        connection = config.attributes["connection"]
+        connection.exec_driver_sql("CREATE TABLE failed_migration (id INTEGER)")
+        connection.exec_driver_sql("DELETE FROM asset")
+
+    monkeypatch.setattr(db.command, "upgrade", broken)
+    with pytest.raises(ValueError, match="relationship"):
+        Library(directory)
+    with sqlite3.connect(directory / "catalog.sqlite3") as connection:
+        assert connection.execute("SELECT count(*) FROM asset").fetchone() == (1,)
+        assert not connection.execute(
+            "SELECT name FROM sqlite_master WHERE name='failed_migration'"
+        ).fetchall()
+        assert not connection.execute("PRAGMA foreign_key_check").fetchall()
+    monkeypatch.setattr(db.command, "upgrade", original)
+    reopened = Library(directory)
+    try:
+        with pytest.raises(IntegrityError), reopened.engine.begin() as connection:
+            connection.exec_driver_sql("DELETE FROM asset")
+    finally:
+        reopened.close()

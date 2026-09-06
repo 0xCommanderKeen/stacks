@@ -25,7 +25,24 @@ def initialize(path: Path):
         connection.exec_driver_sql("PRAGMA journal_mode=WAL")
     config = Config()
     config.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
-    with engine.begin() as connection:
-        config.attributes["connection"] = connection
-        command.upgrade(config, "head")
+    try:
+        with engine.connect() as connection:
+            # SQLite batch rebuilds briefly drop a referenced table. Disable enforcement
+            # only on this startup connection, then validate every relationship before commit.
+            # An explicit BEGIN also makes SQLite DDL roll back on migration failure.
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            connection.commit()
+            try:
+                with connection.begin():
+                    connection.exec_driver_sql("BEGIN IMMEDIATE")
+                    config.attributes["connection"] = connection
+                    command.upgrade(config, "head")
+                    if connection.exec_driver_sql("PRAGMA foreign_key_check").fetchone():
+                        raise ValueError("Schema upgrade failed relationship validation.")
+            finally:
+                connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+                connection.commit()
+    except BaseException:
+        engine.dispose()
+        raise
     return engine, sessionmaker(engine, expire_on_commit=False)

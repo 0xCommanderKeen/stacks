@@ -34,7 +34,14 @@ for viewport in ("desktop", "phone"):
         Path(f"samples/{name}.epub").write_bytes(
             epub_bytes(name, authors=("Shelf Pagination Fixture",), cover=False)
         )
-with tempfile.TemporaryDirectory(prefix="stacks-browser-") as directory:
+with (
+    tempfile.TemporaryDirectory(prefix="stacks-browser-") as directory,
+    tempfile.TemporaryDirectory(prefix="stacks-browser-source-") as source_directory,
+):
+    for viewport in ("desktop", "phone"):
+        Path(source_directory, f"Registered {viewport}.epub").write_bytes(
+            epub_bytes(f"A registered book {viewport}")
+        )
     library = Library(Path(directory))
     library.import_files(
         [
@@ -84,7 +91,12 @@ with tempfile.TemporaryDirectory(prefix="stacks-browser-") as directory:
     library.close()
     uvicorn.run(
         create_app(
-            Settings(data_dir=Path(directory), password="browser-test-password", _env_file=None)
+            Settings(
+                data_dir=Path(directory),
+                password="browser-test-password",
+                sources={"sample": Path(source_directory)},
+                _env_file=None,
+            )
         ),
         host="127.0.0.1",
         port=8123,

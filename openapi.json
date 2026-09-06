@@ -1,6 +1,29 @@
 {
   "components": {
     "schemas": {
+      "AssetAvailability": {
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "available",
+          "detail"
+        ],
+        "title": "AssetAvailability",
+        "type": "object"
+      },
       "AssetOut": {
         "properties": {
           "id": {
@@ -9,6 +32,10 @@
           },
           "original_name": {
             "title": "Original Name",
+            "type": "string"
+          },
+          "root": {
+            "title": "Root",
             "type": "string"
           },
           "sha256": {
@@ -22,6 +49,7 @@
         },
         "required": [
           "id",
+          "root",
           "original_name",
           "size",
           "sha256"
@@ -1519,6 +1547,58 @@
           "offset"
         ],
         "title": "SeriesPage",
+        "type": "object"
+      },
+      "SourceOut": {
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "registered_assets": {
+            "title": "Registered Assets",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "alias",
+          "configured",
+          "available",
+          "registered_assets"
+        ],
+        "title": "SourceOut",
+        "type": "object"
+      },
+      "SourceRegistration": {
+        "properties": {
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 2000,
+            "minItems": 1,
+            "title": "Paths",
+            "type": "array"
+          },
+          "root": {
+            "maxLength": 64,
+            "title": "Root",
+            "type": "string"
+          }
+        },
+        "required": [
+          "root",
+          "paths"
+        ],
+        "title": "SourceRegistration",
         "type": "object"
       },
       "StatusOut": {
@@ -3216,6 +3296,66 @@
         "summary": "Session"
       }
     },
+    "/api/sources": {
+      "get": {
+        "operationId": "sources_api_sources_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourceOut"
+                  },
+                  "title": "Response Sources Api Sources Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sources"
+      }
+    },
+    "/api/sources/register": {
+      "post": {
+        "operationId": "register_source_api_sources_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register Source"
+      }
+    },
     "/api/status": {
       "get": {
         "operationId": "status_api_status_get",
@@ -3318,6 +3458,49 @@
           }
         },
         "summary": "Edit"
+      }
+    },
+    "/api/works/{work_id}/availability": {
+      "get": {
+        "operationId": "original_availability_api_works__work_id__availability_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "work_id",
+            "required": true,
+            "schema": {
+              "title": "Work Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssetAvailability"
+                  },
+                  "title": "Response Original Availability Api Works  Work Id  Availability Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Original Availability"
       }
     },
     "/api/works/{work_id}/personal": {
