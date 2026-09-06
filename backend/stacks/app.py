@@ -23,6 +23,7 @@ from starlette.background import BackgroundTask
 from stacks.backup import backup
 from stacks.collections import Collections
 from stacks.config import Settings
+from stacks.covers import Covers
 from stacks.curation import Curation
 from stacks.devices import Devices
 from stacks.epub import InvalidBook
@@ -244,6 +245,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def opds_asset(asset_id: str, reader: Reader):
         path, name, media = reader.asset(asset_id)
         return FileResponse(path, filename=name, media_type=media)
+
+    @app.get("/opds/works/{work_id}/cover")
+    def opds_work_cover(work_id: str, reader: Reader):
+        return FileResponse(reader.work_cover(work_id), media_type="image/jpeg")
 
     @app.get("/opds/covers/{representation_id}")
     def opds_cover(representation_id: str, reader: Reader):
@@ -721,6 +726,45 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         offset: int = Query(default=0, ge=0),
     ):
         return Reading(lib).continue_list(limit, offset)
+
+    @app.post("/api/works/{work_id}/cover", response_model=WorkOut)
+    async def choose_cover(work_id: str, request: Request, lib: Auth, revision: int = Query(ge=1)):
+        with tempfile.NamedTemporaryFile(dir=lib.uploads, prefix="upload-") as temporary:
+            size = 0
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > 10 * 1024**2:
+                    raise HTTPException(413, "Cover exceeds the 10 MiB limit.")
+                await to_thread.run_sync(temporary.write, chunk)
+            temporary.flush()
+            try:
+                return await to_thread.run_sync(
+                    Covers(lib).choose, work_id, revision, Path(temporary.name)
+                )
+            except InvalidBook as exc:
+                raise HTTPException(422, str(exc)) from None
+            except ValueError as exc:
+                raise HTTPException(409, str(exc)) from None
+            except OSError:
+                raise HTTPException(
+                    503, "Cover could not be saved. Check storage and retry."
+                ) from None
+
+    @app.delete("/api/works/{work_id}/cover", response_model=WorkOut)
+    def reset_cover(work_id: str, lib: Auth, revision: int = Query(ge=1)):
+        try:
+            return Covers(lib).reset(work_id, revision)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/works/{work_id}/cover")
+    def work_cover(work_id: str, lib: Auth):
+        return FileResponse(Covers(lib).thumbnail(work_id), media_type="image/jpeg")
+
+    @app.get("/api/works/{work_id}/cover/original")
+    def cover_original(work_id: str, lib: Auth):
+        path, name, mime = Covers(lib).original(work_id)
+        return FileResponse(path, filename=name, media_type=mime)
 
     @app.get("/api/representations/{representation_id}/cover")
     def cover(representation_id: str, lib: Auth):

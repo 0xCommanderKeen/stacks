@@ -23,6 +23,7 @@ from stacks.models import (
     Collection,
     CollectionEntry,
     Contributor,
+    CoverBlob,
     Credit,
     Edition,
     ImportOperation,
@@ -100,6 +101,7 @@ def personal_out(state):
 
 def work_out(work: Work) -> WorkOut:
     return WorkOut(
+        selected_cover_id=work.selected_cover_id,
         id=work.id,
         trashed_at=work.trashed_at,
         updated_at=work.updated_at,
@@ -867,6 +869,7 @@ class Library:
         with self.lock, self.engine.connect() as connection:
             tables = {}
             for model in (
+                CoverBlob,
                 Work,
                 Contributor,
                 Credit,
@@ -907,4 +910,4 @@ class Library:
             roots.update(
                 {row["root"]: {"kind": "external"} for row in tables["intake_job"] if row["root"]}
             )
-            return {"schema_version": 12, "roots": roots, "tables": tables}
+            return {"schema_version": 13, "roots": roots, "tables": tables}

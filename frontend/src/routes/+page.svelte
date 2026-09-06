@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Cover from '$lib/Cover.svelte';
+  import CoverChoice from '$lib/CoverChoice.svelte';
   import Organization from '$lib/Organization.svelte';
   import CatalogGroups from '$lib/CatalogGroups.svelte';
   import AudioPlayer from '$lib/AudioPlayer.svelte';
@@ -672,7 +673,13 @@
                 'A good book needs no introduction. Add a description to make this one easier to find again.'}
             </p>
             <OriginalStatus book={selected} />
-            {#if !selected.trashed_at}<Organization
+            {#if !selected.trashed_at}{#key selected.id}<CoverChoice
+                  book={selected}
+                  onupdate={(book) => {
+                    selected = book;
+                    void load().catch(fail);
+                  }}
+                />{/key}<Organization
                 book={selected}
                 onupdate={(book) => {
                   selected = book;

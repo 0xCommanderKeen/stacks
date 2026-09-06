@@ -84,7 +84,7 @@ def test_home_finished_archive_and_restore(client, tmp_path):
     personal(client, second, shelf_override="archive")
     assert client.get(next_url).json()["total"] == 0
     snapshot = client.app.state.library.export()
-    assert snapshot["schema_version"] == 12
+    assert snapshot["schema_version"] == 13
     archive = tmp_path / "backup.zip"
     backup(client.app.state.library, archive)
     restore(archive, tmp_path / "restored")

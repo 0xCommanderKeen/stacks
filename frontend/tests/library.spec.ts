@@ -1183,3 +1183,48 @@ test('connect and revoke a reader without sharing owner access', async ({ page }
     (await page.request.get(url, { headers: { Authorization: authorization } })).status(),
   ).toBe(401);
 });
+
+test('preview, choose, reload and reset a custom cover', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  const title = `Cover selection ${testInfo.project.name}`;
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(path.resolve(`../samples/${title}.epub`));
+  await expect(page.getByRole('status')).toContainText('added');
+  await page.getByLabel('Search books or authors').fill(title);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
+  const work = { id: new URL(page.url()).searchParams.get('book') };
+  await page.getByText('Choose a cover', { exact: true }).click();
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3ioAAAAASUVORK5CYII=',
+    'base64',
+  );
+  await page
+    .getByLabel('Cover image', { exact: true })
+    .setInputFiles({ name: 'my-cover.png', mimeType: 'image/png', buffer: png });
+  await expect(page.getByAltText('Preview of your chosen cover')).toBeVisible();
+  await page.getByRole('button', { name: 'Use this cover', exact: true }).click();
+  await expect(page.getByText('Chosen by you', { exact: true })).toBeVisible();
+  const selected = (await (await page.request.get(`/api/works/${work.id}`)).json())
+    .selected_cover_id;
+  expect(selected).toBeTruthy();
+  await page.reload();
+  await page.getByText('Choose a cover', { exact: true }).click();
+  await expect(page.getByText('Chosen by you', { exact: true })).toBeVisible();
+  const image = page.getByAltText(`Cover of ${title}`);
+  await expect(image).toHaveAttribute('src', new RegExp(selected));
+  const downloaded = await page.request.get(`/api/works/${work.id}/cover/original`);
+  expect(await downloaded.body()).toEqual(png);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('chosen-cover.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Use embedded cover', exact: true }).click();
+  await expect(page.getByText('Chosen by you', { exact: true })).toHaveCount(0);
+  expect(
+    (await (await page.request.get(`/api/works/${work.id}`)).json()).selected_cover_id,
+  ).toBeNull();
+});

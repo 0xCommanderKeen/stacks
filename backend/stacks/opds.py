@@ -6,8 +6,9 @@ from xml.etree.ElementTree import Element, SubElement, register_namespace, tostr
 
 from sqlalchemy import func, select
 
+from stacks.covers import Covers
 from stacks.inspection import FORMATS
-from stacks.models import Asset, Edition, PersonalState, Representation, Work, now
+from stacks.models import Asset, Edition, PersonalState, Representation, Work, WorkRedirect, now
 
 ATOM = "http://www.w3.org/2005/Atom"
 SEARCH = "http://a9.com/-/spec/opensearch/1.1/"
@@ -141,17 +142,17 @@ class Opds:
                 ),
                 None,
             )
-            if cover:
+            if cover or work.selected_cover_id:
                 link(
                     entry,
                     "http://opds-spec.org/image",
-                    self.url("/covers/" + cover.id),
+                    self.url("/works/" + work.id + "/cover"),
                     "image/jpeg",
                 )
         return document(feed)
 
     def _allowed(self, session, work):
-        if work is None or work.trashed_at:
+        if work is None or work.trashed_at or session.get(WorkRedirect, work.id):
             raise KeyError("Publication unavailable")
         personal = session.get(PersonalState, work.id)
         shelf = (personal.shelf_override or personal.default_shelf) if personal else "library"
@@ -204,11 +205,11 @@ class Opds:
                     media,
                     asset.original_name,
                 ).set("length", str(asset.size))
-                if representation.cover_path:
+                if representation.cover_path or work.selected_cover_id:
                     link(
                         entry,
                         "http://opds-spec.org/image",
-                        self.url("/covers/" + representation.id),
+                        self.url("/works/" + work.id + "/cover"),
                         "image/jpeg",
                     )
             return document(feed)
@@ -235,3 +236,8 @@ class Opds:
             edition = session.get(Edition, representation.edition_id)
             self._allowed(session, session.get(Work, edition.work_id))
             return self.library.resolve(representation.cover_path)
+
+    def work_cover(self, work_id):
+        with self.library.sessions() as session:
+            self._allowed(session, session.get(Work, work_id))
+            return Covers(self.library).thumbnail(work_id)

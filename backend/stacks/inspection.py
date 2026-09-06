@@ -159,6 +159,20 @@ def _audio(path: Path, fmt: str, facts: dict) -> bytes | None:
 
 
 def _inspect(path: Path, name: str) -> Inspection:
+    if name == "__custom_cover__":
+        if path.stat().st_size > 10 * 1024**2:
+            raise InvalidBook("Cover exceeds the 10 MiB limit.")
+        content = path.read_bytes()
+        cover = thumbnail(content)
+        if not cover:
+            raise InvalidBook("Choose a valid image of at most 12 million pixels.")
+        with Image.open(io.BytesIO(content)) as picture:
+            mime = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}.get(
+                picture.format
+            )
+        if not mime:
+            raise InvalidBook("Choose a JPEG, PNG or WebP cover.")
+        return Inspection({"media_type": mime}, cover)
     fmt = Path(name).suffix.lower().lstrip(".")
     if fmt not in FORMATS:
         raise InvalidBook("Unsupported publication format.")
