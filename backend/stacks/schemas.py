@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -57,10 +57,13 @@ class SeriesPage(BaseModel):
     offset: int
 
 
+SeriesPosition = Annotated[float, Field(allow_inf_nan=False, ge=-1e9, le=1e9)]
+
+
 class MembershipEdit(BaseModel):
     series_id: str
     designation: str = Field(default="", max_length=128)
-    position: float = Field(allow_inf_nan=False, ge=-1e9, le=1e9)
+    position: SeriesPosition
 
 
 class MembershipOut(MembershipEdit):
@@ -147,6 +150,7 @@ class CatalogPage(BaseModel):
 
 
 class ImportResult(BaseModel):
+    representation_id: str
     work: WorkOut
     duplicate: bool
 
@@ -459,7 +463,7 @@ class AcceptedMetadata(BaseModel):
     shelf: Literal["default", "library", "archive"] = "default"
     series_id: str | None = None
     designation: str = Field(default="", max_length=100)
-    position: float = Field(default=0, allow_inf_nan=False)
+    position: SeriesPosition = 0
 
     @field_validator("title")
     @classmethod

@@ -906,10 +906,26 @@ test('preview edited Inbox files, reload, then accept verified originals', async
   await acceptance
     .getByLabel('Batch authors (one per line)', { exact: true })
     .fill(`Batch author ${viewport}`);
+  let chosenRun = '';
+  for (let index = 0; index < 21; index++) {
+    const response = await page.request.post('/api/series', {
+      headers: { 'X-Stacks-Request': '1' },
+      data: { name: `Acceptance runs ${viewport}`, run: String(index).padStart(2, '0') },
+    });
+    expect(response.ok()).toBe(true);
+    if (index === 20) chosenRun = (await response.json()).id;
+  }
+  await acceptance.getByLabel('Find an existing run').fill(`Acceptance runs ${viewport}`);
+  await acceptance.getByRole('button', { name: 'Find runs', exact: true }).click();
+  await acceptance.getByRole('button', { name: 'Next runs', exact: true }).click();
+  await acceptance.getByLabel('Batch series/run').selectOption(chosenRun);
+  await acceptance.getByRole('button', { name: 'Previous runs', exact: true }).click();
+  await expect(acceptance.getByLabel('Batch series/run')).toHaveValue(chosenRun);
   await acceptance.getByRole('button', { name: 'Preview 2 selected files', exact: true }).click();
   const preview = page.getByRole('region', { name: 'Acceptance preview', exact: true });
   await expect(preview).toContainText(`Chosen ${viewport} title`);
   await expect(preview).toContainText(`Batch author ${viewport}`);
+  await expect(preview).toContainText(`Acceptance runs ${viewport} · 20`);
   await page.reload();
   await expect(preview).toContainText(`Chosen ${viewport} title`);
   await preview.getByRole('button', { name: 'Confirm acceptance', exact: true }).click();

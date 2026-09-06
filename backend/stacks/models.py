@@ -265,6 +265,6 @@ class IntakeItem(Base):
     snapshot_json: Mapped[str | None] = mapped_column(Text, default=None)
     candidate_revision: Mapped[int | None] = mapped_column(default=None)
     group_id: Mapped[str | None] = mapped_column(String(36), default=None)
-    result_work_id: Mapped[str | None] = mapped_column(String(36), default=None)
+    result_representation_id: Mapped[str | None] = mapped_column(String(36), default=None)
     error: Mapped[str | None] = mapped_column(Text, default=None)
     state: Mapped[str] = mapped_column(default="pending", index=True)

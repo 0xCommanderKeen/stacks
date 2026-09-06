@@ -262,6 +262,8 @@
           },
           "position": {
             "default": 0,
+            "maximum": 1000000000.0,
+            "minimum": -1000000000.0,
             "title": "Position",
             "type": "number"
           },
@@ -1171,11 +1173,16 @@
             "title": "Duplicate",
             "type": "boolean"
           },
+          "representation_id": {
+            "title": "Representation Id",
+            "type": "string"
+          },
           "work": {
             "$ref": "#/components/schemas/WorkOut"
           }
         },
         "required": [
+          "representation_id",
           "work",
           "duplicate"
         ],

@@ -547,23 +547,25 @@ class Library:
                                 "Review it before replacing it."
                             )
             with self.sessions() as session:
-                existing = session.scalar(
-                    select(Work.id)
+                existing = session.execute(
+                    select(Work.id, Representation.id)
+                    .select_from(Work)
                     .join(Edition)
                     .join(Representation)
                     .join(ImportOperation, ImportOperation.id == Representation.id)
                     .where(ImportOperation.sha256 == sha, ImportOperation.state == "complete")
-                )
+                ).first()
             if not existing and accepted is not None:
                 with self.sessions() as session:
-                    asset_owner = session.scalar(
-                        select(Edition.work_id)
+                    asset_owner = session.execute(
+                        select(Edition.work_id, Representation.id)
+                        .select_from(Edition)
                         .join(Representation)
                         .join(Asset)
                         .where(Asset.sha256.in_([entry["sha256"] for entry in entries]))
                         .order_by(Asset.id)
                         .limit(1)
-                    )
+                    ).first()
                     if asset_owner and len(entries) == 1:
                         existing = asset_owner
                     elif asset_owner:
@@ -586,7 +588,9 @@ class Library:
                             )
                             if asset.sha256 == match["sha256"]:
                                 asset.observed_mtime_ns = match["observed_mtime_ns"]
-                return ImportResult(work=self.get(existing), duplicate=True)
+                return ImportResult(
+                    work=self.get(existing[0]), representation_id=existing[1], duplicate=True
+                )
             if root:
                 with self.sessions() as session:
                     overlap = session.scalar(
@@ -660,7 +664,7 @@ class Library:
                             old["observed_mtime_ns"] = verified["observed_mtime_ns"]
                     operation.extracted_json = json.dumps(prior, ensure_ascii=False)
             work_id = self._publish(pending)
-            return ImportResult(work=self.get(work_id), duplicate=False)
+            return ImportResult(work=self.get(work_id), representation_id=pending, duplicate=False)
         operation_id = identity()
         stage = self.staging / operation_id
         stage.mkdir()
@@ -709,7 +713,7 @@ class Library:
                 shutil.rmtree(stage)
             raise
         work_id = self._publish(operation_id)
-        return ImportResult(work=self.get(work_id), duplicate=False)
+        return ImportResult(work=self.get(work_id), representation_id=operation_id, duplicate=False)
 
     def _publish(self, operation_id: str) -> str:
         with self.sessions() as session:

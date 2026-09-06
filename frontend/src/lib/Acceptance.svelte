@@ -37,6 +37,9 @@
   let seriesQuery = $state('');
   let series = $state<SeriesPage | null>(null);
   let seriesId = $state('');
+  let chosenSeries = $state<components['schemas']['SeriesOut'] | null>(null);
+  let appliedSeriesQuery = '';
+  let seriesOffset = $state(0);
   let designation = $state('');
   let position = $state<number | undefined>(undefined);
   let groupAudio = $state(false);
@@ -113,11 +116,18 @@
       if (active && current === sequence && id === jobId) timer = setTimeout(load, 1500);
     }
   }
-  async function findSeries() {
+  async function findSeries(offset = 0) {
     busy = true;
     error = '';
     try {
-      series = await json<SeriesPage>(`/series?q=${encodeURIComponent(seriesQuery)}&limit=20`);
+      if (offset === 0) appliedSeriesQuery = seriesQuery;
+      const result = await json<SeriesPage>(
+        `/series?q=${encodeURIComponent(appliedSeriesQuery)}&limit=20&offset=${offset}`,
+      );
+      if (active) {
+        series = result;
+        seriesOffset = offset;
+      }
     } catch (cause) {
       error = String(cause);
     } finally {
@@ -280,6 +290,8 @@
         ><label
           >Candidate sort position<input
             type="number"
+            min="-1000000000"
+            max="1000000000"
             step="any"
             bind:value={editPosition}
             disabled={busy}
@@ -349,20 +361,46 @@
             disabled={busy}
           /></label
         >
-        <button type="button" class="secondary" disabled={busy} onclick={findSeries}
+        <button type="button" class="secondary" disabled={busy} onclick={() => findSeries()}
           >Find runs</button
         >
         <label
-          >Batch series/run<select bind:value={seriesId} disabled={busy}
+          >Batch series/run<select
+            bind:value={seriesId}
+            disabled={busy}
+            onchange={(event) => {
+              const id = event.currentTarget.value;
+              chosenSeries =
+                series?.items.find((item) => item.id === id) ||
+                (chosenSeries?.id === id ? chosenSeries : null);
+            }}
             ><option value="">Keep candidate choices / no run</option
-            >{#each series?.items || [] as item}<option value={item.id}
+            >{#if chosenSeries && !series?.items.some((item) => item.id === chosenSeries?.id)}<option
+                value={chosenSeries.id}
+                >{chosenSeries.name} · {chosenSeries.run || 'Unspecified run'}</option
+              >{/if}{#each series?.items || [] as item}<option value={item.id}
                 >{item.name} · {item.run || 'Unspecified run'}</option
               >{/each}</select
           ></label
         >
-        {#if series && series.total > 20}<p class="hint">
-            Showing 20 matching runs. Narrow your search to find another.
-          </p>{/if}
+        {#if series && series.total > 20}<div class="actions" aria-label="Matching run pages">
+            <button
+              type="button"
+              class="secondary"
+              disabled={busy || seriesOffset === 0}
+              onclick={() => findSeries(seriesOffset - 20)}>Previous runs</button
+            >
+            <span
+              >{seriesOffset + 1}–{Math.min(seriesOffset + 20, series.total)} of {series.total} matching
+              runs</span
+            >
+            <button
+              type="button"
+              class="secondary"
+              disabled={busy || seriesOffset + 20 >= series.total}
+              onclick={() => findSeries(seriesOffset + 20)}>Next runs</button
+            >
+          </div>{/if}
         {#if seriesId}<div class="fields">
             <label
               >Designation (optional)<input
@@ -373,6 +411,8 @@
             ><label
               >Sort position<input
                 type="number"
+                min="-1000000000"
+                max="1000000000"
                 step="any"
                 bind:value={position}
                 placeholder="Use embedded issue number"
@@ -381,8 +421,8 @@
             >
           </div>
           <p class="hint">
-            Blank values use each file’s embedded issue number. Non-numeric designations start at
-            position 0; review annuals and specials before accepting.
+            Blank values use each file’s embedded issue number. Non-numeric or out-of-range
+            designations start at position 0; review annuals and specials before accepting.
           </p>{/if}
         <label class="check"
           ><input

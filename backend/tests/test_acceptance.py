@@ -557,3 +557,90 @@ def test_pending_journal_cannot_silently_replace_preview_choices(source_library,
     )
     assert result.work.title == "First choice"
     assert library.list(scope="all").total == 1
+
+
+def test_acceptance_positions_use_catalog_bounds_before_publication(source_library):
+    from pydantic import ValidationError
+    from stacks.models import InboxCandidate
+    from stacks.schemas import AcceptanceRequest, JobChange
+
+    from .test_inbox import finish
+
+    library, source = source_library
+    worker = discover(library, source, count=1)
+    series = library.save_series(SeriesEdit(name="Bounded run"))
+    candidate = worker.candidates().items[0]
+    with pytest.raises(ValidationError):
+        worker.preview_acceptance(
+            AcceptanceRequest(
+                candidate_ids=[candidate.id],
+                metadata=AcceptedMetadata(series_id=series.id, position=1e12),
+            )
+        )
+    assert library.list(scope="all").total == 0
+    with library.sessions.begin() as session:
+        row = session.get(InboxCandidate, candidate.id)
+        facts = json.loads(row.facts_json)
+        facts["series_hint"] = {"designation": "999999999999"}
+        row.facts_json = json.dumps(facts)
+    job = worker.preview_acceptance(
+        AcceptanceRequest(
+            candidate_ids=[candidate.id],
+            metadata=AcceptedMetadata(series_id=series.id),
+        )
+    )
+    chosen = worker.acceptance(job.id).items[0].metadata
+    assert chosen.designation == "999999999999" and chosen.position == 0
+    worker.change(job.id, JobChange(action="confirm", revision=job.revision))
+    finish(worker)
+    assert library.list(scope="all").items[0].memberships[0].position == 0
+    worker.close()
+
+
+def test_grouped_receipt_uses_accepted_representation_when_tracks_have_other_owners(source_library):
+    from pathlib import Path
+
+    from stacks.intake import Intake
+    from stacks.models import Asset, Edition
+    from stacks.schemas import AcceptanceRequest, JobChange, ScanRequest
+
+    from .test_inbox import finish
+
+    library, source = source_library
+    fixtures = Path(__file__).parent / "fixtures"
+    tracks = []
+    for index, name in enumerate(("tone.mp3", "listening.m4b")):
+        path = source / f"{index}-{name}"
+        path.write_bytes((fixtures / name).read_bytes())
+        tracks.append((path, path.name))
+    standalone = library.import_file(*tracks[0])
+    recording = library.import_files(tracks)
+    # Make the ambiguous checksum fallback deterministically choose the wrong owner.
+    with library.sessions.begin() as session:
+        asset = session.scalar(
+            select(Asset).where(Asset.representation_id == standalone.representation_id)
+        )
+        asset.id = "00000000-0000-0000-0000-000000000000"
+    worker = Intake(library, stable_seconds=0)
+    worker.scan(ScanRequest(root="books"))
+    finish(worker)
+    job = worker.preview_acceptance(
+        AcceptanceRequest(
+            candidate_ids=[candidate.id for candidate in worker.candidates().items],
+            group_audio=True,
+        )
+    )
+    worker.change(job.id, JobChange(action="confirm", revision=job.revision))
+    finish(worker)
+    assert worker.acceptance(job.id).job.skipped == 2
+    assert {item.work_id for item in worker.acceptance(job.id).items} == {recording.work.id}
+    # Ownership can change independently of the receipt; stable representation identity follows it.
+    with library.sessions.begin() as session:
+        rep = session.get(Representation, recording.representation_id)
+        edition = session.get(Edition, rep.edition_id)
+        edition.work_id = standalone.work.id
+    assert {item.work_id for item in worker.acceptance(job.id).items} == {standalone.work.id}
+    with library.sessions.begin() as session:
+        session.get(Edition, edition.id).work_id = recording.work.id
+    assert {item.work_id for item in worker.acceptance(job.id).items} == {recording.work.id}
+    worker.close()

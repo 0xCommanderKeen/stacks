@@ -20,14 +20,20 @@ def upgrade():
     op.add_column("intake_item", sa.Column("snapshot_json", sa.Text()))
     op.add_column("intake_item", sa.Column("candidate_revision", sa.Integer()))
     op.add_column("intake_item", sa.Column("group_id", sa.String(36)))
-    op.add_column("intake_item", sa.Column("result_work_id", sa.String(36)))
+    op.add_column("intake_item", sa.Column("result_representation_id", sa.String(36)))
     op.add_column("intake_item", sa.Column("error", sa.Text()))
     op.create_index("ix_intake_item_group", "intake_item", ["job_id", "group_id", "state"])
 
 
 def downgrade():
     op.drop_index("ix_intake_item_group", "intake_item")
-    for column in ("error", "result_work_id", "group_id", "candidate_revision", "snapshot_json"):
+    for column in (
+        "error",
+        "result_representation_id",
+        "group_id",
+        "candidate_revision",
+        "snapshot_json",
+    ):
         op.drop_column("intake_item", column)
     op.drop_index("ix_intake_job_kind", "intake_job")
     op.drop_column("intake_job", "options_json")

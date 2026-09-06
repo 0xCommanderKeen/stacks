@@ -777,7 +777,7 @@ class Intake:
                     number = values["designation"].lstrip("#").strip()
                     if not re.fullmatch(r"-?\d{1,12}(?:\.\d{1,6}|/\d{1,12})?", number):
                         raise ValueError("No bounded numeric designation")
-                    values["position"] = float(Fraction(number))
+                    values["position"] = AcceptedMetadata(position=float(Fraction(number))).position
                 except (ValueError, ZeroDivisionError):
                     values["position"] = 0
         return AcceptedMetadata.model_validate(values)
@@ -837,7 +837,11 @@ class Intake:
             select(Edition.work_id)
             .join(Representation)
             .join(Asset)
-            .where(Asset.sha256 == snapshot["sha256"])
+            .where(
+                Representation.id == item.result_representation_id
+                if item.result_representation_id
+                else Asset.sha256 == snapshot["sha256"]
+            )
             .order_by(Asset.id)
             .limit(1)
         )
@@ -858,7 +862,7 @@ class Intake:
             series=series_out(series) if series else None,
             state=item.state,
             error=item.error,
-            work_id=current.work_id if item.result_work_id else None,
+            work_id=current.work_id if item.result_representation_id else None,
         )
 
     def _accept_next(self, job_id):
@@ -910,7 +914,8 @@ class Intake:
                 for entry, candidate in rows:
                     current_item = session.get(IntakeItem, entry.id)
                     current_item.state = "duplicate" if result.duplicate else "accepted"
-                    current_item.result_work_id, current_item.error = result.work.id, None
+                    current_item.result_representation_id = result.representation_id
+                    current_item.error = None
                     current = session.get(InboxCandidate, candidate.id)
                     if current.revision == entry.candidate_revision:
                         current.state = "accepted"

@@ -1226,6 +1226,8 @@ export interface components {
     ImportResult: {
       /** Duplicate */
       duplicate: boolean;
+      /** Representation Id */
+      representation_id: string;
       work: components['schemas']['WorkOut'];
     };
     /** JobChange */
