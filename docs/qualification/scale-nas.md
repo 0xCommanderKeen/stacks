@@ -90,6 +90,31 @@ after service startup, **not** measurements after flushing NAS filesystem caches
 The 100k first series request took 3.891 seconds. Shared caches and concurrent
 activity can affect all results.
 
+## Explicit progress continuity follow-up
+
+A second browser run at each scale reset only the disposable audiobook position,
+started intake, and repeatedly issued common-author searches throughout actual
+playback. Synthetic EPUB mtimes were changed beforehand so the scanner performed
+fresh inspection rather than reusing prior observations. Both jobs were running
+before and after the audio observation, establishing overlap explicitly.
+
+| Follow-up evidence | 50k | 100k |
+| --- | ---: | ---: |
+| Concurrent searches, all HTTP 200 | 42 | 18 |
+| Player progress saves, all HTTP 200 | 5 | 5 |
+| Intake completed before → after playback | 3 → 92 of 500 | 4 → 77 of 500 |
+| Intake failures | 0 | 0 |
+| Saved position after pause | 16.105 s | 16.120 s |
+| Media element position after pause | 16.190 s | 16.203 s |
+
+The harness reads the saved progress through the playback API after pausing,
+checks the same asset identity and a position within half a second, and records
+the revision. Both runs passed. The application remains responsible for its own
+normal autosave PATCHes; the harness does not replace them with synthetic writes.
+Both services were stopped after measurement, so these follow-up scans were not
+observed to completion. Earlier complete intake and portable evidence remains
+separate. These short observations still do not establish physical-device use.
+
 ## Portable catalog round trips
 
 Both offline NAS round trips completed with zero mismatched catalog tables.
@@ -137,7 +162,12 @@ node scripts/qualify_grid.mjs "$BENCHMARK_URL" "$PRIVATE_PASSWORD_FILE" \
   grid-50000.json seed-50000.json
 ```
 
-Run those two processes concurrently to reproduce the 100k load combination.
+Run those two processes concurrently to reproduce the initial 100k load combination.
+The current browser harness additionally starts its own intake/search load during
+its playback phase and verifies saved progress. Before a repeat on a previously
+scanned disposable fixture, change only those synthetic EPUB mtimes to a distinct
+past timestamp so intake must inspect them again. Do not do this to real originals.
+Do not run two browser players concurrently against the same fixture progress.
 Use count 100000 and fresh paths for the larger fixture. Stop the disposable
 service after its intake jobs settle, then run the offline portability check:
 

@@ -458,6 +458,436 @@
         },
         "mismatched_tables": [],
         "limitations": "Offline round trip of a settled disposable synthetic catalog; original media is deliberately omitted. Peak RSS is a separate fresh process per phase. Fingerprints compare all catalog columns ordered by stable primary keys."
+      },
+      "continuity_followup": {
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "browser": "Chromium desktop",
+        "first_navigation_ms": 1223.5739170000002,
+        "warm": {
+          "samples": 15,
+          "median_ms": 443.60112500000105,
+          "p95_ms": 893.3827089999995,
+          "max_ms": 893.3827089999995
+        },
+        "visible_grid_tiles": 24,
+        "loaded_covers": 17,
+        "page_errors": [],
+        "audio_samples": [
+          {
+            "position": 0.05095,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 0.613449,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.125829,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.634677,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.146883,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.664739,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.176901,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.696296,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.216784,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.786013,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.354737,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.866876,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.375912,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.892384,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.400297,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.905528,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.413878,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.919979,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.427052,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.94446,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.449888,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.954286,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.462341,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.970155,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.48017,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.990859,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.528948,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.063513,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.650429,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.160483,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.668783,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 16.177145,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          }
+        ],
+        "concurrent_load": {
+          "requests": [
+            {
+              "status": 200,
+              "elapsed_ms": 792.3485419999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 422.66720799999894
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 460.79895900000156
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 384.3466669999998
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 426.2355829999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 418.82287499999984
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 407.6414169999989
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 462.49916699999994
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 523.7440830000014
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 373.66399999999885
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 374.1169169999994
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 386.0958750000009
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 461.3995419999992
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 402.4713329999977
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 473.73004100000253
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 383.40016599999944
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 384.1533750000017
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 426.88424999999916
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 389.25395800000115
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 367.6907500000016
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 376.48491699999795
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 439.9318749999984
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 369.5123339999991
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 374.7816249999996
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 386.3019999999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 442.9202910000022
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 391.18654199999946
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 418.8293339999982
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 407.42883300000176
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 420.4080419999991
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 461.21099999999933
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 421.1512909999983
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 527.8889999999992
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 495.4702079999988
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 529.6380000000026
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 399.2073750000018
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 521.883249999999
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 420.83250000000044
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 387.5564169999998
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 490.92833299999984
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 402.93354100000215
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 451.3789579999975
+            }
+          ],
+          "progress_saves": [
+            {
+              "status": 200,
+              "elapsed_ms": 5720.6201249999995
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 10728.013958000001
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 15869.308916
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 18130.780874999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 18166.99725
+            }
+          ],
+          "intake_before_audio": {
+            "state": "running",
+            "discovered": 500,
+            "completed": 3,
+            "remaining": 497,
+            "failed": 0
+          },
+          "intake_after_audio": {
+            "state": "running",
+            "discovered": 500,
+            "completed": 92,
+            "remaining": 408,
+            "failed": 0
+          },
+          "saved_progress": {
+            "revision": 9,
+            "asset_id": "f47ae0fc-bf24-4b3d-8f4a-c43bf9f4f427",
+            "position": 16.105361,
+            "speed": 1,
+            "completed": false,
+            "representation_id": "25c8e6b5-cb2d-4d00-aad3-debebf253729",
+            "updated_at": "2026-09-06T18:29:04.153446+00:00"
+          },
+          "paused_position": 16.189835
+        },
+        "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
       }
     },
     "100000": {
@@ -909,6 +1339,340 @@
         },
         "mismatched_tables": [],
         "limitations": "Offline round trip of a settled disposable synthetic catalog; original media is deliberately omitted. Peak RSS is a separate fresh process per phase. Fingerprints compare all catalog columns ordered by stable primary keys."
+      },
+      "continuity_followup": {
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "browser": "Chromium desktop",
+        "first_navigation_ms": 1166.6190829999998,
+        "warm": {
+          "samples": 15,
+          "median_ms": 849.1542079999999,
+          "p95_ms": 1001.9567079999997,
+          "max_ms": 1001.9567079999997
+        },
+        "visible_grid_tiles": 24,
+        "loaded_covers": 18,
+        "page_errors": [],
+        "audio_samples": [
+          {
+            "position": 0.363685,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 0.870425,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.387094,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.893204,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.401527,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.908814,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.416009,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.925389,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.441831,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.951912,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.460378,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.98119,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.48641,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.991577,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.497356,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.003349,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.509524,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.012259,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.528508,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.033713,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.565696,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.070634,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.575766,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.081295,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.588261,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.088813,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.608308,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.117387,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.634081,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.140574,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.647474,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 16.154028,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          }
+        ],
+        "concurrent_load": {
+          "requests": [
+            {
+              "status": 200,
+              "elapsed_ms": 1867.327333000001
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1015.0092500000028
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 931.8327500000014
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 886.4008329999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 839.159166999998
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 890.2465420000008
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 863.4596249999995
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 853.7203330000011
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 906.2684169999993
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 921.875082999999
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1079.372792000002
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1184.8557500000024
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1074.5063750000008
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1111.8934999999983
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1107.424417000002
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1047.4959589999999
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1091.8372910000035
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1120.8426250000048
+            }
+          ],
+          "progress_saves": [
+            {
+              "status": 200,
+              "elapsed_ms": 6502.365166
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 11501.029375000002
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 16499.42875
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 18670.956625
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 18696.761458
+            }
+          ],
+          "intake_before_audio": {
+            "state": "running",
+            "discovered": 500,
+            "completed": 4,
+            "remaining": 496,
+            "failed": 0
+          },
+          "intake_after_audio": {
+            "state": "running",
+            "discovered": 500,
+            "completed": 77,
+            "remaining": 423,
+            "failed": 0
+          },
+          "saved_progress": {
+            "revision": 9,
+            "asset_id": "c8930751-1e39-4795-ba90-73a811df0b7e",
+            "position": 16.120355,
+            "speed": 1,
+            "completed": false,
+            "representation_id": "353f1f44-dde4-41d9-be01-3a422f08ad70",
+            "updated_at": "2026-09-06T18:30:53.173802+00:00"
+          },
+          "paused_position": 16.202565
+        },
+        "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
       }
     }
   }
