@@ -143,6 +143,19 @@ class TokenBoundedInput:
         self.in_string = False
         self.escaped = False
         self.length = 0
+        self.plain_length = 0
+
+    def plain(self, chunk):
+        previous = 0
+        for match in re.finditer(rb'[^ \t\r\n{}\[\],:"]+', chunk):
+            if match.start() > previous:
+                self.plain_length = 0
+            self.plain_length += match.end() - match.start()
+            if self.plain_length > MAX_TOKEN:
+                raise ValueError("A catalog JSON token exceeds the format limit.")
+            previous = match.end()
+        if previous < len(chunk):
+            self.plain_length = 0
 
     def read(self, size=-1):
         if size == 0:
@@ -166,8 +179,13 @@ class TokenBoundedInput:
                     self.in_string = False
                 if self.length > MAX_TOKEN:
                     raise ValueError("A catalog JSON token exceeds the format limit.")
-            elif symbol == b'"':
-                self.in_string, self.length, self.escaped = True, 0, False
+            else:
+                self.plain(chunk[previous : match.start()])
+                if symbol == b'"':
+                    self.in_string, self.length, self.escaped = True, 0, False
+                    self.plain_length = 0
+                else:
+                    self.plain(symbol)
             previous = match.end()
         if self.in_string:
             self.length += len(chunk) - previous
@@ -175,6 +193,8 @@ class TokenBoundedInput:
                 self.escaped = False
             if self.length > MAX_TOKEN:
                 raise ValueError("A catalog JSON token exceeds the format limit.")
+        else:
+            self.plain(chunk[previous:])
         return chunk
 
 

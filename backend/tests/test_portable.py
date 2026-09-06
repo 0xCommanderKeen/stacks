@@ -317,3 +317,17 @@ def test_string_guard_preserves_escaped_quotes_backslashes_and_utf8_at_chunk_bou
 
     value = {"quoted": 'A "book" \\ shelf \\"end 📚', "line": "a\nb"}
     assert Reader(ByteAtATime(json.dumps(value, ensure_ascii=False).encode())).value() == value
+
+
+@pytest.mark.parametrize("ending", [b"}", b""])
+def test_numeric_tokens_are_bounded_before_parser_allocation(monkeypatch, ending):
+    import io
+
+    import ijson
+    from stacks import portable
+
+    monkeypatch.setattr(portable, "MAX_TOKEN", 64)
+    source = io.BytesIO(b'{"format_version":' + b"1" * 100000 + ending)
+    with pytest.raises(ValueError, match="token exceeds"):
+        list(ijson.basic_parse(portable.TokenBoundedInput(source)))
+    assert source.tell() <= 130
