@@ -437,15 +437,15 @@
     margin: 0 auto;
   }
   h1 {
-    font:
-      400 4rem Georgia,
-      serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
     margin: 0.5rem 0 1rem;
   }
   h2 {
-    font:
-      400 2rem Georgia,
-      serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
     margin: 0;
   }
   h3 {

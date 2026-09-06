@@ -226,7 +226,8 @@
   }
   h2,
   h3 {
-    font-family: Georgia, serif;
+    font-family: inherit;
+    font-weight: 600;
     font-weight: 400;
   }
   .run-heading h2 {
@@ -251,8 +252,8 @@
     flex-direction: column;
     min-height: 220px;
     padding: 1.5rem;
-    background: #e7e7d9;
-    border-top: 4px solid #75805c;
+    background: var(--accent-soft);
+    border-top: 4px solid var(--accent);
     border-radius: 2px;
   }
   .run-card h3 {

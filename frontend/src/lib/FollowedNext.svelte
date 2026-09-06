@@ -84,7 +84,8 @@
     padding-top: 2rem;
   }
   h2 {
-    font-family: Georgia, serif;
+    font-family: inherit;
+    font-weight: 600;
     font-weight: 400;
     font-size: 2.4rem;
     margin: 0.8rem 0 2rem;

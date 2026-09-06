@@ -164,6 +164,8 @@
 
 <style>
   .backups {
+    background: var(--surface);
+    border-radius: 12px;
     margin: 2rem 0;
     padding: 2rem;
     border: 1px solid var(--line);
@@ -201,7 +203,7 @@
   }
   li {
     padding: 1rem 0;
-    border-top: 1px solid var(--line);
+    border: 1px solid var(--line);
     display: flex;
     gap: 0.8rem;
     align-items: center;
@@ -220,6 +222,8 @@
   }
   @media (max-width: 600px) {
     .backups {
+      background: var(--surface);
+      border-radius: 12px;
       padding: 1.2rem;
     }
   }

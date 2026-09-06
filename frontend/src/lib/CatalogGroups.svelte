@@ -269,10 +269,11 @@
   .groups {
     margin: 1.5rem 0;
     padding: 1.5rem 0;
-    border-top: 1px solid #cfcabd;
+    border-top: 1px solid var(--line);
   }
   h2 {
-    font-family: Georgia, serif;
+    font-family: inherit;
+    font-weight: 600;
     font-size: 1.5rem;
     font-weight: normal;
   }
@@ -287,8 +288,8 @@
     box-sizing: border-box;
     font: inherit;
     color: inherit;
-    background: #fffcf5;
-    border: 1px solid #cfcabd;
+    background: var(--surface);
+    border: 1px solid var(--line);
     padding: 0.6rem;
   }
   .matches {
@@ -299,17 +300,17 @@
   .match {
     text-align: left;
     padding: 0.8rem;
-    border: 1px solid #cfcabd;
+    border: 1px solid var(--line);
   }
   .match small {
     display: block;
     margin-top: 0.3rem;
   }
   .chosen {
-    outline: 2px solid #344c40;
+    outline: 2px solid var(--accent);
   }
   .preview {
-    border-left: 3px solid #344c40;
+    border-left: 3px solid var(--accent);
     padding-left: 1rem;
   }
   .operation {

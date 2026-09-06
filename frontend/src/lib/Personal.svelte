@@ -269,7 +269,8 @@
   }
   h2,
   h3 {
-    font-family: Georgia, serif;
+    font-family: inherit;
+    font-weight: 600;
     font-weight: 400;
     margin: 0;
   }
@@ -298,9 +299,9 @@
     font: inherit;
     width: 100%;
     min-width: 0;
-    background: #fffdf6;
+    background: var(--surface);
     color: var(--ink);
-    border: 1px solid #adb4a3;
+    border: 1px solid var(--line);
     padding: 0.7rem;
     border-radius: 3px;
   }
@@ -342,7 +343,7 @@
     flex-wrap: wrap;
   }
   .tags span {
-    background: #e5e6d5;
+    background: var(--accent-soft);
     border-radius: 3px;
     padding: 0.25rem 0.5rem;
     font-size: 0.8rem;

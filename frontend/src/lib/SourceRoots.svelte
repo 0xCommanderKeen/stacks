@@ -112,15 +112,16 @@
 
 <style>
   .sources {
-    border-top: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--line);
     margin-top: 3rem;
-    padding: 2rem 0;
-    max-width: 54rem;
+    padding: 2rem;
   }
   h2 {
-    font:
-      400 2.4rem Georgia,
-      serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
   }
   p {
     color: var(--muted);

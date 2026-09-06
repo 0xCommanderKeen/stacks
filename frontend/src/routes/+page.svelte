@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Cover from '$lib/Cover.svelte';
+  import ContinueListening from '$lib/ContinueListening.svelte';
   import Metadata from '$lib/Metadata.svelte';
   import CoverChoice from '$lib/CoverChoice.svelte';
   import Organization from '$lib/Organization.svelte';
@@ -394,14 +395,14 @@
 {:else if !signedIn}
   <main class="login-shell">
     <div class="login-art" aria-hidden="true">
-      <div class="large-wordmark">stacks<span>▰</span></div>
+      <div class="large-wordmark">stacks<span aria-hidden="true">.</span></div>
       <div class="spines"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <p>A place for the books<br />you come back to.</p>
       <span class="eyebrow">YOUR OWN READING ROOM</span>
     </div>
     <div class="login-form">
       <div class="eyebrow">WELCOME TO STACKS</div>
-      <h1>Make yourself<br /><em>at home.</em></h1>
+      <h1>Your library,<br />all together.</h1>
       <p class="muted">Your library is waiting.</p>
       <form onsubmit={signIn}>
         <label for="password">Library password</label><input
@@ -419,52 +420,117 @@
   </main>
 {:else}
   <a class="skip" href="#main">Skip to content</a>
-  <header>
+  <header class="app-sidebar">
     <a
       class="wordmark"
       href="/"
       onclick={(event) => {
         event.preventDefault();
         libraryView();
-      }}>stacks<span>▰</span></a
+      }}>stacks<span aria-hidden="true">.</span></a
     >
+    <div class="sidebar-label">YOUR SPACE</div>
     <nav aria-label="Main navigation">
-      <button class:active={view === 'home'} onclick={showHome}>Home</button>
-      <button class:active={view === 'library'} onclick={libraryView}>Library</button>
+      <button
+        class:active={view === 'home'}
+        aria-current={view === 'home' ? 'page' : undefined}
+        onclick={showHome}
+        ><svg
+          class="nav-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          aria-hidden="true"><path d="m3 10 9-7 9 7v11h-6v-7H9v7H3Z" /></svg
+        >Home</button
+      >
+      <button
+        class:active={view === 'library'}
+        aria-current={view === 'library' ? 'page' : undefined}
+        onclick={libraryView}
+        ><svg
+          class="nav-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          aria-hidden="true"><path d="M4 3v18M9 3v18M14 3v18M18 3l3 18" /></svg
+        >Library</button
+      >
       <button
         class:active={view === 'inbox'}
+        aria-current={view === 'inbox' ? 'page' : undefined}
         onclick={() => {
           selected = null;
           view = 'inbox';
           setUrl();
-        }}>Inbox</button
+        }}
+        ><svg
+          class="nav-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          aria-hidden="true"><path d="M3 4h18v16H3ZM3 13h5l2 3h4l2-3h5" /></svg
+        >Inbox</button
       >
       <button
         class:active={view === 'collections'}
+        aria-current={view === 'collections' ? 'page' : undefined}
         onclick={() => {
           selected = null;
           view = 'collections';
           setUrl();
-        }}>Collections</button
+        }}
+        ><svg
+          class="nav-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          aria-hidden="true"><path d="M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z" /></svg
+        >Collections</button
       ><button
         class:active={view === 'settings'}
+        aria-current={view === 'settings' ? 'page' : undefined}
         onclick={() => {
           view = 'settings';
           selected = null;
           setUrl();
-        }}>Settings</button
+        }}
+        ><svg
+          class="nav-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          aria-hidden="true"><path d="M4 7h16M4 17h16M8 3v8M16 13v8" /></svg
+        >Settings</button
       >
       <button
         class:active={view === 'trash'}
+        aria-current={view === 'trash' ? 'page' : undefined}
         onclick={() => {
           selected = null;
           view = 'trash';
           setUrl();
-        }}>Trash</button
+        }}
+        ><svg
+          class="nav-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></svg
+        >Trash</button
       >
     </nav>
     <button class="signout" onclick={signOut}>Sign out <span>↗</span></button>
   </header>
+  <div class="app-topbar">
+    <span>Your space</span><span aria-hidden="true">/</span><strong>{view}</strong
+    >{#if selected}<span aria-hidden="true">/</span><span>Details</span>{/if}
+  </div>
   <main id="main" class="workspace">
     {#if error}<div class="message error" role="alert">
         {error}<button aria-label="Dismiss error" onclick={() => (error = '')}>×</button>
@@ -478,7 +544,7 @@
       </div>{/if}
     {#if view === 'home'}
       <div class="eyebrow">PICK UP WHERE YOU LEFT OFF</div>
-      <h1>A little more <em>listening.</em></h1>
+      <h1>Continue listening</h1>
       <p class="intro">Your place is here when you come back.</p>
       {#if continuing?.items.length}
         <div class="book-grid">
@@ -559,7 +625,7 @@
       <Inbox onopen={open} />
     {:else if view === 'settings'}
       <div class="eyebrow">LOOK AFTER YOUR LIBRARY</div>
-      <h1>Keep it <em>safe.</em></h1>
+      <h1>Settings</h1>
       <p class="intro">Your books and your choices belong to you.</p>
       <Backups />
       <div class="settings-grid">
@@ -729,17 +795,19 @@
     {:else}
       <div class="page-heading" class:compact={!!medium}>
         <div>
-          <div class="eyebrow">YOUR OWN READING ROOM</div>
-          {#if medium}<h1>
-              {medium === 'comic'
-                ? 'Comic runs.'
-                : medium === 'audio'
-                  ? 'Your listening shelf.'
-                  : 'Your books.'}
-            </h1>{:else}<h1>Good books.<br /><em>All in one place.</em></h1>{/if}
+          <div class="eyebrow">A PLACE FOR EVERY STORY</div>
+          <h1>
+            {medium === 'comic'
+              ? 'Comic runs'
+              : medium === 'audio'
+                ? 'Audiobooks'
+                : medium === 'ebook'
+                  ? 'Books'
+                  : 'Library'}
+          </h1>
+          <p class="intro">Your books, comics and audiobooks. All together.</p>
         </div>
         <div class="heading-aside">
-          <p>A little order for<br />everything you love to read.</p>
           <button class="primary" onclick={() => upload.click()} disabled={!!busy}
             >{busy.startsWith('Importing') ? busy : '+ Add books'}</button
           ><input
@@ -753,9 +821,11 @@
           /><span class="small muted">Books, comics & audio · originals kept intact</span>
         </div>
       </div>
+      <ContinueListening onopen={open} onplay={(id) => player.start(id)} onerror={fail} />
       <div class="media-tabs" role="group" aria-label="Publication type">
         {#each [['', 'Everything'], ['ebook', 'Books'], ['comic', 'Comics'], ['audio', 'Audio']] as [value, label]}<button
             class:active={medium === value}
+            aria-pressed={medium === value}
             onclick={() => changeMedia(value)}>{label}</button
           >{/each}
       </div>

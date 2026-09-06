@@ -272,9 +272,9 @@
     margin-top: 1.5rem;
   }
   h3 {
-    font:
-      400 1.6rem Georgia,
-      serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
     margin: 0;
   }
   .comparison {
