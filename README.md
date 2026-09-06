@@ -6,12 +6,13 @@ Stacks is a clean-start project focused on safe imports, useful cataloging,
 comic series, and dependable audiobook playback. The current development version supports
 **EPUB, PDF, CBZ, CBR, MP3, M4A, and M4B import, catalog search, edition/series editing,
 original downloads, reversible grouping/splitting, audiobook playback with saved progress,
-and backup/restore**. Bulk intake is a subsequent milestone.
+personal shelves and reading history, and backup/restore**. Bulk intake is a subsequent milestone.
 
 - [Implementation plan](docs/rebuild/PLAN.md)
 - [Proposed domain language](CONTEXT.md)
 - [First-book scope, guarantees, and limitations](docs/first-book.md)
 - [Audiobook playback and progress](docs/audio.md)
+- [Personal shelves and reading history](docs/personal-library.md)
 
 The intended deployment is one self-hosted application with local media storage.
 The repository is public; personal library files, databases, and credentials do

@@ -414,3 +414,69 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   );
   await page.screenshot({ path: testInfo.outputPath('audio-player.png'), fullPage: true });
 });
+
+test('personal shelves and repeated records survive reload and scope navigation', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(path.resolve('../samples/The Long Way Home.epub'));
+  await expect(page.getByRole('status')).toContainText(/added/);
+  await page.getByRole('combobox', { name: 'Library scope' }).selectOption('all');
+  await page.getByLabel('Search books or authors').fill('The Long Way Home');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Open The Long Way Home', exact: true }).click();
+  const personal = page.getByRole('region', { name: 'Personal library details' });
+  const workId = new URL(page.url()).searchParams.get('book');
+  const beforeCount = (await (await page.request.get(`/api/works/${workId}/records`)).json()).total;
+  await personal.getByRole('button', { name: 'Edit personal details' }).click();
+  await personal.getByRole('combobox', { name: 'Shelf', exact: true }).selectOption('archive');
+  await personal.getByRole('combobox', { name: 'Rating', exact: true }).selectOption('4');
+  await personal.getByLabel('Tags, separated by commas').fill('summer, return to');
+  await personal
+    .getByLabel('Personal notes')
+    .fill('For a long afternoon. Keep the original edition.');
+  await personal.getByRole('button', { name: 'Save personal details' }).click();
+  await expect(personal.getByRole('status')).toContainText('Personal details saved');
+  for (const kind of ['read', 'listen']) {
+    await personal.getByRole('button', { name: 'Add reading record' }).click();
+    await personal.getByRole('combobox', { name: 'Activity', exact: true }).selectOption(kind);
+    await personal.getByLabel('Started', { exact: true }).fill('2026-08-01');
+    await personal.getByLabel('Finished (optional)').fill('2026-08-15');
+    await personal.getByRole('button', { name: 'Save reading record' }).click();
+    await expect(personal.getByRole('status')).toContainText('Reading record saved');
+  }
+  await page.reload();
+  await expect(personal.getByText('In your archive · Your choice · 4 / 5')).toBeVisible();
+  await expect(
+    personal.getByText('For a long afternoon. Keep the original edition.'),
+  ).toBeVisible();
+  await expect(personal.locator('li')).toHaveCount(Math.min(beforeCount + 2, 5));
+  expect((await (await page.request.get(`/api/works/${workId}/records`)).json()).total).toBe(
+    beforeCount + 2,
+  );
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Library scope' }).selectOption('library');
+  await expect(
+    page.getByRole('button', { name: 'Open The Long Way Home', exact: true }),
+  ).toBeHidden();
+  await page.getByRole('combobox', { name: 'Library scope' }).selectOption('archive');
+  await expect(
+    page.getByRole('button', { name: 'Open The Long Way Home', exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('combobox', { name: 'Library scope' })).toHaveValue('archive');
+  await page.getByRole('button', { name: 'Open The Long Way Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  await expect(page.getByRole('combobox', { name: 'Library scope' })).toHaveValue('archive');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.getByRole('button', { name: 'Open The Long Way Home', exact: true }).click();
+  await personal.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath('personal-library.png'), fullPage: true });
+});

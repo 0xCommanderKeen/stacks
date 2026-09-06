@@ -10,6 +10,8 @@ from stacks.models import (
     Contributor,
     Credit,
     Edition,
+    PersonalState,
+    ReadingRecord,
     Representation,
     SeriesMembership,
     Work,
@@ -41,8 +43,35 @@ def _snapshot(session, work_ids):
         "series_membership": _rows(
             session, SeriesMembership, SeriesMembership.work_id.in_(work_ids)
         ),
+        "personal_state": _rows(session, PersonalState, PersonalState.work_id.in_(work_ids)),
+        "reading_record": _rows(session, ReadingRecord, ReadingRecord.work_id.in_(work_ids)),
         "work_redirect": _rows(session, WorkRedirect, WorkRedirect.source_id.in_(work_ids)),
     }
+
+
+def _personal_values(work):
+    values = work.personal.model_dump(include={"notes", "rating", "tags"})
+    values["shelf"] = [work.personal.default_shelf, work.personal.shelf_override]
+    return values
+
+
+def _personal_label(field, value):
+    if field == "shelf":
+        default, override = value
+        return f"{override or default} ({'your choice' if override else 'default'})"
+    if field == "rating":
+        return f"{value} / 5" if value else "Unrated"
+    if field == "tags":
+        return ", ".join(value) or "No tags"
+    return value or "No notes"
+
+
+def _saved_snapshot(raw):
+    snapshot = json.loads(raw)
+    # Earlier operations predate personal state. Empty new tables preserve their meaning.
+    snapshot.setdefault("personal_state", [])
+    snapshot.setdefault("reading_record", [])
+    return snapshot
 
 
 def _conflicts(source, target):
@@ -57,6 +86,17 @@ def _conflicts(source, target):
                     field=name,
                     source=json.dumps(left, ensure_ascii=False),
                     target=json.dumps(right, ensure_ascii=False),
+                )
+            )
+    left_values, right_values = _personal_values(source), _personal_values(target)
+    for field, left in left_values.items():
+        right = right_values[field]
+        if left != right and left not in (None, "", []):
+            conflicts.append(
+                ConflictOut(
+                    field=f"personal:{field}",
+                    source=_personal_label(field, left),
+                    target=_personal_label(field, right),
                 )
             )
     existing = {m.series_id: m for m in target.memberships}
@@ -168,7 +208,7 @@ class CatalogOperations:
                 return self._out(operation)
             if operation.state != "preview":
                 raise ValueError("This operation is no longer a pending preview.")
-            if _snapshot(session, data["work_ids"]) != json.loads(operation.before_json):
+            if _snapshot(session, data["work_ids"]) != _saved_snapshot(operation.before_json):
                 raise ValueError("The catalog changed after this preview. Preview again.")
             required = {c["field"] for c in data["conflicts"]}
             if set(resolutions) != required:
@@ -233,9 +273,30 @@ class CatalogOperations:
                 .where(Representation.id == data["representation_id"])
                 .values(edition_id=data["target_edition_id"])
             )
+        chosen = {
+            key.removeprefix("personal:")
+            for key, side in resolutions.items()
+            if key.startswith("personal:") and side == "source"
+        }
+        if chosen:
+            values = _personal_values(work_out(source))
+            if target.personal is None:
+                target.personal = PersonalState()
+            for field in chosen:
+                if field == "shelf":
+                    target.personal.default_shelf, target.personal.shelf_override = values[field]
+                elif field == "tags":
+                    target.personal.tags_json = json.dumps(values[field], ensure_ascii=False)
+                else:
+                    setattr(target.personal, field, values[field])
+            session.flush()
         remains = session.scalar(
             select(Representation.id).join(Edition).where(Edition.work_id == source.id).limit(1)
         )
+        records = update(ReadingRecord).where(ReadingRecord.work_id == source.id)
+        if remains:
+            records = records.where(ReadingRecord.representation_id == data["representation_id"])
+        session.execute(records.values(work_id=target.id, revision=ReadingRecord.revision + 1))
         if not remains:
             session.add(WorkRedirect(source_id=source.id, target_id=target.id))
 
@@ -263,6 +324,14 @@ class CatalogOperations:
                 for m in source.memberships
             ],
         )
+        if source.personal is not None:
+            new.personal = PersonalState(
+                **{
+                    column.name: getattr(source.personal, column.name)
+                    for column in PersonalState.__table__.columns
+                    if column.name != "work_id"
+                }
+            )
         session.add(new)
         session.flush()
         session.add(
@@ -289,6 +358,15 @@ class CatalogOperations:
             .values(edition_id=data["new_edition_id"])
         )
 
+        session.execute(
+            update(ReadingRecord)
+            .where(
+                ReadingRecord.work_id == source.id,
+                ReadingRecord.representation_id == representation.id,
+            )
+            .values(work_id=new.id, revision=ReadingRecord.revision + 1)
+        )
+
     def undo(self, operation_id):
         with self.library.lock, self.library.sessions.begin() as session:
             operation = session.get(CatalogOperation, operation_id)
@@ -299,13 +377,18 @@ class CatalogOperations:
             if operation.state != "applied":
                 raise ValueError("Only an applied operation can be undone.")
             data = json.loads(operation.request_json)
-            before, after = json.loads(operation.before_json), json.loads(operation.after_json)
+            before, after = (
+                _saved_snapshot(operation.before_json),
+                _saved_snapshot(operation.after_json),
+            )
             current = _snapshot(session, data["work_ids"])
             comparable = json.loads(json.dumps(current))
             expected = json.loads(json.dumps(after))
             for snapshot in (comparable, expected):
                 for work in snapshot["work"]:
                     work.pop("revision")
+                for record in snapshot["reading_record"]:
+                    record.pop("revision")
             if comparable != expected:
                 raise ValueError(
                     "These works changed since grouping. Undo would overwrite newer edits."
@@ -328,6 +411,8 @@ class CatalogOperations:
             (Credit, Credit.work_id),
             (SeriesMembership, SeriesMembership.work_id),
             (WorkRedirect, WorkRedirect.source_id),
+            (PersonalState, PersonalState.work_id),
+            (ReadingRecord, ReadingRecord.work_id),
         ):
             session.execute(delete(model).where(column.in_(work_ids)))
             for row in before[model.__tablename__]:
@@ -337,6 +422,12 @@ class CatalogOperations:
             new_ids = {r["id"] for r in after[model.__tablename__]} - old_ids
             if new_ids:
                 session.execute(delete(model).where(model.id.in_(new_ids)))
+        for record in current["reading_record"]:
+            session.execute(
+                update(ReadingRecord)
+                .where(ReadingRecord.id == record["id"])
+                .values(revision=record["revision"] + 1)
+            )
         # Never reuse a revision observed before grouping or undo.
         for work in current["work"]:
             session.execute(

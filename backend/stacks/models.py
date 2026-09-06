@@ -26,6 +26,9 @@ class Work(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     revision: Mapped[int] = mapped_column(default=1)
     created_at: Mapped[str] = mapped_column(default=now, index=True)
+    personal: Mapped["PersonalState | None"] = relationship(
+        cascade="all, delete-orphan", uselist=False
+    )
     editions: Mapped[list["Edition"]] = relationship(cascade="all, delete-orphan")
     memberships: Mapped[list["SeriesMembership"]] = relationship(cascade="all, delete-orphan")
     credits: Mapped[list["Credit"]] = relationship(
@@ -153,3 +156,27 @@ class Progress(Base):
     completed: Mapped[bool] = mapped_column(default=False)
     revision: Mapped[int] = mapped_column(default=1)
     updated_at: Mapped[str] = mapped_column(default=now, index=True)
+
+
+class PersonalState(Base):
+    __tablename__ = "personal_state"
+    work_id: Mapped[str] = mapped_column(ForeignKey("work.id"), primary_key=True)
+    default_shelf: Mapped[str] = mapped_column(default="library")
+    shelf_override: Mapped[str | None] = mapped_column(default=None)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    rating: Mapped[int | None] = mapped_column(default=None)
+    tags_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
+class ReadingRecord(Base):
+    __tablename__ = "reading_record"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    work_id: Mapped[str] = mapped_column(ForeignKey("work.id"), index=True)
+    representation_id: Mapped[str | None] = mapped_column(
+        ForeignKey("representation.id"), index=True
+    )
+    kind: Mapped[str]
+    started: Mapped[str]
+    finished: Mapped[str | None]
+    revision: Mapped[int] = mapped_column(default=1)
+    created_at: Mapped[str] = mapped_column(default=now)
