@@ -21,6 +21,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/assets/{asset_id}/stream': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Stream */
+    get: operations['stream_api_assets__asset_id__stream_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/backup': {
     parameters: {
       query?: never;
@@ -64,6 +81,23 @@ export interface paths {
     };
     /** Export */
     get: operations['export_api_export_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/home/continue': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Continue List */
+    get: operations['continue_list_api_home_continue_get'];
     put?: never;
     post?: never;
     delete?: never;
@@ -225,6 +259,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/representations/{representation_id}/playback': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Playback */
+    get: operations['playback_api_representations__representation_id__playback_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/representations/{representation_id}/progress': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Progress */
+    patch: operations['progress_api_representations__representation_id__progress_patch'];
+    trace?: never;
+  };
   '/api/series': {
     parameters: {
       query?: never;
@@ -378,6 +446,19 @@ export interface components {
       /** Size */
       size: number;
     };
+    /** AudioTrackOut */
+    AudioTrackOut: {
+      /** Asset Id */
+      asset_id: string;
+      /** Chapters */
+      chapters: components['schemas']['ChapterOut'][];
+      /** Duration */
+      duration: number;
+      /** Original Name */
+      original_name: string;
+      /** Title */
+      title: string;
+    };
     /** CatalogPage */
     CatalogPage: {
       /** Items */
@@ -389,6 +470,13 @@ export interface components {
       /** Total */
       total: number;
     };
+    /** ChapterOut */
+    ChapterOut: {
+      /** Start */
+      start: number;
+      /** Title */
+      title: string;
+    };
     /** ConflictOut */
     ConflictOut: {
       /** Field */
@@ -397,6 +485,24 @@ export interface components {
       source: string;
       /** Target */
       target: string;
+    };
+    /** ContinueOut */
+    ContinueOut: {
+      progress: components['schemas']['ProgressOut'];
+      /** Representation Id */
+      representation_id: string;
+      work: components['schemas']['WorkOut'];
+    };
+    /** ContinuePage */
+    ContinuePage: {
+      /** Items */
+      items: components['schemas']['ContinueOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
     };
     /** EditionEdit */
     EditionEdit: {
@@ -537,6 +643,60 @@ export interface components {
       offset: number;
       /** Total */
       total: number;
+    };
+    /** PlaybackOut */
+    PlaybackOut: {
+      progress: components['schemas']['ProgressOut'];
+      /** Representation Id */
+      representation_id: string;
+      /** Title */
+      title: string;
+      /** Tracks */
+      tracks: components['schemas']['AudioTrackOut'][];
+      /** Work Id */
+      work_id: string;
+    };
+    /** ProgressEdit */
+    ProgressEdit: {
+      /** Asset Id */
+      asset_id: string;
+      /**
+       * Completed
+       * @default false
+       */
+      completed: boolean;
+      /** Position */
+      position: number;
+      /** Revision */
+      revision: number;
+      /**
+       * Speed
+       * @default 1
+       */
+      speed: number;
+    };
+    /** ProgressOut */
+    ProgressOut: {
+      /** Asset Id */
+      asset_id: string;
+      /**
+       * Completed
+       * @default false
+       */
+      completed: boolean;
+      /** Position */
+      position: number;
+      /** Representation Id */
+      representation_id: string;
+      /** Revision */
+      revision: number;
+      /**
+       * Speed
+       * @default 1
+       */
+      speed: number;
+      /** Updated At */
+      updated_at: string | null;
     };
     /** RepresentationOut */
     RepresentationOut: {
@@ -697,6 +857,37 @@ export interface operations {
       };
     };
   };
+  stream_api_assets__asset_id__stream_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        asset_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   create_backup_api_backup_post: {
     parameters: {
       query?: never;
@@ -766,6 +957,38 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+    };
+  };
+  continue_list_api_home_continue_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ContinuePage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };
@@ -1013,6 +1236,72 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  playback_api_representations__representation_id__playback_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        representation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PlaybackOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  progress_api_representations__representation_id__progress_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        representation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ProgressEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProgressOut'];
         };
       };
       /** @description Validation Error */

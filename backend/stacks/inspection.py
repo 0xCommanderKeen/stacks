@@ -142,6 +142,14 @@ def _audio(path: Path, fmt: str, facts: dict) -> bytes | None:
             :10000
         ]
     if fmt == "mp3":
+        if hasattr(tags, "getall"):
+            facts["chapters"] = [
+                dict(
+                    start=c.start_time / 1000,
+                    title=str(c.sub_frames.get("TIT2", c.element_id))[:512],
+                )
+                for c in tags.getall("CHAP")[:10000]
+            ]
         pictures = tags.getall("APIC") if hasattr(tags, "getall") else []
         content = pictures[0].data if pictures else None
     else:

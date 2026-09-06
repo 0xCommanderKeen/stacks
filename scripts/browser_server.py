@@ -7,6 +7,7 @@ import uvicorn
 from pypdf import PdfWriter
 from stacks.app import create_app
 from stacks.config import Settings
+from stacks.library import Library
 from stacks.samples import epub_bytes
 from stacks.samples import main as samples
 
@@ -24,6 +25,14 @@ for index in range(26):
         epub_bytes(f"Page Test {index:02d}", authors=("Pagination Fixture",), cover=False)
     )
 with tempfile.TemporaryDirectory(prefix="stacks-browser-") as directory:
+    library = Library(Path(directory))
+    library.import_files(
+        [
+            (Path("backend/tests/fixtures/listening.m4b"), "Disc 1/01.m4b"),
+            (Path("backend/tests/fixtures/tone.mp3"), "Disc 2/01.mp3"),
+        ]
+    )
+    library.close()
     uvicorn.run(
         create_app(
             Settings(data_dir=Path(directory), password="browser-test-password", _env_file=None)

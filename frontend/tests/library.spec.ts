@@ -287,3 +287,74 @@ test('group alternate formats, split, undo, and preserve separate narrations', a
   await page.getByRole('button', { name: 'Group or separate formats' }).click();
   await page.getByRole('button', { name: 'Undo grouping or split' }).click();
 });
+
+test('audio persists through navigation, seeks, resumes and detects stale devices', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  const catalog = await (await page.request.get('/api/catalog?q=Listening%20Practice')).json();
+  const work = catalog.items.find(
+    (w: { editions: { representations: { format: string }[] }[] }) =>
+      w.editions[0].representations[0].format === 'audio-set',
+  );
+  const representation = work.editions[0].representations[0];
+  await page.goto(`/?book=${work.id}`);
+  await page.getByRole('button', { name: 'Listen · AUDIO-SET', exact: true }).click();
+  const player = page.getByRole('region', { name: 'Audiobook player' });
+  await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Keep it safe.' })).toBeVisible();
+  await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
+  await player.getByRole('button', { name: 'Pause audio' }).click();
+  await player.getByRole('combobox', { name: 'Speed', exact: true }).selectOption('1.5');
+  await player.getByRole('combobox', { name: 'Jump to chapter' }).selectOption('10');
+  const progress = async () =>
+    (await (await page.request.get(`/api/representations/${representation.id}/playback`)).json())
+      .progress;
+  await expect.poll(async () => (await progress()).position).toBeGreaterThanOrEqual(10);
+  await player.getByRole('slider', { name: 'Listening position' }).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect.poll(async () => (await progress()).position).toBeLessThan(10);
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Continue Listening Practice' })).toBeVisible();
+  await page.reload();
+  await page.getByRole('button', { name: 'Continue Listening Practice' }).click();
+  await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
+  await player.getByRole('button', { name: 'Pause audio' }).click();
+  await expect(player.getByRole('combobox', { name: 'Speed', exact: true })).toHaveValue('1.5');
+  expect(
+    Number(await player.getByRole('slider', { name: 'Listening position' }).inputValue()),
+  ).toBeGreaterThan(9);
+  // A second device saves after this player's last acknowledged revision.
+  await expect.poll(async () => (await progress()).speed).toBe(1.5);
+  await expect(player.getByText('Place saved', { exact: true })).toBeVisible();
+  const current = await progress();
+  const other = await page.request.patch(`/api/representations/${representation.id}/progress`, {
+    headers: { 'X-Stacks-Request': '1' },
+    data: { ...current, position: 15 },
+  });
+  expect(other.ok()).toBe(true);
+  await player.getByRole('slider', { name: 'Listening position' }).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(player.getByRole('alert')).toContainText('another device');
+  await player.getByRole('button', { name: 'Reload saved position' }).click();
+  await expect(player.getByRole('slider', { name: 'Listening position' })).toHaveValue('15');
+  await player.getByRole('button', { name: 'Next track' }).click();
+  await expect(player.getByRole('combobox', { name: 'Track', exact: true })).toHaveValue('1');
+  await player.getByRole('button', { name: 'Previous track' }).click();
+  await expect(player.getByRole('combobox', { name: 'Track', exact: true })).toHaveValue('0');
+  await expect(player.getByRole('slider', { name: 'Listening position' })).toBeEnabled();
+  await player.getByRole('slider', { name: 'Listening position' }).focus();
+  await page.keyboard.press('End');
+  await page.keyboard.press('ArrowLeft');
+  await player.getByRole('button', { name: 'Play audio' }).click();
+  await expect(player.getByRole('combobox', { name: 'Track', exact: true })).toHaveValue('1');
+  await expect.poll(async () => (await progress()).completed).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('audio-player.png'), fullPage: true });
+});

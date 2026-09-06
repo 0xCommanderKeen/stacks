@@ -23,6 +23,7 @@ from stacks.models import (
     Credit,
     Edition,
     ImportOperation,
+    Progress,
     Representation,
     Series,
     SeriesMembership,
@@ -101,7 +102,9 @@ def work_out(work: Work) -> WorkOut:
                             if k in {"page_count", "duration_seconds", "series_hint"}
                         },
                         has_cover=bool(r.cover_path),
-                        capabilities=["download"],
+                        capabilities=["download", "listen"]
+                        if r.format in {"mp3", "m4a", "m4b", "audio-set"}
+                        else ["download"],
                         assets=[
                             dict(
                                 id=a.id, original_name=a.original_name, size=a.size, sha256=a.sha256
@@ -482,9 +485,7 @@ class Library:
             tables = {}
             for model in (
                 Work,
-                WorkRedirect,
                 Contributor,
-                CatalogOperation,
                 Credit,
                 Edition,
                 Representation,
@@ -493,6 +494,7 @@ class Library:
                 SeriesMembership,
                 WorkRedirect,
                 CatalogOperation,
+                Progress,
             ):
                 tables[model.__tablename__] = [
                     dict(row)
@@ -500,4 +502,4 @@ class Library:
                         select(model.__table__).order_by(*model.__table__.primary_key.columns)
                     ).mappings()
                 ]
-            return {"schema_version": 3, "roots": {"managed": "managed/"}, "tables": tables}
+            return {"schema_version": 4, "roots": {"managed": "managed/"}, "tables": tables}

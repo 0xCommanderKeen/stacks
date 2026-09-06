@@ -114,6 +114,7 @@ def restore(archive_path: Path, destination: Path):
                 ("0001",),
                 ("0002",),
                 ("0003",),
+                ("0004",),
             }:
                 raise ValueError("This Stacks version cannot restore the backup schema.")
             for root, relative, sha, size in connection.execute(

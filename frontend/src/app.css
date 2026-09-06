@@ -742,3 +742,15 @@ textarea {
     animation: none !important;
   }
 }
+
+body:has(.player) .workspace {
+  padding-bottom: 250px;
+}
+
+.cover-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}

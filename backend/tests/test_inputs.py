@@ -130,3 +130,19 @@ def test_password_change_invalidates_existing_sessions(settings):
     with TestClient(create_app(changed)) as client:
         client.cookies.set("stacks_session", token)
         assert client.get("/api/session").status_code == 401
+
+
+def test_successful_login_resets_failed_attempt_window(settings):
+    with TestClient(create_app(settings)) as client:
+        for _ in range(2):
+            for _ in range(6):
+                assert (
+                    client.post(
+                        "/api/login", json={"password": "wrong"}, headers=HEADERS
+                    ).status_code
+                    == 401
+                )
+            assert (
+                client.post("/api/login", json={"password": PASSWORD}, headers=HEADERS).status_code
+                == 204
+            )

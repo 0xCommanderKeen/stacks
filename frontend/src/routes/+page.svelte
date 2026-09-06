@@ -3,6 +3,8 @@
   import Cover from '$lib/Cover.svelte';
   import Organization from '$lib/Organization.svelte';
   import CatalogGroups from '$lib/CatalogGroups.svelte';
+  import AudioPlayer from '$lib/AudioPlayer.svelte';
+  import type { components } from '$lib/schema';
   import {
     ApiError,
     json,
@@ -26,7 +28,26 @@
   let appliedQuery = $state('');
   let offset = $state(0);
   let selected = $state<Book | null>(null);
-  let view = $state<'library' | 'settings'>('library');
+  let view = $state<'library' | 'settings' | 'home'>('library');
+  let continuing = $state<components['schemas']['ContinuePage'] | null>(null);
+  let homeOffset = $state(0);
+  let player = $state<{
+    start: (id: string, play?: boolean) => Promise<void>;
+    flush: () => Promise<void>;
+    pauseAndFlush: () => Promise<void>;
+  }>(null!);
+  async function loadHome(nextOffset = homeOffset) {
+    continuing = await json<components['schemas']['ContinuePage']>(
+      `/home/continue?offset=${nextOffset}`,
+    );
+    homeOffset = nextOffset;
+  }
+  async function showHome() {
+    selected = null;
+    view = 'home';
+    setUrl();
+    await loadHome().catch(fail);
+  }
   let editing = $state(false);
   let editTitle = $state('');
   let editAuthors = $state('');
@@ -59,10 +80,19 @@
     q = params.get('q') || '';
     const requestedOffset = Number(params.get('offset') || 0);
     offset = Number.isSafeInteger(requestedOffset) && requestedOffset >= 0 ? requestedOffset : 0;
-    view = params.get('view') === 'settings' ? 'settings' : 'library';
+    view =
+      params.get('view') === 'settings'
+        ? 'settings'
+        : params.get('view') === 'home'
+          ? 'home'
+          : 'library';
+    const continuationOffset = Number(params.get('continue_offset') || 0);
+    homeOffset =
+      Number.isSafeInteger(continuationOffset) && continuationOffset >= 0 ? continuationOffset : 0;
     selected = null;
     editing = false;
     await load(offset, q);
+    if (view === 'home') await loadHome();
     if (params.get('book'))
       selected = await json<Book>(`/works/${encodeURIComponent(params.get('book')!)}`);
   }
@@ -91,7 +121,8 @@
     if (appliedQuery) params.set('q', appliedQuery);
     if (offset) params.set('offset', String(offset));
     if (selected) params.set('book', selected.id);
-    if (view === 'settings') params.set('view', 'settings');
+    if (view !== 'library') params.set('view', view);
+    if (view === 'home' && homeOffset) params.set('continue_offset', String(homeOffset));
     history.pushState({}, '', params.size ? `/?${params}` : '/');
   }
 
@@ -117,6 +148,7 @@
 
   async function signOut() {
     try {
+      await player?.pauseAndFlush();
       await request('/logout', { method: 'POST' });
       signedIn = false;
       selected = null;
@@ -188,6 +220,7 @@
   }
 
   function open(book: Book) {
+    view = 'library';
     selected = book;
     editing = false;
     error = '';
@@ -306,6 +339,7 @@
       }}>stacks<span>▰</span></a
     >
     <nav aria-label="Main navigation">
+      <button class:active={view === 'home'} onclick={showHome}>Home</button>
       <button class:active={view === 'library'} onclick={libraryView}>Library</button><button
         class:active={view === 'settings'}
         onclick={() => {
@@ -328,7 +362,52 @@
         {status.import_errors} interrupted import(s) need attention. Check storage, then restart Stacks
         to retry recovery. Original copies are retained.
       </div>{/if}
-    {#if view === 'settings'}
+    {#if view === 'home'}
+      <div class="eyebrow">PICK UP WHERE YOU LEFT OFF</div>
+      <h1>A little more <em>listening.</em></h1>
+      <p class="intro">Your place is here when you come back.</p>
+      {#if continuing?.items.length}
+        <div class="book-grid">
+          {#each continuing.items as item}<div class="book">
+              <button
+                class="cover-button"
+                aria-label="Open {item.work.title}"
+                onclick={() => open(item.work)}><Cover book={item.work} /></button
+              >
+              <div class="book-caption">
+                <h2>{item.work.title}</h2>
+                <p>{item.work.authors.join(' · ')}</p>
+              </div>
+              <button class="secondary" onclick={() => player.start(item.representation_id)}
+                >Continue {item.work.title}</button
+              >
+            </div>{/each}
+        </div>
+        {#if continuing.total > continuing.limit}<div class="pagination">
+            <button
+              class="secondary"
+              disabled={homeOffset === 0}
+              onclick={async () => {
+                await loadHome(Math.max(0, homeOffset - continuing!.limit));
+                setUrl();
+              }}>← Previous</button
+            ><span
+              >{homeOffset + 1}–{Math.min(homeOffset + continuing.limit, continuing.total)} of {continuing.total}</span
+            ><button
+              class="secondary"
+              disabled={homeOffset + continuing.limit >= continuing.total}
+              onclick={async () => {
+                await loadHome(homeOffset + continuing!.limit);
+                setUrl();
+              }}>Next →</button
+            >
+          </div>{/if}
+      {:else}<section class="empty">
+          <h2>Your next chapter is waiting.</h2>
+          <p>Start an audiobook in your library. Its saved place will appear here.</p>
+          <button class="secondary" onclick={libraryView}>Browse library</button>
+        </section>{/if}
+    {:else if view === 'settings'}
       <div class="eyebrow">LOOK AFTER YOUR LIBRARY</div>
       <h1>Keep it <em>safe.</em></h1>
       <p class="intro">Your books and your choices belong to you.</p>
@@ -388,7 +467,13 @@
             <h1>{selected.title}</h1>
             <p class="byline">{selected.authors.join(' · ') || 'Unknown author'}</p>
             <div class="actions">
-              {#each selected.editions as edition}{#each edition.representations as representation}{#each representation.assets as asset}<a
+              {#each selected.editions as edition}{#each edition.representations as representation}{#if representation.capabilities.includes('listen')}<button
+                      class="primary"
+                      onclick={() => player.start(representation.id)}
+                      >Listen · {representation.format.toUpperCase()}{edition.narrator
+                        ? ` · ${edition.narrator}`
+                        : ''}</button
+                    >{/if}{#each representation.assets as asset}<a
                       class="button primary"
                       href="/api/assets/{asset.id}/download"
                       download
@@ -526,4 +611,10 @@
     {/if}
     <footer><span>STACKS</span><span>A library, on your terms.</span></footer>
   </main>
+  <AudioPlayer
+    bind:this={player}
+    onopen={(id) => {
+      void json<Book>(`/works/${id}`).then(open).catch(fail);
+    }}
+  />
 {/if}
