@@ -175,7 +175,7 @@ def test_backups_and_export_do_not_reissue_device_authority(client, tmp_path):
     issued, _ = issue(client)
     library = client.app.state.library
     exported = library.export()
-    assert exported["schema_version"] == 13
+    assert exported["schema_version"] == 14
     assert "device_credential" not in exported["tables"]
     assert issued["password"] not in json.dumps(exported)
     archive = tmp_path / "backup.zip"

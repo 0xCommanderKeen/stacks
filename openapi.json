@@ -248,6 +248,26 @@
             ],
             "title": "Language"
           },
+          "manual_fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "title",
+                    "authors",
+                    "description"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Fields"
+          },
           "narrator": {
             "anyOf": [
               {
@@ -1138,6 +1158,62 @@
         "title": "EditionOut",
         "type": "object"
       },
+      "FieldOrigin": {
+        "properties": {
+          "protected": {
+            "title": "Protected",
+            "type": "boolean"
+          },
+          "provider_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Key"
+          },
+          "selected_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected At"
+          },
+          "source": {
+            "enum": [
+              "manual",
+              "embedded",
+              "openlibrary"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "source",
+          "protected"
+        ],
+        "title": "FieldOrigin",
+        "type": "object"
+      },
       "FollowEdit": {
         "properties": {
           "following": {
@@ -1524,6 +1600,95 @@
           "series"
         ],
         "title": "MembershipOut",
+        "type": "object"
+      },
+      "MetadataAccept": {
+        "properties": {
+          "fields": {
+            "items": {
+              "enum": [
+                "title",
+                "authors",
+                "description"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "replace_protected": {
+            "items": {
+              "enum": [
+                "title",
+                "authors",
+                "description"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Replace Protected",
+            "type": "array"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "suggestion_fetched_at": {
+            "title": "Suggestion Fetched At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "suggestion_fetched_at",
+          "revision",
+          "fields"
+        ],
+        "title": "MetadataAccept",
+        "type": "object"
+      },
+      "MetadataSearch": {
+        "properties": {
+          "offset": {
+            "default": 0,
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "q": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "MetadataSearch",
+        "type": "object"
+      },
+      "MetadataState": {
+        "properties": {
+          "origins": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FieldOrigin"
+            },
+            "title": "Origins",
+            "type": "object"
+          },
+          "work": {
+            "$ref": "#/components/schemas/WorkOut"
+          }
+        },
+        "required": [
+          "work",
+          "origins"
+        ],
+        "title": "MetadataState",
         "type": "object"
       },
       "NextOut": {
@@ -2366,6 +2531,120 @@
           "import_errors"
         ],
         "title": "StatusOut",
+        "type": "object"
+      },
+      "SuggestedValues": {
+        "properties": {
+          "authors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authors"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "SuggestedValues",
+        "type": "object"
+      },
+      "SuggestionOut": {
+        "properties": {
+          "detailed": {
+            "title": "Detailed",
+            "type": "boolean"
+          },
+          "fetched_at": {
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "provider_key": {
+            "title": "Provider Key",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "values": {
+            "$ref": "#/components/schemas/SuggestedValues"
+          }
+        },
+        "required": [
+          "id",
+          "provider_key",
+          "source_url",
+          "fetched_at",
+          "detailed",
+          "values"
+        ],
+        "title": "SuggestionOut",
+        "type": "object"
+      },
+      "SuggestionPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "default": 5,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset"
+        ],
+        "title": "SuggestionPage",
         "type": "object"
       },
       "TrashEntryOut": {
@@ -5212,6 +5491,200 @@
           }
         },
         "summary": "Cover Original"
+      }
+    },
+    "/api/works/{work_id}/metadata": {
+      "get": {
+        "operationId": "metadata_state_api_works__work_id__metadata_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "work_id",
+            "required": true,
+            "schema": {
+              "title": "Work Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Metadata State"
+      }
+    },
+    "/api/works/{work_id}/metadata/search": {
+      "post": {
+        "operationId": "metadata_search_api_works__work_id__metadata_search_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "work_id",
+            "required": true,
+            "schema": {
+              "title": "Work Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataSearch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Metadata Search"
+      }
+    },
+    "/api/works/{work_id}/metadata/{suggestion_id}/accept": {
+      "post": {
+        "operationId": "metadata_accept_api_works__work_id__metadata__suggestion_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "work_id",
+            "required": true,
+            "schema": {
+              "title": "Work Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "suggestion_id",
+            "required": true,
+            "schema": {
+              "title": "Suggestion Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataAccept"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Metadata Accept"
+      }
+    },
+    "/api/works/{work_id}/metadata/{suggestion_id}/details": {
+      "post": {
+        "operationId": "metadata_details_api_works__work_id__metadata__suggestion_id__details_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "work_id",
+            "required": true,
+            "schema": {
+              "title": "Work Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "suggestion_id",
+            "required": true,
+            "schema": {
+              "title": "Suggestion Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Metadata Details"
       }
     },
     "/api/works/{work_id}/personal": {

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Cover from '$lib/Cover.svelte';
+  import Metadata from '$lib/Metadata.svelte';
   import CoverChoice from '$lib/CoverChoice.svelte';
   import Organization from '$lib/Organization.svelte';
   import CatalogGroups from '$lib/CatalogGroups.svelte';
@@ -686,6 +687,13 @@
                   void load().catch(fail);
                 }}
               />
+              {#key selected.id}<Metadata
+                  book={selected}
+                  onupdate={(book) => {
+                    selected = book;
+                    void load().catch(fail);
+                  }}
+                />{/key}
               {#key selected.id}<CatalogGroups
                   book={selected}
                   onchange={async (id) => {

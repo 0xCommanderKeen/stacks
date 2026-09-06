@@ -22,6 +22,7 @@ from stacks.models import (
     WorkRedirect,
     identity,
 )
+from stacks.provenance import FIELDS, origins
 from stacks.schemas import ConflictOut, GroupPreview, GroupRequest, OperationOut, OperationPage
 
 
@@ -92,6 +93,7 @@ def _saved_snapshot(raw):
         work.setdefault("trashed_at", None)
         work.setdefault("updated_at", work["created_at"])
         work.setdefault("selected_cover_id", None)
+        work.setdefault("metadata_origins_json", "{}")
     return snapshot
 
 
@@ -281,6 +283,25 @@ class CatalogOperations:
     def _group(self, session, data, resolutions):
         source = session.get(Work, data["source_work_id"])
         target = session.get(Work, data["target_work_id"])
+        chosen_origins = origins(target)
+        source_origins = origins(source)
+        for field in FIELDS:
+            if resolutions.get(field) == "source":
+                chosen_origins[field] = source_origins[field]
+            elif source_origins[field]["protected"]:
+                left = (
+                    [c.contributor.name for c in source.credits]
+                    if field == "authors"
+                    else getattr(source, field)
+                )
+                right = (
+                    [c.contributor.name for c in target.credits]
+                    if field == "authors"
+                    else getattr(target, field)
+                )
+                if left == right:
+                    chosen_origins[field] = source_origins[field]
+        target.metadata_origins_json = json.dumps(chosen_origins)
         for name in ("title", "description", "selected_cover_id"):
             if resolutions.get(name) == "source":
                 setattr(target, name, getattr(source, name))
@@ -396,6 +417,7 @@ class CatalogOperations:
         edition = session.get(Edition, representation.edition_id)
         new = Work(
             id=data["new_work_id"],
+            metadata_origins_json=source.metadata_origins_json,
             selected_cover_id=source.selected_cover_id,
             title=source.title,
             description=source.description,

@@ -508,7 +508,8 @@ test('archiving the final book on a page returns to the last populated page', as
         path.resolve(`../samples/${prefix} ${String(i).padStart(2, '0')}.epub`),
       ),
     );
-  await expect(page.getByRole('status')).toContainText('25 books added');
+  // Each original is inspected in its own bounded process; wait for the batch.
+  await expect(page.getByRole('status')).toContainText('25 books added', { timeout: 30_000 });
   await page.getByLabel('Search books or authors').fill(prefix);
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByRole('button', { name: 'Next →', exact: true }).click();
@@ -1227,4 +1228,57 @@ test('preview, choose, reload and reset a custom cover', async ({ page }, testIn
   expect(
     (await (await page.request.get(`/api/works/${work.id}`)).json()).selected_cover_id,
   ).toBeNull();
+});
+
+test('review provider fields while preserving a manual title', async ({ page }, testInfo) => {
+  const title = `Metadata ${testInfo.project.name}`;
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(path.resolve(`../samples/${title}.epub`));
+  await expect(page.getByRole('status')).toContainText('added');
+  await page.getByLabel('Search books or authors').fill(title);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: `Open ${title}`, exact: true }).click();
+  await page.getByRole('button', { name: 'Edit details' }).click();
+  const corrected = `${title} corrected`;
+  await page.getByLabel('Title', { exact: true }).fill(corrected);
+  await page.getByRole('button', { name: 'Save details' }).click();
+  await page.getByText('Find book details', { exact: true }).click();
+  await page.getByLabel('Title or author to look up').fill(title);
+  await page.getByRole('button', { name: 'Search Open Library' }).click();
+  await page.getByRole('button', { name: 'Next matches', exact: true }).click();
+  await page.getByRole('button', { name: `Review ${title} suggested 6`, exact: true }).click();
+  const preview = page.getByRole('region', { name: 'Metadata preview', exact: true });
+  await expect(preview.getByLabel('Use suggested title', { exact: true })).not.toBeChecked();
+  await page.getByRole('button', { name: 'Look up description', exact: true }).click();
+  await expect(preview.getByLabel('Use suggested description', { exact: true })).toBeChecked();
+  await preview.getByLabel('Use suggested authors', { exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Accept selected fields', exact: true }).click();
+  await expect(page.getByRole('heading', { name: corrected, exact: true })).toBeVisible();
+  await expect(
+    page.getByText('A description from the test catalog.', { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByText('Find book details', { exact: true }).click();
+  await page.getByLabel('Title or author to look up').fill(title);
+  await page.getByRole('button', { name: 'Search Open Library' }).click();
+  await page.getByRole('button', { name: `Review ${title} suggested 1`, exact: true }).click();
+  await preview.getByLabel('Use suggested title', { exact: true }).check();
+  await expect(
+    page.getByRole('button', { name: 'Accept selected fields', exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByLabel('Replace my protected title with these suggestions', { exact: true })
+    .check();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('metadata-preview.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Accept selected fields', exact: true }).click();
+  await expect(
+    page.getByRole('heading', { name: `${title} suggested 1`, exact: true }),
+  ).toBeVisible();
 });

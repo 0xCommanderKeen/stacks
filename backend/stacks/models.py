@@ -32,6 +32,7 @@ class CoverBlob(Base):
 class Work(Base):
     __tablename__ = "work"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    metadata_origins_json: Mapped[str] = mapped_column(Text, default="{}")
     selected_cover_id: Mapped[str | None] = mapped_column(ForeignKey("cover_blob.id"))
     title: Mapped[str] = mapped_column(Text)
     description: Mapped[str] = mapped_column(Text, default="")
@@ -318,3 +319,14 @@ class DeviceCredential(Base):
     scope: Mapped[str]
     created_at: Mapped[str] = mapped_column(default=now)
     last_used_at: Mapped[str | None] = mapped_column(default=None)
+
+
+class MetadataSuggestion(Base):
+    __tablename__ = "metadata_suggestion"
+    __table_args__ = (UniqueConstraint("work_id", "provider_key"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    work_id: Mapped[str] = mapped_column(ForeignKey("work.id", ondelete="CASCADE"), index=True)
+    provider_key: Mapped[str] = mapped_column(String(64))
+    values_json: Mapped[str] = mapped_column(Text)
+    fetched_at: Mapped[str] = mapped_column(String(), default=now)
+    detailed: Mapped[bool] = mapped_column(default=False)

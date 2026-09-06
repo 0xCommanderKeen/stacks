@@ -11,9 +11,17 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     password: SecretStr = Field(min_length=12)
     sources: dict[str, Path] = Field(default_factory=dict)
+    provider_contact: str = Field(default="", max_length=128)
     secure_cookie: bool = False
     max_upload_bytes: int = Field(default=100 * 1024 * 1024, ge=1024, le=1024**3)
     frontend_dir: Path = Path("frontend/build")
+
+    @field_validator("provider_contact")
+    @classmethod
+    def valid_provider_contact(cls, value):
+        if not value.isascii() or any(ord(c) < 32 for c in value):
+            raise ValueError("Provider contact must be printable ASCII.")
+        return value.strip()
 
     @property
     def db_path(self) -> Path:
