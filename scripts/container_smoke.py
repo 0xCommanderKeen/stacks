@@ -27,6 +27,9 @@ def main():
     try:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            # Linux preserves host bind-mount permissions. This directory contains only
+            # synthetic test data and must be traversable by the container's UID 10001.
+            root.chmod(0o755)
             for restoring in (False, True):
                 container = name + ("-restored" if restoring else "-initial")
                 args = [
@@ -117,6 +120,7 @@ def main():
                         {"Content-Type": "application/json"},
                     )
                     (root / "backup.zip").write_bytes(request("/api/backup", b"", "POST").read())
+                    (root / "backup.zip").chmod(0o644)
                 catalog = json.load(request("/api/catalog"))
                 assert catalog["items"][0]["title"] == "Restored from the shipped image"
                 asset = catalog["items"][0]["editions"][0]["representations"][0]["assets"][0]
