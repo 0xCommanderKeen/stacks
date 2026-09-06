@@ -18,11 +18,21 @@ from sqlalchemy.exc import SQLAlchemyError
 from stacks import models
 from stacks.db import initialize
 from stacks.epub import safe_member
-from stacks.schemas import FieldOrigin, PersonalValues, RecordEdit
+from stacks.schemas import (
+    CollectionEdit,
+    FieldOrigin,
+    MembershipEdit,
+    PersonalValues,
+    ProgressEdit,
+    RecordEdit,
+    SeriesEdit,
+)
 from stacks.snapshots import flush_directory, snapshot_database
 
 SCHEMA_VERSION = 15
 FORMAT_VERSION = 1
+MAX_TOKEN = 16 * 1024 * 1024
+MAX_OBJECT = 32 * 1024 * 1024
 TABLE_NAMES = (
     "cover_blob",
     "work",
@@ -110,7 +120,10 @@ def write_catalog(library, output):
                             for field in value.values()
                         ):
                             raise ValueError("A catalog field exceeds the portable format limit.")
-                        json.dump(value, target, ensure_ascii=False, allow_nan=False)
+                        serialized = json.dumps(value, ensure_ascii=False, allow_nan=False)
+                        if len(serialized.encode("utf-8")) > MAX_TOKEN:
+                            raise ValueError("A catalog row exceeds the portable format limit.")
+                        target.write(serialized)
                         first = False
                     target.write("]")
                 target.write("}}\n")
@@ -122,11 +135,54 @@ def write_catalog(library, output):
         partial.unlink(missing_ok=True)
 
 
+class TokenBoundedInput:
+    """Bound JSON string tokens before the parser allocates their complete values."""
+
+    def __init__(self, source):
+        self.source = source
+        self.in_string = False
+        self.escaped = False
+        self.length = 0
+
+    def read(self, size=-1):
+        if size == 0:
+            return b""
+        chunk = self.source.read(min(size if size > 0 else 65536, 65536, MAX_TOKEN + 1))
+        previous = 0
+        for match in re.finditer(rb'["\\]', chunk):
+            gap = match.start() - previous
+            symbol = match.group()
+            if self.in_string:
+                self.length += gap
+                if gap:
+                    self.escaped = False
+                if self.escaped:
+                    self.length += 1
+                    self.escaped = False
+                elif symbol == b"\\":
+                    self.length += 1
+                    self.escaped = True
+                else:
+                    self.in_string = False
+                if self.length > MAX_TOKEN:
+                    raise ValueError("A catalog JSON token exceeds the format limit.")
+            elif symbol == b'"':
+                self.in_string, self.length, self.escaped = True, 0, False
+            previous = match.end()
+        if self.in_string:
+            self.length += len(chunk) - previous
+            if len(chunk) > previous:
+                self.escaped = False
+            if self.length > MAX_TOKEN:
+                raise ValueError("A catalog JSON token exceeds the format limit.")
+        return chunk
+
+
 class Reader:
     """Small grammar for the existing JSON envelope; each table is consumed once."""
 
     def __init__(self, source):
-        self.events = iter(ijson.basic_parse(source, use_float=True))
+        self.events = iter(ijson.basic_parse(TokenBoundedInput(source), use_float=True))
 
     def next(self):
         try:
@@ -140,7 +196,11 @@ class Reader:
             raise ValueError("Invalid catalog structure.")
         return found
 
-    def value(self, first=None, depth=0):
+    def value(self, first=None, depth=0, budget=None):
+        budget = [0] if budget is None else budget
+        budget[0] += 64
+        if budget[0] > MAX_OBJECT:
+            raise ValueError("A catalog object exceeds the format limit.")
         if depth > 8:
             raise ValueError("Catalog JSON nesting exceeds the format limit.")
         event, value = first or self.next()
@@ -152,9 +212,11 @@ class Reader:
                     return result
                 if event != "map_key" or key in result or len(result) >= 1000:
                     raise ValueError("Duplicate or excessive catalog object keys.")
-                result[key] = self.value(depth=depth + 1)
+                budget[0] += len(key)
+                result[key] = self.value(depth=depth + 1, budget=budget)
         if event in {"string", "number", "boolean", "null"}:
-            if isinstance(value, str) and len(value) > 16 * 1024 * 1024:
+            budget[0] += len(value) if isinstance(value, str) else 16
+            if budget[0] > MAX_OBJECT:
                 raise ValueError("A catalog field exceeds the format limit.")
             return value
         raise ValueError("Invalid catalog value.")
@@ -191,8 +253,11 @@ def validate_row(name, row):
         if field in {"relative_path", "cover_path", "source", "destination"}:
             if not safe_member(value) or value in {".", ""} or "\x00" in value:
                 raise ValueError(f"Unsafe relative path in {name}.")
-        if field == "root" and value and not ROOT.fullmatch(value):
-            raise ValueError("Invalid source alias.")
+        if field == "root":
+            if (value or name != "intake_job") and not ROOT.fullmatch(value):
+                raise ValueError("Invalid source alias.")
+            if value == "managed" and name != "asset":
+                raise ValueError("Managed storage is not an external intake source.")
         if field == "sha256" and not re.fullmatch(r"[0-9a-f]{64}", value):
             raise ValueError("Invalid original checksum.")
         if field in {"size", "bytes", "position"} and name != "series_membership" and value < 0:
@@ -201,7 +266,8 @@ def validate_row(name, row):
             raise ValueError("Invalid revision.")
         if field.endswith("_json"):
             parsed = json.loads(value)
-            if not isinstance(parsed, (dict, list)):
+            expected = list if field == "tags_json" else dict
+            if not isinstance(parsed, expected):
                 raise ValueError("Invalid embedded catalog JSON.")
     enums = {
         ("edition", "medium"): {"ebook", "comic", "audio"},
@@ -245,8 +311,14 @@ def validate_row(name, row):
             raise ValueError("Invalid selected metadata origins.")
         for origin in origins.values():
             FieldOrigin.model_validate(origin)
-    if name == "progress" and not 0.5 <= row["speed"] <= 3:
-        raise ValueError("Invalid playback speed.")
+    domain_models = {
+        "progress": ProgressEdit,
+        "series_membership": MembershipEdit,
+        "series": SeriesEdit,
+        "collection": CollectionEdit,
+    }
+    if name in domain_models:
+        domain_models[name].model_validate(row)
     if name == "scan_directory" and row["path"] and not safe_member(row["path"]):
         raise ValueError("Unsafe scan directory.")
     if name == "intake_job" and row["prefix"] and not safe_member(row["prefix"]):

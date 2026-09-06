@@ -232,3 +232,88 @@ def test_export_packaging_leaves_catalog_edits_and_audio_ranges_available(
             release.set()
         exporting.result(timeout=5)
     assert json.loads(destination.read_text())["tables"]["work"][0]["title"] == work["title"]
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "membership_position",
+        "membership_designation",
+        "progress_position",
+        "facts_shape",
+        "redirect_cycle",
+    ],
+)
+def test_read_invalid_values_are_rejected_before_publication(client, tmp_path, damage):
+    from uuid import uuid4
+
+    from .test_reading import audiobook
+
+    work, rep, asset = audiobook(client)
+    document = client.get("/api/export").json()
+    if damage.startswith("membership"):
+        series_id = str(uuid4())
+        document["tables"]["series"] = [
+            {"id": series_id, "name": "Run", "run": "2026", "following": False, "revision": 1}
+        ]
+        document["tables"]["series_membership"] = [
+            {
+                "id": str(uuid4()),
+                "series_id": series_id,
+                "work_id": work["id"],
+                "designation": "x" * 129 if damage.endswith("designation") else "1",
+                "position": 1e10 if damage.endswith("position") else 1,
+            }
+        ]
+    elif damage == "progress_position":
+        document["tables"]["progress"] = [
+            {
+                "representation_id": rep["id"],
+                "asset_id": asset["id"],
+                "position": 1e10,
+                "speed": 1.0,
+                "completed": False,
+                "revision": 1,
+                "updated_at": "2026-09-06T00:00:00Z",
+            }
+        ]
+    elif damage == "facts_shape":
+        document["tables"]["representation"][0]["extracted_json"] = "[]"
+    else:
+        document["tables"]["work_redirect"] = [{"source_id": work["id"], "target_id": work["id"]}]
+    source = tmp_path / "bad.json"
+    source.write_text(json.dumps(document))
+    destination = tmp_path / "fresh"
+    with pytest.raises(ValueError):
+        import_catalog(source, destination, allow_missing_originals=True)
+    assert not destination.exists()
+
+
+@pytest.mark.parametrize("prefix", [b'{"', b'{"value":"'])
+@pytest.mark.parametrize("ending", [b'"}', b""])
+def test_oversized_keys_and_strings_stop_input_before_complete_allocation(
+    monkeypatch, prefix, ending
+):
+    import io
+
+    import ijson
+    from stacks import portable
+
+    monkeypatch.setattr(portable, "MAX_TOKEN", 64)
+    source = io.BytesIO(prefix + b"x" * 10000 + ending)
+    with pytest.raises(ValueError, match="token exceeds"):
+        list(ijson.basic_parse(portable.TokenBoundedInput(source)))
+    assert source.tell() <= 130
+
+
+def test_string_guard_preserves_escaped_quotes_backslashes_and_utf8_at_chunk_boundaries():
+    import io
+
+    from stacks.portable import Reader
+
+    class ByteAtATime(io.BytesIO):
+        def read(self, size=-1):
+            return super().read(min(size, 1) if size >= 0 else 1)
+
+    value = {"quoted": 'A "book" \\ shelf \\"end 📚', "line": "a\nb"}
+    assert Reader(ByteAtATime(json.dumps(value, ensure_ascii=False).encode())).value() == value

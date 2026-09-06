@@ -63,9 +63,7 @@ test('import, search, edit, download, reload and back up a book', async ({ page 
   const exportedPath = await exported.path();
   const catalog = JSON.parse(await readFile(exportedPath!, 'utf8'));
   expect(catalog.format_version).toBe(1);
-  expect(catalog.tables.work.some((work: { title: string }) => work.title === title)).toBe(
-    true,
-  );
+  expect(catalog.tables.work.some((work: { title: string }) => work.title === title)).toBe(true);
   expect(catalog.tables).not.toHaveProperty('device_credential');
   await page.getByRole('button', { name: /Sign out/ }).click();
   await expect(page.getByLabel('Library password')).toBeVisible();

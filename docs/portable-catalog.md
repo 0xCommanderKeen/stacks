@@ -50,7 +50,9 @@ redirect cycles and truncated JSON are rejected. Import never contacts a provide
 
 The incremental parser uses [ijson's event interface](https://github.com/ICRAR/ijson).
 Memory follows the largest individual field/row, not the whole catalog. Format 1
-limits decoded strings to 16 MiB and objects to 1,000 keys with eight levels of
+limits encoded JSON string tokens and exported rows to 16 MiB. A byte-stream guard
+enforces token limits before parsing, including keys and unterminated strings.
+Objects have a 32 MiB construction budget, at most 1,000 keys and eight levels of
 structural nesting. Embedded JSON strings are validated separately. Large catalogs
 remain row streams; the original SQLite snapshot and output require temporary disk.
 The import/export format is transparent JSON, not executable code or a database dump.
