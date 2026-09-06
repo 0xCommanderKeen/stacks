@@ -429,6 +429,124 @@
         "title": "AudioTrackOut",
         "type": "object"
       },
+      "BackupCreate": {
+        "properties": {
+          "mode": {
+            "default": "catalog",
+            "enum": [
+              "catalog",
+              "full"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "title": "BackupCreate",
+        "type": "object"
+      },
+      "BackupOut": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "bytes": {
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "catalog",
+              "full"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "running",
+              "complete",
+              "error"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "state",
+          "created_at",
+          "finished_at",
+          "error",
+          "bytes",
+          "available"
+        ],
+        "title": "BackupOut",
+        "type": "object"
+      },
+      "BackupPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BackupOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "BackupPage",
+        "type": "object"
+      },
       "CandidateEdit": {
         "properties": {
           "metadata": {
@@ -1544,6 +1662,53 @@
           "password"
         ],
         "title": "Login",
+        "type": "object"
+      },
+      "MaintenanceOut": {
+        "properties": {
+          "disk_free_bytes": {
+            "title": "Disk Free Bytes",
+            "type": "integer"
+          },
+          "failed_intake": {
+            "title": "Failed Intake",
+            "type": "integer"
+          },
+          "last_backup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BackupOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending_intake": {
+            "title": "Pending Intake",
+            "type": "integer"
+          },
+          "pending_trash": {
+            "title": "Pending Trash",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "disk_free_bytes",
+          "pending_intake",
+          "failed_intake",
+          "pending_trash",
+          "last_backup",
+          "sources"
+        ],
+        "title": "MaintenanceOut",
         "type": "object"
       },
       "MembershipEdit": {
@@ -3091,6 +3256,164 @@
         "summary": "Create Backup"
       }
     },
+    "/api/backups": {
+      "get": {
+        "operationId": "backups_api_backups_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backups"
+      },
+      "post": {
+        "operationId": "queue_backup_api_backups_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Queue Backup"
+      }
+    },
+    "/api/backups/{backup_id}/copy": {
+      "delete": {
+        "operationId": "remove_backup_copy_api_backups__backup_id__copy_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "backup_id",
+            "required": true,
+            "schema": {
+              "title": "Backup Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Backup Copy"
+      }
+    },
+    "/api/backups/{backup_id}/download": {
+      "get": {
+        "operationId": "download_backup_api_backups__backup_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "backup_id",
+            "required": true,
+            "schema": {
+              "title": "Backup Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download Backup"
+      }
+    },
     "/api/browse/series": {
       "get": {
         "operationId": "browse_series_api_browse_series_get",
@@ -4322,6 +4645,24 @@
           }
         },
         "summary": "Logout"
+      }
+    },
+    "/api/maintenance": {
+      "get": {
+        "operationId": "maintenance_api_maintenance_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Maintenance"
       }
     },
     "/api/openapi.json": {

@@ -31,9 +31,30 @@ test('import, search, edit, download, reload and back up a book', async ({ page 
   );
   await page.screenshot({ path: testInfo.outputPath('book-detail.png'), fullPage: true });
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const backups = page.getByRole('region', { name: 'Library backups' });
+  const created = page.waitForResponse(
+    (response) => response.url().endsWith('/api/backups') && response.request().method() === 'POST',
+  );
+  await backups.getByRole('button', { name: 'Create backup', exact: true }).click();
+  const backupId = (await (await created).json()).id;
+  const download = backups.locator(`a[href="/api/backups/${backupId}/download"]`);
+  await expect(download).toBeVisible({ timeout: 30_000 });
   const backupPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download backup' }).click();
-  expect((await backupPromise).suggestedFilename()).toBe('stacks.backup.zip');
+  await download.click();
+  expect((await backupPromise).suggestedFilename()).toBe('stacks.catalog.backup.zip');
+  await page.reload();
+  await expect(download).toBeVisible();
+  await download
+    .locator('..')
+    .getByRole('button', { name: 'Remove server copy', exact: true })
+    .click();
+  await expect(download).toHaveCount(0);
+  await expect(backups).toContainText('Server copy removed');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await backups.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath('backups.png'), fullPage: true });
   await page.getByRole('button', { name: /Sign out/ }).click();
   await expect(page.getByLabel('Library password')).toBeVisible();
 });
@@ -823,9 +844,11 @@ test('register an original in Archive and explain external backup protection', a
     true,
   );
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Library backup', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Library backups', exact: true })).toBeVisible();
   await expect(
-    page.getByText('Registered source originals are not included;', { exact: false }),
+    page.getByText('Registered source originals are always protected separately.', {
+      exact: false,
+    }),
   ).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('sources.png'), fullPage: true });
 });

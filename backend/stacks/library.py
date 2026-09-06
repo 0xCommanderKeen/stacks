@@ -19,6 +19,7 @@ from stacks.epub import InvalidBook, safe_member
 from stacks.inspection import inspect_file, natural_key
 from stacks.models import (
     Asset,
+    BackupRecord,
     CatalogOperation,
     Collection,
     CollectionEntry,
@@ -884,6 +885,7 @@ class Library:
         with self.lock, self.engine.connect() as connection:
             tables = {}
             for model in (
+                BackupRecord,
                 MetadataSuggestion,
                 CoverBlob,
                 Work,
@@ -926,4 +928,4 @@ class Library:
             roots.update(
                 {row["root"]: {"kind": "external"} for row in tables["intake_job"] if row["root"]}
             )
-            return {"schema_version": 14, "roots": roots, "tables": tables}
+            return {"schema_version": 15, "roots": roots, "tables": tables}

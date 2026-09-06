@@ -330,3 +330,14 @@ class MetadataSuggestion(Base):
     values_json: Mapped[str] = mapped_column(Text)
     fetched_at: Mapped[str] = mapped_column(String(), default=now)
     detailed: Mapped[bool] = mapped_column(default=False)
+
+
+class BackupRecord(Base):
+    __tablename__ = "backup_record"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    mode: Mapped[str] = mapped_column(String())
+    state: Mapped[str] = mapped_column(String(), default="queued", index=True)
+    created_at: Mapped[str] = mapped_column(String(), default=now)
+    finished_at: Mapped[str | None] = mapped_column(String())
+    error: Mapped[str | None] = mapped_column(Text)
+    bytes: Mapped[int] = mapped_column(BigInteger, default=0)

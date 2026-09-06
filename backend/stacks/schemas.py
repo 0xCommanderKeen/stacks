@@ -637,3 +637,34 @@ class MetadataAccept(BaseModel):
     replace_protected: list[Literal["title", "authors", "description"]] = Field(
         default_factory=list, max_length=3
     )
+
+
+class BackupCreate(BaseModel):
+    mode: Literal["catalog", "full"] = "catalog"
+
+
+class BackupOut(BaseModel):
+    id: str
+    mode: Literal["catalog", "full"]
+    state: Literal["queued", "running", "complete", "error"]
+    created_at: str
+    finished_at: str | None
+    error: str | None
+    bytes: int
+    available: bool
+
+
+class BackupPage(BaseModel):
+    items: list[BackupOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class MaintenanceOut(BaseModel):
+    disk_free_bytes: int
+    pending_intake: int
+    failed_intake: int
+    pending_trash: int
+    last_backup: BackupOut | None
+    sources: list[SourceOut]

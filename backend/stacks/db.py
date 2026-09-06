@@ -2,8 +2,11 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
+
+from stacks.snapshots import before_upgrade
 
 
 def connect(path: Path):
@@ -20,11 +23,12 @@ def connect(path: Path):
 
 def initialize(path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
+    before_upgrade(path, ScriptDirectory.from_config(config).get_current_head())
     engine = connect(path)
     with engine.connect() as connection:
         connection.exec_driver_sql("PRAGMA journal_mode=WAL")
-    config = Config()
-    config.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
     try:
         with engine.connect() as connection:
             # SQLite batch rebuilds briefly drop a referenced table. Disable enforcement
