@@ -127,6 +127,7 @@ def restore(archive_path: Path, destination: Path):
                 ("0007",),
                 ("0008",),
                 ("0009",),
+                ("0010",),
             }:
                 raise ValueError("This Stacks version cannot restore the backup schema.")
             external_roots = {}

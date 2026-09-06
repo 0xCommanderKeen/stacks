@@ -41,6 +41,7 @@ from stacks.models import (
     identity,
 )
 from stacks.schemas import (
+    AcceptedMetadata,
     CatalogPage,
     ImportResult,
     PersonalOut,
@@ -397,18 +398,93 @@ class Library:
         """An ordered audio set is one representation; other formats have exactly one asset."""
         return self._ingest(sources)
 
-    def _ingest(self, sources: list[tuple[Path, str]], root: str | None = None) -> ImportResult:
-        with self.ingest_lock:
-            return self._ingest_locked(sources, root)
+    def accept_sources(
+        self,
+        root,
+        paths,
+        expected_hashes,
+        accepted: AcceptedMetadata,
+        mode="register",
+        checkpoint=None,
+    ):
+        if mode not in {"register", "copy"}:
+            raise InvalidBook("Choose register or copy storage.")
+        sources = []
+        for name in paths:
+            path = self.source_path(root, name)
+            sources.append((path, path.relative_to(self.sources[root]).as_posix()))
+        if accepted.series_id:
+            with self.lock, self.sessions() as session:
+                if session.get(Series, accepted.series_id) is None:
+                    raise InvalidBook("Choose an existing series/run.")
+        if len({name for _, name in sources}) != len(sources):
+            raise InvalidBook("Choose each source file only once.")
+        if set(paths) != set(expected_hashes):
+            raise InvalidBook("Every source needs its preview checksum.")
+        expected_hashes = {
+            canonical: expected_hashes[name]
+            for name, (_, canonical) in zip(paths, sources, strict=True)
+        }
+        return self._ingest(
+            sources,
+            root,
+            managed_copy=mode == "copy",
+            expected_hashes=expected_hashes,
+            accepted=accepted,
+            checkpoint=checkpoint,
+        )
 
-    def _ingest_locked(self, sources, root):
+    def _ingest(
+        self,
+        sources: list[tuple[Path, str]],
+        root: str | None = None,
+        *,
+        managed_copy=False,
+        expected_hashes=None,
+        accepted=None,
+        checkpoint=None,
+    ) -> ImportResult:
+        with self.ingest_lock:
+            return self._ingest_locked(
+                sources,
+                root,
+                managed_copy=managed_copy,
+                expected_hashes=expected_hashes,
+                accepted=accepted,
+                checkpoint=checkpoint,
+            )
+
+    def _ingest_locked(
+        self,
+        sources,
+        root,
+        *,
+        managed_copy=False,
+        expected_hashes=None,
+        accepted=None,
+        checkpoint=None,
+    ):
+        def checked_digest(path):
+            if checkpoint is None:
+                return digest(path)
+            checksum = hashlib.sha256()
+            with path.open("rb") as source:
+                while chunk := source.read(1024 * 1024):
+                    checkpoint()
+                    checksum.update(chunk)
+            return checksum.hexdigest()
+
         if not sources or len(sources) > 2000:
             raise InvalidBook("Choose between 1 and 2000 files.")
         sources = sorted(sources, key=lambda item: (natural_key(item[1]), item[1]))
         if any(not safe_member(name) or len(name) > 1024 for _, name in sources):
             raise InvalidBook("Invalid original filename.")
         observations = {name: path.stat() for path, name in sources} if root else {}
-        inspections = [inspect_file(path, name) for path, name in sources]
+        inspections = []
+        for path, name in sources:
+            if checkpoint:
+                checkpoint()
+            inspections.append(inspect_file(path, name))
         if len(sources) > 1 and any(i.facts["medium"] != "audio" for i in inspections):
             raise InvalidBook("Only audio tracks can be imported as one file set.")
         metadata = dict(inspections[0].facts)
@@ -422,7 +498,7 @@ class Library:
                 dict(
                     filename=f"original.{fmt}" if len(sources) == 1 else f"track-{index:04d}.{fmt}",
                     original_name=name,
-                    sha256=digest(source),
+                    sha256=checked_digest(source),
                     size=source.stat().st_size,
                     facts=inspection.facts,
                 )
@@ -435,7 +511,15 @@ class Library:
                     raise InvalidBook("A source file changed while inspecting it. Wait and retry.")
                 entry["relative_path"] = name
                 entry["observed_mtime_ns"] = current.st_mtime_ns
-            metadata["source_root"] = root
+            metadata["input_root"] = root
+            if not managed_copy:
+                metadata["source_root"] = root
+        if expected_hashes is not None and any(
+            expected_hashes.get(entry["original_name"]) != entry["sha256"] for entry in entries
+        ):
+            raise InvalidBook("Source bytes changed since preview. Rescan and review them again.")
+        if accepted is not None:
+            metadata["accepted_metadata"] = accepted.model_dump(exclude_none=True)
         metadata["assets"] = entries
         if len(entries) > 1:
             metadata["format"] = "audio-set"
@@ -463,15 +547,50 @@ class Library:
                                 "Review it before replacing it."
                             )
             with self.sessions() as session:
-                existing = session.scalar(
-                    select(Work.id)
+                existing = session.execute(
+                    select(Work.id, Representation.id)
+                    .select_from(Work)
                     .join(Edition)
                     .join(Representation)
                     .join(ImportOperation, ImportOperation.id == Representation.id)
                     .where(ImportOperation.sha256 == sha, ImportOperation.state == "complete")
-                )
+                ).first()
+            if not existing and accepted is not None:
+                with self.sessions() as session:
+                    asset_owner = session.execute(
+                        select(Edition.work_id, Representation.id)
+                        .select_from(Edition)
+                        .join(Representation)
+                        .join(Asset)
+                        .where(Asset.sha256.in_([entry["sha256"] for entry in entries]))
+                        .order_by(Asset.id)
+                        .limit(1)
+                    ).first()
+                    if asset_owner and len(entries) == 1:
+                        existing = asset_owner
+                    elif asset_owner:
+                        raise InvalidBook(
+                            "Some tracks already belong to a recording. Regroup that work first."
+                        )
             if existing:
-                return ImportResult(work=self.get(existing), duplicate=True)
+                if root and accepted is not None:
+                    with self.sessions.begin() as session:
+                        for asset in session.scalars(
+                            select(Asset).where(
+                                Asset.root == root,
+                                Asset.relative_path.in_([name for _, name in sources]),
+                            )
+                        ):
+                            match = next(
+                                entry
+                                for entry in entries
+                                if entry["relative_path"] == asset.relative_path
+                            )
+                            if asset.sha256 == match["sha256"]:
+                                asset.observed_mtime_ns = match["observed_mtime_ns"]
+                return ImportResult(
+                    work=self.get(existing[0]), representation_id=existing[1], duplicate=True
+                )
             if root:
                 with self.sessions() as session:
                     overlap = session.scalar(
@@ -498,7 +617,10 @@ class Library:
                         .where(
                             ImportOperation.state != "complete",
                             ImportOperation.sha256 != sha,
-                            func.json_extract(ImportOperation.extracted_json, "$.source_root")
+                            func.coalesce(
+                                func.json_extract(ImportOperation.extracted_json, "$.input_root"),
+                                func.json_extract(ImportOperation.extracted_json, "$.source_root"),
+                            )
                             == root,
                             func.json_extract(entries_table.c.value, "$.relative_path").in_(
                                 [name for _, name in sources]
@@ -518,20 +640,57 @@ class Library:
                     .order_by(ImportOperation.created_at)
                 )
         if pending:
+            with self.lock, self.sessions.begin() as session:
+                operation = session.get(ImportOperation, pending)
+                prior = json.loads(operation.extracted_json)
+                if accepted is not None and (
+                    prior.get("accepted_metadata") != accepted.model_dump(exclude_none=True)
+                    or prior.get("source_root") != metadata.get("source_root")
+                    or prior.get("input_root", prior.get("source_root")) != root
+                    or [entry["original_name"] for entry in prior.get("assets", [])]
+                    != [entry["original_name"] for entry in entries]
+                ):
+                    raise InvalidBook(
+                        "An earlier import has different pending choices. "
+                        "Recover it before creating a new preview."
+                    )
+                # A verified retry can refresh source observation times without changing bytes,
+                # accepted metadata, storage mode, or original ownership.
+                if root and prior.get("source_root") == root:
+                    current = {entry["relative_path"]: entry for entry in entries}
+                    for old in prior.get("assets", []):
+                        verified = current.get(old.get("relative_path"))
+                        if verified and old["sha256"] == verified["sha256"]:
+                            old["observed_mtime_ns"] = verified["observed_mtime_ns"]
+                    operation.extracted_json = json.dumps(prior, ensure_ascii=False)
             work_id = self._publish(pending)
-            return ImportResult(work=self.get(work_id), duplicate=False)
+            return ImportResult(work=self.get(work_id), representation_id=pending, duplicate=False)
         operation_id = identity()
         stage = self.staging / operation_id
         stage.mkdir()
         try:
-            for (source, _), entry in [] if root else zip(sources, entries, strict=True):
+            copying = [] if root and not managed_copy else zip(sources, entries, strict=True)
+            for (source, _), entry in copying:
                 destination = stage / entry["filename"]
                 with source.open("rb") as incoming, destination.open("xb") as out:
-                    shutil.copyfileobj(incoming, out, 1024**2)
+                    if checkpoint is None:
+                        shutil.copyfileobj(incoming, out, 1024**2)
+                    else:
+                        while chunk := incoming.read(1024 * 1024):
+                            checkpoint()
+                            out.write(chunk)
                     out.flush()
                     os.fsync(out.fileno())
-                if digest(destination) != entry["sha256"]:
+                if checked_digest(destination) != entry["sha256"]:
                     raise OSError("File verification failed; the upload was not imported.")
+            if root:
+                for _, name in sources:
+                    original, current = observations[name], self.source_path(root, name).stat()
+                    fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+                    if any(getattr(original, field) != getattr(current, field) for field in fields):
+                        raise InvalidBook("A source changed during copying. Rescan and retry.")
+            if checkpoint:
+                checkpoint()
             if cover:
                 write_durable(stage / "cover.jpg", cover)
             sync_dir(stage)
@@ -554,7 +713,7 @@ class Library:
                 shutil.rmtree(stage)
             raise
         work_id = self._publish(operation_id)
-        return ImportResult(work=self.get(work_id), duplicate=False)
+        return ImportResult(work=self.get(work_id), representation_id=operation_id, duplicate=False)
 
     def _publish(self, operation_id: str) -> str:
         with self.sessions() as session:
@@ -600,18 +759,37 @@ class Library:
         with self.lock, self.sessions.begin() as session:
             operation = session.get(ImportOperation, operation_id)
             metadata = json.loads(operation.extracted_json)
-            work = Work(title=metadata["title"], description=metadata["description"])
-            if metadata.get("source_root"):
-                work.personal = PersonalState(default_shelf="archive")
+            accepted = metadata.get("accepted_metadata", {})
+            chosen = metadata | {key: value for key, value in accepted.items() if value is not None}
+            work = Work(title=chosen["title"], description=chosen["description"])
+            if metadata.get("source_root") or accepted:
+                shelf = accepted.get("shelf", "default")
+                work.personal = PersonalState(
+                    default_shelf="archive", shelf_override=None if shelf == "default" else shelf
+                )
+            if accepted.get("series_id"):
+                series = session.get(Series, accepted["series_id"])
+                if series is None:
+                    raise InvalidBook("The accepted series is unavailable. Review before retrying.")
+                work.memberships = [
+                    SeriesMembership(
+                        series_id=series.id,
+                        designation=accepted.get("designation", ""),
+                        position=accepted.get("position", 0),
+                    )
+                ]
+                if series.following and work.personal:
+                    work.personal.default_shelf = "library"
             work.credits = [
                 Credit(position=i, contributor=Contributor(name=name))
-                for i, name in enumerate(metadata["authors"])
+                for i, name in enumerate(chosen["authors"])
             ]
             edition = Edition(
                 medium=metadata.get("medium", "ebook"),
-                language=metadata["language"],
-                publisher=metadata["publisher"],
-                identifier=metadata["identifier"],
+                language=chosen["language"],
+                publisher=chosen["publisher"],
+                identifier=chosen["identifier"],
+                narrator=chosen.get("narrator", ""),
             )
             representation = Representation(
                 id=operation_id,
@@ -717,5 +895,7 @@ class Library:
                 }
             )
             roots.update({row["root"]: {"kind": "external"} for row in tables["inbox_candidate"]})
-            roots.update({row["root"]: {"kind": "external"} for row in tables["intake_job"]})
-            return {"schema_version": 9, "roots": roots, "tables": tables}
+            roots.update(
+                {row["root"]: {"kind": "external"} for row in tables["intake_job"] if row["root"]}
+            )
+            return {"schema_version": 10, "roots": roots, "tables": tables}

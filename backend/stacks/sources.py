@@ -20,7 +20,9 @@ class Sources:
                 ).all()
             )
             discovered = set(session.scalars(select(InboxCandidate.root).distinct()))
-            discovered.update(session.scalars(select(IntakeJob.root).distinct()))
+            discovered.update(
+                session.scalars(select(IntakeJob.root).where(IntakeJob.root != "").distinct())
+            )
         return [
             SourceOut(
                 alias=alias,

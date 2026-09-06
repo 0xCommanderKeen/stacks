@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -57,10 +57,13 @@ class SeriesPage(BaseModel):
     offset: int
 
 
+SeriesPosition = Annotated[float, Field(allow_inf_nan=False, ge=-1e9, le=1e9)]
+
+
 class MembershipEdit(BaseModel):
     series_id: str
     designation: str = Field(default="", max_length=128)
-    position: float = Field(allow_inf_nan=False, ge=-1e9, le=1e9)
+    position: SeriesPosition
 
 
 class MembershipOut(MembershipEdit):
@@ -147,6 +150,7 @@ class CatalogPage(BaseModel):
 
 
 class ImportResult(BaseModel):
+    representation_id: str
     work: WorkOut
     duplicate: bool
 
@@ -398,12 +402,13 @@ class ScanRequest(BaseModel):
 
 
 class JobChange(BaseModel):
-    action: Literal["cancel", "retry"]
+    action: Literal["cancel", "retry", "confirm"]
     revision: int = Field(ge=1)
 
 
 class JobOut(BaseModel):
     id: str
+    kind: str
     root: str
     prefix: str
     state: str
@@ -442,6 +447,71 @@ class CandidateOut(BaseModel):
 
 class CandidatePage(BaseModel):
     items: list[CandidateOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class AcceptedMetadata(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=1024)
+    authors: list[str] | None = Field(default=None, max_length=20)
+    description: str | None = Field(default=None, max_length=20000)
+    language: str | None = Field(default=None, max_length=64)
+    publisher: str | None = Field(default=None, max_length=1024)
+    identifier: str | None = Field(default=None, max_length=1024)
+    narrator: str | None = Field(default=None, max_length=1024)
+    shelf: Literal["default", "library", "archive"] = "default"
+    series_id: str | None = None
+    designation: str = Field(default="", max_length=100)
+    position: SeriesPosition = 0
+
+    @field_validator("title")
+    @classmethod
+    def accepted_title(cls, value):
+        if value is not None and not value.strip():
+            raise ValueError("A title is required.")
+        return value.strip() if value is not None else None
+
+    @field_validator("authors")
+    @classmethod
+    def accepted_authors(cls, value):
+        return WorkEdit.author_names(value) if value is not None else None
+
+
+class CandidateEdit(BaseModel):
+    revision: int = Field(ge=1)
+    metadata: AcceptedMetadata
+
+
+class AcceptanceRequest(BaseModel):
+    candidate_ids: list[str] | None = Field(default=None, min_length=1, max_length=2000)
+    q: str = Field(default="", max_length=300)
+    root: str = Field(default="", max_length=64)
+    state: str = Field(default="ready", max_length=20)
+    scan_id: str = Field(default="", max_length=36)
+    mode: Literal["register", "copy"] = "register"
+    metadata: AcceptedMetadata = Field(default_factory=AcceptedMetadata)
+    group_audio: bool = False
+    audio_singles_confirmed: bool = False
+
+
+class AcceptanceItemOut(BaseModel):
+    series: SeriesOut | None
+    id: str
+    group_id: str
+    candidate: CandidateOut
+    metadata: AcceptedMetadata
+    state: str
+    error: str | None
+    work_id: str | None
+
+
+class AcceptancePage(BaseModel):
+    confirmed: bool
+    job: JobOut
+    mode: Literal["register", "copy"]
+    grouped_audio: bool
+    items: list[AcceptanceItemOut]
     total: int
     limit: int
     offset: int

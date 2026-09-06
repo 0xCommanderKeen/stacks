@@ -870,3 +870,168 @@ test('Inbox scans sources without importing and preserves paged review across na
   );
   await page.screenshot({ path: testInfo.outputPath('inbox.png'), fullPage: true });
 });
+
+test('preview edited Inbox files, reload, then accept verified originals', async ({
+  page,
+}, testInfo) => {
+  const viewport = testInfo.project.name;
+  await page.goto('/?view=inbox');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page.getByLabel('Source', { exact: true }).selectOption('sample');
+  await page.getByLabel('Folder within source').fill(`Acceptance ${viewport}`);
+  await page.getByRole('button', { name: 'Scan source', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Scan jobs', exact: true })).toContainText(
+    '3 inspected',
+  );
+  await page
+    .getByRole('checkbox', { name: `Select Acceptance ${viewport}/0.epub`, exact: true })
+    .check();
+  await page
+    .getByRole('checkbox', { name: `Select Acceptance ${viewport}/1.epub`, exact: true })
+    .check();
+  const files = page.getByRole('region', { name: 'Discovered files', exact: true });
+  const first = files
+    .locator('article')
+    .filter({ has: page.getByRole('heading', { name: `Acceptance ${viewport} 0`, exact: true }) });
+  await first.getByRole('button', { name: 'Edit acceptance metadata', exact: true }).click();
+  await page.getByLabel('Accepted title', { exact: true }).fill(`Chosen ${viewport} title`);
+  await page.getByRole('button', { name: 'Save acceptance metadata', exact: true }).click();
+  const acceptance = page.getByRole('region', { name: 'Batch acceptance', exact: true });
+  await acceptance
+    .getByLabel('Original storage')
+    .selectOption(viewport === 'desktop' ? 'copy' : 'register');
+  await acceptance.getByLabel('Batch shelf').selectOption('library');
+  await acceptance.getByText('Shared metadata and audio grouping', { exact: true }).click();
+  await acceptance
+    .getByLabel('Batch authors (one per line)', { exact: true })
+    .fill(`Batch author ${viewport}`);
+  let chosenRun = '';
+  for (let index = 0; index < 21; index++) {
+    const response = await page.request.post('/api/series', {
+      headers: { 'X-Stacks-Request': '1' },
+      data: { name: `Acceptance runs ${viewport}`, run: String(index).padStart(2, '0') },
+    });
+    expect(response.ok()).toBe(true);
+    if (index === 20) chosenRun = (await response.json()).id;
+  }
+  await acceptance.getByLabel('Find an existing run').fill(`Acceptance runs ${viewport}`);
+  await acceptance.getByRole('button', { name: 'Find runs', exact: true }).click();
+  await acceptance.getByRole('button', { name: 'Next runs', exact: true }).click();
+  await acceptance.getByLabel('Batch series/run').selectOption(chosenRun);
+  await acceptance.getByRole('button', { name: 'Previous runs', exact: true }).click();
+  await expect(acceptance.getByLabel('Batch series/run')).toHaveValue(chosenRun);
+  await acceptance.getByRole('button', { name: 'Preview 2 selected files', exact: true }).click();
+  const preview = page.getByRole('region', { name: 'Acceptance preview', exact: true });
+  await expect(preview).toContainText(`Chosen ${viewport} title`);
+  await expect(preview).toContainText(`Batch author ${viewport}`);
+  await expect(preview).toContainText(`Acceptance runs ${viewport} · 20`);
+  await page.reload();
+  await expect(preview).toContainText(`Chosen ${viewport} title`);
+  await preview.getByRole('button', { name: 'Confirm acceptance', exact: true }).click();
+  await expect(preview).toContainText('2 accepted', { timeout: 15000 });
+  const catalog = await (
+    await page.request.get(
+      `/api/catalog?scope=all&q=${encodeURIComponent(`Batch author ${viewport}`)}`,
+    )
+  ).json();
+  expect(catalog.total).toBe(2);
+  expect(
+    catalog.items.every(
+      (work: { personal: { shelf: string } }) => work.personal.shelf === 'library',
+    ),
+  ).toBe(true);
+  expect(catalog.items[0].editions[0].representations[0].assets[0].root).toBe(
+    viewport === 'desktop' ? 'managed' : 'sample',
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('acceptance.png'), fullPage: true });
+  const batchUrl = page.url();
+  await page.evaluate(() => {
+    (window as unknown as { stacksNavigationMarker: boolean }).stacksNavigationMarker = true;
+  });
+  await preview.getByRole('link', { name: 'Open accepted work', exact: true }).first().click();
+  await expect(
+    page.getByRole('heading', { name: `Chosen ${viewport} title`, exact: true, level: 1 }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { stacksNavigationMarker: boolean }).stacksNavigationMarker,
+    ),
+  ).toBe(true);
+  await page.goBack();
+  await expect(page).toHaveURL(batchUrl);
+  await expect(preview).toContainText('2 accepted');
+  // Leaving while a work request is pending must win over its late response.
+  const workId = catalog.items.find(
+    (work: { title: string }) => work.title === `Chosen ${viewport} title`,
+  ).id;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requested!: () => void;
+  const incoming = new Promise<void>((resolve) => {
+    requested = resolve;
+  });
+  await page.route(`**/api/works/${workId}`, async (route) => {
+    requested();
+    await gate;
+    await route.continue();
+  });
+  const response = page.waitForResponse((result) => result.url().endsWith(`/api/works/${workId}`));
+  await preview.getByRole('link', { name: 'Open accepted work', exact: true }).first().click();
+  await incoming;
+  await page.goBack();
+  const previous = page.url();
+  release();
+  await (await response).finished();
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  await expect(page).toHaveURL(previous);
+  await expect(page.getByRole('heading', { name: 'Inbox.', exact: true, level: 1 })).toBeVisible();
+});
+
+test('review selected audio tracks in natural disc order before acceptance', async ({
+  page,
+}, testInfo) => {
+  const viewport = testInfo.project.name;
+  await page.goto('/?view=inbox');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page.getByLabel('Source', { exact: true }).selectOption('sample');
+  await page.getByLabel('Folder within source').fill(`Audio inbox ${viewport}`);
+  await page.getByRole('button', { name: 'Scan source', exact: true }).click();
+  const files = page.getByRole('region', { name: 'Discovered files', exact: true });
+  await expect(files).toContainText('2 files in this scan');
+  for (const disc of [10, 2])
+    await page
+      .getByRole('checkbox', {
+        name: `Select Audio inbox ${viewport}/Disc ${disc}/track.mp3`,
+        exact: true,
+      })
+      .check();
+  const acceptance = page.getByRole('region', { name: 'Batch acceptance', exact: true });
+  await acceptance.getByText('Shared metadata and audio grouping', { exact: true }).click();
+  await acceptance
+    .getByLabel('Batch title (optional)', { exact: true })
+    .fill(`Reviewed audio ${viewport}`);
+  await acceptance
+    .getByRole('checkbox', { name: 'Group selected audio tracks as one recording', exact: true })
+    .check();
+  await acceptance.getByRole('button', { name: 'Preview 2 selected files', exact: true }).click();
+  const preview = page.getByRole('region', { name: 'Acceptance preview', exact: true });
+  await expect(
+    preview.getByRole('heading', { name: 'One reviewed recording', exact: true }),
+  ).toBeVisible();
+  await expect(preview.locator('li').first()).toContainText('Disc 2/track.mp3');
+  await expect(preview.locator('li').nth(1)).toContainText('Disc 10/track.mp3');
+  await preview.getByRole('button', { name: 'Confirm acceptance', exact: true }).click();
+  await expect(preview).toContainText('2 accepted', { timeout: 15000 });
+  await preview.getByRole('link', { name: 'Open accepted work', exact: true }).first().click();
+  await expect(
+    page.getByRole('heading', { name: `Reviewed audio ${viewport}`, exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Listen · AUDIO-SET', exact: true })).toBeVisible();
+});

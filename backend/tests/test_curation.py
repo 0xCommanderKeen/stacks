@@ -136,7 +136,7 @@ def test_personal_merge_conflicts_and_undo_preserve_history(client, tmp_path):
     try:
         assert with_library.get(target["id"]).personal.notes == "Source memory"
         assert Curation(with_library).records(target["id"]).total == 2
-        assert with_library.export()["schema_version"] == 9
+        assert with_library.export()["schema_version"] == 10
     finally:
         with_library.close()
     assert client.post(f"/api/operations/{plan['id']}/undo").status_code == 200

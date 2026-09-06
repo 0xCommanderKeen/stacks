@@ -7,6 +7,8 @@ import zipfile
 from pathlib import Path
 
 import uvicorn
+from mutagen.id3 import TIT2
+from mutagen.mp3 import MP3
 from PIL import Image, ImageDraw
 from pypdf import PdfWriter
 from stacks.app import create_app
@@ -50,6 +52,24 @@ with (
             publication = folder / f"{index:02}.epub"
             publication.write_bytes(epub_bytes(f"Inbox {viewport} {index:02}", cover=False))
             os.utime(publication, (1, 1))
+    for viewport in ("desktop", "phone"):
+        folder = Path(source_directory, f"Acceptance {viewport}")
+        folder.mkdir()
+        for index in range(3):
+            publication = folder / f"{index}.epub"
+            publication.write_bytes(epub_bytes(f"Acceptance {viewport} {index}", cover=False))
+            os.utime(publication, (1, 1))
+        for index in (2, 10):
+            folder = Path(source_directory, f"Audio inbox {viewport}", f"Disc {index}")
+            folder.mkdir(parents=True)
+            track = folder / "track.mp3"
+            track.write_bytes(Path("backend/tests/fixtures/tone.mp3").read_bytes())
+            audio = MP3(track)
+            if audio.tags is None:
+                audio.add_tags()
+            audio.tags.add(TIT2(encoding=3, text=f"Acceptance {viewport} track {index}"))
+            audio.save()
+            os.utime(track, (1, 1))
     library = Library(Path(directory))
     library.import_files(
         [

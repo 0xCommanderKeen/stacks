@@ -4,15 +4,18 @@ import hashlib
 import json
 import logging
 import os
+import re
 import threading
 import time
+from fractions import Fraction
 from pathlib import Path
 
 from sqlalchemy import func, literal, or_, select, update
 from sqlalchemy.dialects.sqlite import insert
 
 from stacks.epub import InvalidBook, safe_member
-from stacks.inspection import FORMATS, inspect_file
+from stacks.inspection import FORMATS, inspect_file, natural_key
+from stacks.library import series_out
 from stacks.models import (
     Asset,
     Edition,
@@ -21,10 +24,19 @@ from stacks.models import (
     IntakeJob,
     Representation,
     ScanDirectory,
+    Series,
     identity,
     now,
 )
-from stacks.schemas import CandidateOut, CandidatePage, JobOut, JobPage
+from stacks.schemas import (
+    AcceptanceItemOut,
+    AcceptancePage,
+    AcceptedMetadata,
+    CandidateOut,
+    CandidatePage,
+    JobOut,
+    JobPage,
+)
 
 ACTIVE = ("queued", "running")
 LOG = logging.getLogger(__name__)
@@ -64,6 +76,10 @@ class Intake:
     def start(self):
         if self.thread is not None:
             raise RuntimeError("The intake worker is already started.")
+        with self.library.lock, self.library.sessions.begin() as session:
+            session.execute(
+                update(IntakeItem).where(IntakeItem.state == "running").values(state="pending")
+            )
         self.thread = threading.Thread(target=self._run, name="stacks-intake", daemon=True)
         self.thread.start()
 
@@ -127,13 +143,30 @@ class Intake:
                 raise KeyError(job_id)
             if job.revision != request.revision:
                 raise ValueError("This job changed. Refresh before changing it.")
-            if request.action == "cancel":
-                if job.state not in ACTIVE:
-                    raise ValueError("Only queued or running jobs can be cancelled.")
+            if request.action == "confirm":
+                if job.state != "preview" or job.kind != "accept":
+                    raise ValueError("Only an acceptance preview can be confirmed.")
+                stale = session.scalar(
+                    select(IntakeItem.id)
+                    .join(InboxCandidate)
+                    .where(
+                        IntakeItem.job_id == job.id,
+                        IntakeItem.candidate_revision != InboxCandidate.revision,
+                    )
+                    .limit(1)
+                )
+                if stale:
+                    raise ValueError("Candidates changed. Create a new preview before accepting.")
+                job.state = "queued"
+            elif request.action == "cancel":
+                if job.state not in (*ACTIVE, "preview"):
+                    raise ValueError("Only previews or active jobs can be cancelled.")
                 job.state = "cancelled"
             else:
-                if job.state in ACTIVE:
-                    raise ValueError("This job is already active.")
+                if job.state in ACTIVE or job.state == "preview":
+                    raise ValueError("This job is active or still needs preview confirmation.")
+                if job.kind == "accept" and not json.loads(job.options_json).get("confirmed"):
+                    raise ValueError("Create a new preview to accept these files.")
                 job.state, job.error = "queued", None
                 session.execute(
                     update(IntakeItem)
@@ -143,6 +176,10 @@ class Intake:
                     )
                     .values(state="pending")
                 )
+            if request.action == "confirm":
+                options = json.loads(job.options_json)
+                options["confirmed"] = True
+                job.options_json = json.dumps(options)
             touch(job)
             session.flush()
             result = self._job_out(session, job)
@@ -173,6 +210,7 @@ class Intake:
                 name: getattr(job, name)
                 for name in (
                     "id",
+                    "kind",
                     "root",
                     "prefix",
                     "state",
@@ -183,9 +221,9 @@ class Intake:
                 )
             },
             discovered=sum(counts.values()),
-            completed=counts.get("done", 0),
-            remaining=counts.get("pending", 0),
-            skipped=skipped + counts.get("waiting", 0),
+            completed=counts.get("done", 0) + counts.get("accepted", 0),
+            remaining=counts.get("pending", 0) + counts.get("running", 0),
+            skipped=skipped + counts.get("waiting", 0) + counts.get("duplicate", 0),
             failed=counts.get("error", 0),
             directories_remaining=remaining_dirs,
         )
@@ -281,7 +319,14 @@ class Intake:
     def _run(self):
         try:
             while not self.stop.is_set():
-                if not self.step():
+                try:
+                    worked = self.step()
+                except Exception:
+                    # A full/unavailable database may prevent even recording a job error.
+                    # Keep the executor alive so durable work can retry when storage returns.
+                    LOG.error("intake_storage_unavailable")
+                    worked = False
+                if not worked:
                     self.wake.wait(1)
                     self.wake.clear()
         finally:
@@ -293,26 +338,32 @@ class Intake:
             job = session.scalar(
                 select(IntakeJob)
                 .where(IntakeJob.state.in_(ACTIVE))
-                .order_by(IntakeJob.created_at, IntakeJob.id)
+                .order_by(IntakeJob.kind, IntakeJob.created_at, IntakeJob.id)
                 .limit(1)
             )
             if job is None:
                 self._close_directory()
                 return False
-            job_id, root = job.id, job.root
+            job_id, root, kind = job.id, job.root, job.kind
             if job.state == "queued":
                 job.state = "running"
                 touch(job)
         try:
             self._check(job_id)
-            self._discover(job_id, root)
-            self._check(job_id)
-            self._inspect_next(job_id)
+            if kind == "scan":
+                self._discover(job_id, root)
+                self._check(job_id)
+                self._inspect_next(job_id)
+            else:
+                self._close_directory()
+                self._accept_next(job_id)
             with self.library.lock, self.library.sessions.begin() as session:
                 job = session.get(IntakeJob, job_id)
                 pending = session.scalar(
                     select(IntakeItem.id)
-                    .where(IntakeItem.job_id == job_id, IntakeItem.state == "pending")
+                    .where(
+                        IntakeItem.job_id == job_id, IntakeItem.state.in_(["pending", "running"])
+                    )
                     .limit(1)
                 )
                 directory = session.scalar(
@@ -490,6 +541,18 @@ class Intake:
                 )
                 if work_id:
                     state = "duplicate"
+                elif session.scalar(
+                    select(IntakeItem.id)
+                    .where(
+                        IntakeItem.candidate_id == candidate.id,
+                        IntakeItem.state.in_(["accepted", "duplicate"]),
+                    )
+                    .limit(1)
+                ):
+                    state = "review"
+                    error = (
+                        "Source bytes changed after acceptance. Review this replacement explicitly."
+                    )
             candidate.state, candidate.error = state, error
             candidate.observation_json = (
                 json.dumps(observed) if state not in {"error", "waiting"} else "{}"
@@ -502,3 +565,389 @@ class Intake:
                 state if state in {"error", "waiting"} else "done"
             )
             touch(job)
+
+    def edit_candidate(self, candidate_id, request):
+        with self.library.lock, self.library.sessions.begin() as session:
+            candidate = session.get(InboxCandidate, candidate_id)
+            if candidate is None:
+                raise KeyError(candidate_id)
+            if candidate.revision != request.revision:
+                raise ValueError("This candidate changed. Refresh before editing.")
+            active = session.scalar(
+                select(IntakeItem.id)
+                .join(IntakeJob)
+                .where(
+                    IntakeItem.candidate_id == candidate_id,
+                    IntakeJob.kind == "accept",
+                    or_(
+                        IntakeItem.state == "running",
+                        (IntakeItem.state == "pending") & IntakeJob.state.in_(ACTIVE),
+                    ),
+                )
+                .limit(1)
+            )
+            if active:
+                raise ValueError("This candidate is being accepted. Wait for its job to stop.")
+            if (
+                request.metadata.series_id
+                and session.get(Series, request.metadata.series_id) is None
+            ):
+                raise ValueError("Choose an existing series/run.")
+            candidate.edits_json = request.metadata.model_dump_json(exclude_unset=True)
+            candidate.revision += 1
+            candidate.updated_at = now()
+        return self.candidate(candidate_id)
+
+    def candidate(self, candidate_id):
+        with self.library.sessions() as session:
+            candidate = session.get(InboxCandidate, candidate_id)
+            if candidate is None:
+                raise KeyError(candidate_id)
+            return self._candidate_out(session, candidate)
+
+    @staticmethod
+    def _candidate_out(session, candidate):
+        current_owner = session.scalar(
+            select(Edition.work_id)
+            .join(Representation)
+            .join(Asset)
+            .where(Asset.sha256 == candidate.sha256)
+            .order_by(Asset.id)
+            .limit(1)
+        )
+        return CandidateOut(
+            **{
+                name: getattr(candidate, name)
+                for name in (
+                    "id",
+                    "root",
+                    "relative_path",
+                    "state",
+                    "revision",
+                    "sha256",
+                    "error",
+                    "updated_at",
+                )
+            },
+            work_id=current_owner,
+            facts=json.loads(candidate.facts_json),
+            edits=json.loads(candidate.edits_json),
+        )
+
+    def preview_acceptance(self, request):
+        if request.group_audio and request.candidate_ids is None:
+            raise ValueError("Choose explicit audio tracks before grouping a recording.")
+        with self.library.lock, self.library.sessions.begin() as session:
+            query = select(InboxCandidate)
+            if request.candidate_ids is not None:
+                query = query.where(InboxCandidate.id.in_(request.candidate_ids))
+            else:
+                if request.q.strip():
+                    query = query.where(
+                        or_(
+                            InboxCandidate.relative_path.contains(
+                                request.q.strip(), autoescape=True
+                            ),
+                            func.json_extract(InboxCandidate.facts_json, "$.title").contains(
+                                request.q.strip(), autoescape=True
+                            ),
+                        )
+                    )
+                if request.root:
+                    query = query.where(InboxCandidate.root == request.root)
+                if request.state:
+                    query = query.where(InboxCandidate.state == request.state)
+                else:
+                    query = query.where(InboxCandidate.state.in_(["ready", "duplicate"]))
+                if request.scan_id:
+                    query = query.where(
+                        select(IntakeItem.id)
+                        .where(
+                            IntakeItem.candidate_id == InboxCandidate.id,
+                            IntakeItem.job_id == request.scan_id,
+                        )
+                        .exists()
+                    )
+            count = session.scalar(select(func.count()).select_from(query.subquery()))
+            if not count or (
+                request.candidate_ids is not None and count != len(set(request.candidate_ids))
+            ):
+                raise ValueError("Choose existing eligible candidates for the preview.")
+            if session.scalar(
+                query.where(
+                    or_(
+                        InboxCandidate.state.not_in(["ready", "review", "duplicate"]),
+                        InboxCandidate.sha256.is_(None),
+                    )
+                ).limit(1)
+            ):
+                raise ValueError("Some candidates need a stable rescan before acceptance.")
+            audio = func.json_extract(InboxCandidate.facts_json, "$.medium") == "audio"
+            if request.group_audio:
+                roots = session.scalars(
+                    query.with_only_columns(InboxCandidate.root).distinct()
+                ).all()
+                if len(roots) != 1 or session.scalar(query.where(~audio).limit(1)):
+                    raise ValueError("A recording must contain only audio files from one source.")
+            elif not request.audio_singles_confirmed and session.scalar(
+                query.where(audio).limit(1)
+            ):
+                raise ValueError(
+                    "Review audio grouping or explicitly confirm individual audio files."
+                )
+            if (
+                request.metadata.series_id
+                and session.get(Series, request.metadata.series_id) is None
+            ):
+                raise ValueError("Choose an existing series/run.")
+            options = request.model_dump(exclude={"candidate_ids", "metadata"})
+            options["metadata"] = request.metadata.model_dump(exclude_unset=True)
+            job = IntakeJob(
+                kind="accept",
+                root=request.root,
+                prefix="",
+                state="preview",
+                options_json=json.dumps(options),
+            )
+            session.add(job)
+            session.flush()
+            grouped_id = identity() if request.group_audio else None
+            facts = []
+            for field in (
+                "title",
+                "authors",
+                "description",
+                "language",
+                "publisher",
+                "identifier",
+                "narrator",
+                "series_hint",
+            ):
+                facts.extend([field, func.json_extract(InboxCandidate.facts_json, f"$.{field}")])
+            snapshot = func.json_object(
+                "sha256",
+                InboxCandidate.sha256,
+                "facts",
+                func.json_object(*facts),
+                "edits",
+                func.json(InboxCandidate.edits_json),
+            )
+            selected = query.with_only_columns(
+                func.lower(func.hex(func.randomblob(16))),
+                literal(job.id),
+                InboxCandidate.id,
+                literal("pending"),
+                InboxCandidate.revision,
+                literal(grouped_id) if grouped_id else InboxCandidate.id,
+                snapshot,
+            )
+            session.execute(
+                insert(IntakeItem).from_select(
+                    [
+                        "id",
+                        "job_id",
+                        "candidate_id",
+                        "state",
+                        "candidate_revision",
+                        "group_id",
+                        "snapshot_json",
+                    ],
+                    selected,
+                )
+            )
+            session.flush()
+            return self._job_out(session, job)
+
+    @staticmethod
+    def _accepted(snapshot, options):
+        data = json.loads(snapshot)
+        values = {
+            key: value
+            for key, value in data["facts"].items()
+            if key != "series_hint" and value is not None
+        }
+        values.update(data["edits"])
+        values.update(options.get("metadata", {}))
+        if values.get("series_id"):
+            hint = data["facts"].get("series_hint") or {}
+            if "designation" not in values:
+                values["designation"] = str(hint.get("designation", ""))[:100]
+            if "position" not in values:
+                try:
+                    number = values["designation"].lstrip("#").strip()
+                    if not re.fullmatch(r"-?\d{1,12}(?:\.\d{1,6}|/\d{1,12})?", number):
+                        raise ValueError("No bounded numeric designation")
+                    values["position"] = AcceptedMetadata(position=float(Fraction(number))).position
+                except (ValueError, ZeroDivisionError):
+                    values["position"] = 0
+        return AcceptedMetadata.model_validate(values)
+
+    def acceptance(self, job_id, limit=24, offset=0):
+        with self.library.sessions() as session:
+            job = session.get(IntakeJob, job_id)
+            if job is None or job.kind != "accept":
+                raise KeyError(job_id)
+            options = json.loads(job.options_json)
+            query = (
+                select(IntakeItem, InboxCandidate)
+                .join(InboxCandidate)
+                .where(IntakeItem.job_id == job_id)
+            )
+            total = session.scalar(select(func.count()).select_from(query.subquery()))
+            if options["group_audio"]:
+                # Explicit groups have at most 2000 tracks; this cannot load the whole archive.
+                rows = session.execute(query.limit(2000)).all()
+                rows.sort(key=lambda row: (natural_key(row[1].relative_path), row[1].relative_path))
+                metadata = (
+                    self._accepted(rows[0][0].snapshot_json, options)
+                    if rows
+                    else AcceptedMetadata()
+                )
+                rows = rows[offset : offset + limit]
+            else:
+                rows = session.execute(
+                    query.order_by(InboxCandidate.root, InboxCandidate.relative_path, IntakeItem.id)
+                    .limit(limit)
+                    .offset(offset)
+                ).all()
+                metadata = None
+            return AcceptancePage(
+                confirmed=bool(options.get("confirmed")),
+                job=self._job_out(session, job),
+                mode=options["mode"],
+                grouped_audio=options["group_audio"],
+                items=[
+                    self._acceptance_item(
+                        session,
+                        item,
+                        candidate,
+                        metadata or self._accepted(item.snapshot_json, options),
+                    )
+                    for item, candidate in rows
+                ],
+                total=total,
+                limit=limit,
+                offset=offset,
+            )
+
+    def _acceptance_item(self, session, item, candidate, metadata):
+        current = self._candidate_out(session, candidate)
+        snapshot = json.loads(item.snapshot_json)
+        owner = session.scalar(
+            select(Edition.work_id)
+            .join(Representation)
+            .join(Asset)
+            .where(
+                Representation.id == item.result_representation_id
+                if item.result_representation_id
+                else Asset.sha256 == snapshot["sha256"]
+            )
+            .order_by(Asset.id)
+            .limit(1)
+        )
+        current = current.model_copy(
+            update={
+                "facts": snapshot["facts"],
+                "edits": snapshot["edits"],
+                "sha256": snapshot["sha256"],
+                "work_id": owner,
+            }
+        )
+        series = session.get(Series, metadata.series_id) if metadata.series_id else None
+        return AcceptanceItemOut(
+            id=item.id,
+            group_id=item.group_id,
+            candidate=current,
+            metadata=metadata,
+            series=series_out(series) if series else None,
+            state=item.state,
+            error=item.error,
+            work_id=current.work_id if item.result_representation_id else None,
+        )
+
+    def _accept_next(self, job_id):
+        with self.library.lock, self.library.sessions.begin() as session:
+            item = session.scalar(
+                select(IntakeItem)
+                .where(IntakeItem.job_id == job_id, IntakeItem.state.in_(["pending", "running"]))
+                .order_by(IntakeItem.id)
+                .limit(1)
+            )
+            if item is None:
+                return
+            group_id = item.group_id
+            rows = session.execute(
+                select(IntakeItem, InboxCandidate)
+                .join(InboxCandidate)
+                .where(
+                    IntakeItem.job_id == job_id,
+                    IntakeItem.group_id == group_id,
+                )
+                .limit(2000)
+            ).all()
+            rows.sort(key=lambda row: (natural_key(row[1].relative_path), row[1].relative_path))
+            job = session.get(IntakeJob, job_id)
+            options = json.loads(job.options_json)
+            stale = any(candidate.revision != entry.candidate_revision for entry, candidate in rows)
+            for entry, _ in rows:
+                entry.state = "running"
+            touch(job)
+        try:
+            self._check(job_id)
+            if stale:
+                raise ValueError("Candidate metadata changed. Create a new acceptance preview.")
+            candidates = [candidate for _, candidate in rows]
+            metadata = self._accepted(rows[0][0].snapshot_json, options)
+            result = self.library.accept_sources(
+                candidates[0].root,
+                [c.relative_path for c in candidates],
+                {
+                    candidate.relative_path: json.loads(entry.snapshot_json)["sha256"]
+                    for entry, candidate in rows
+                },
+                metadata,
+                options["mode"],
+                lambda: self._check(job_id),
+            )
+            # Publication is now durable. Record it even if cancellation arrived during that commit.
+            with self.library.lock, self.library.sessions.begin() as session:
+                for entry, candidate in rows:
+                    current_item = session.get(IntakeItem, entry.id)
+                    current_item.state = "duplicate" if result.duplicate else "accepted"
+                    current_item.result_representation_id = result.representation_id
+                    current_item.error = None
+                    current = session.get(InboxCandidate, candidate.id)
+                    if current.revision == entry.candidate_revision:
+                        current.state = "accepted"
+                        current.error = None
+                        current.revision += 1
+                        current.updated_at = now()
+                touch(session.get(IntakeJob, job_id))
+        except Interrupted:
+            with self.library.lock, self.library.sessions.begin() as session:
+                session.execute(
+                    update(IntakeItem)
+                    .where(
+                        IntakeItem.job_id == job_id,
+                        IntakeItem.group_id == group_id,
+                        IntakeItem.state == "running",
+                    )
+                    .values(state="pending")
+                )
+            raise
+        except (OSError, ValueError) as exc:
+            message = (
+                str(exc)
+                if isinstance(exc, ValueError)
+                else "Publication interrupted. Check storage and retry; staged files are retained."
+            )
+            with self.library.lock, self.library.sessions.begin() as session:
+                session.execute(
+                    update(IntakeItem)
+                    .where(
+                        IntakeItem.job_id == job_id,
+                        IntakeItem.group_id == group_id,
+                    )
+                    .values(state="error", error=message)
+                )
+                touch(session.get(IntakeJob, job_id))

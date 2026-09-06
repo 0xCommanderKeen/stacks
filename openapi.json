@@ -1,6 +1,322 @@
 {
   "components": {
     "schemas": {
+      "AcceptanceItemOut": {
+        "properties": {
+          "candidate": {
+            "$ref": "#/components/schemas/CandidateOut"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "group_id": {
+            "title": "Group Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/AcceptedMetadata"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "work_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Id"
+          }
+        },
+        "required": [
+          "series",
+          "id",
+          "group_id",
+          "candidate",
+          "metadata",
+          "state",
+          "error",
+          "work_id"
+        ],
+        "title": "AcceptanceItemOut",
+        "type": "object"
+      },
+      "AcceptancePage": {
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "grouped_audio": {
+            "title": "Grouped Audio",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AcceptanceItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "register",
+              "copy"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "confirmed",
+          "job",
+          "mode",
+          "grouped_audio",
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AcceptancePage",
+        "type": "object"
+      },
+      "AcceptanceRequest": {
+        "properties": {
+          "audio_singles_confirmed": {
+            "default": false,
+            "title": "Audio Singles Confirmed",
+            "type": "boolean"
+          },
+          "candidate_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2000,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Ids"
+          },
+          "group_audio": {
+            "default": false,
+            "title": "Group Audio",
+            "type": "boolean"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/AcceptedMetadata"
+          },
+          "mode": {
+            "default": "register",
+            "enum": [
+              "register",
+              "copy"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "q": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Q",
+            "type": "string"
+          },
+          "root": {
+            "default": "",
+            "maxLength": 64,
+            "title": "Root",
+            "type": "string"
+          },
+          "scan_id": {
+            "default": "",
+            "maxLength": 36,
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "state": {
+            "default": "ready",
+            "maxLength": 20,
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "title": "AcceptanceRequest",
+        "type": "object"
+      },
+      "AcceptedMetadata": {
+        "properties": {
+          "authors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Authors"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "designation": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Designation",
+            "type": "string"
+          },
+          "identifier": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identifier"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "narrator": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrator"
+          },
+          "position": {
+            "default": 0,
+            "maximum": 1000000000.0,
+            "minimum": -1000000000.0,
+            "title": "Position",
+            "type": "number"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "series_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Id"
+          },
+          "shelf": {
+            "default": "default",
+            "enum": [
+              "default",
+              "library",
+              "archive"
+            ],
+            "title": "Shelf",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "AcceptedMetadata",
+        "type": "object"
+      },
       "AssetAvailability": {
         "properties": {
           "asset_id": {
@@ -91,6 +407,24 @@
           "chapters"
         ],
         "title": "AudioTrackOut",
+        "type": "object"
+      },
+      "CandidateEdit": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/AcceptedMetadata"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "metadata"
+        ],
+        "title": "CandidateEdit",
         "type": "object"
       },
       "CandidateOut": {
@@ -839,11 +1173,16 @@
             "title": "Duplicate",
             "type": "boolean"
           },
+          "representation_id": {
+            "title": "Representation Id",
+            "type": "string"
+          },
           "work": {
             "$ref": "#/components/schemas/WorkOut"
           }
         },
         "required": [
+          "representation_id",
           "work",
           "duplicate"
         ],
@@ -855,7 +1194,8 @@
           "action": {
             "enum": [
               "cancel",
-              "retry"
+              "retry",
+              "confirm"
             ],
             "title": "Action",
             "type": "string"
@@ -910,6 +1250,10 @@
             "title": "Id",
             "type": "string"
           },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
           "prefix": {
             "title": "Prefix",
             "type": "string"
@@ -941,6 +1285,7 @@
         },
         "required": [
           "id",
+          "kind",
           "root",
           "prefix",
           "state",
@@ -2850,6 +3195,68 @@
         "summary": "Import Book"
       }
     },
+    "/api/intake/acceptance/{job_id}": {
+      "get": {
+        "operationId": "acceptance_page_api_intake_acceptance__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptancePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acceptance Page"
+      }
+    },
     "/api/intake/candidates": {
       "get": {
         "operationId": "inbox_candidates_api_intake_candidates_get",
@@ -2945,6 +3352,55 @@
           }
         },
         "summary": "Inbox Candidates"
+      }
+    },
+    "/api/intake/candidates/{candidate_id}": {
+      "patch": {
+        "operationId": "edit_candidate_api_intake_candidates__candidate_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "candidate_id",
+            "required": true,
+            "schema": {
+              "title": "Candidate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Candidate"
       }
     },
     "/api/intake/jobs": {
@@ -3047,6 +3503,44 @@
           }
         },
         "summary": "Change Job"
+      }
+    },
+    "/api/intake/preview": {
+      "post": {
+        "operationId": "preview_acceptance_api_intake_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Acceptance"
       }
     },
     "/api/intake/scans": {
