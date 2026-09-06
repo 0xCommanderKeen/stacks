@@ -739,6 +739,7 @@ test('collection history navigation disables edits until the requested identity 
   await page.goto('/');
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
+  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
   const collections = [];
   for (const suffix of ['A', 'B']) {
     const response = await page.request.post('/api/collections', {
