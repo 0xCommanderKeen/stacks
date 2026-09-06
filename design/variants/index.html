@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Stacks — three directions</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="direction-bar">
+      <a class="preview-brand" href="?v=a"
+        >STACKS <span>DESIGN STUDY / 01</span></a
+      >
+      <nav aria-label="Design direction">
+        <a href="?v=a" data-direction="a">A <span>Clear</span></a
+        ><a href="?v=b" data-direction="b">B <span>After hours</span></a
+        ><a href="?v=c" data-direction="c">C <span>Index</span></a>
+      </nav>
+      <span class="sample-label">Interactive sample library</span>
+    </div>
+    <div id="app"></div>
+    <dialog id="details">
+      <button class="close" aria-label="Close details">×</button>
+      <div id="detail-content"></div>
+    </dialog>
+    <dialog id="add">
+      <button class="close" aria-label="Close add books">×</button
+      ><span class="eyebrow">GROW YOUR LIBRARY</span>
+      <h2>A little more to read.</h2>
+      <p>This is a design preview. Files you choose here won’t be imported.</p>
+      <label class="drop"
+        >↥<strong>Choose books, comics or audio</strong
+        ><span>EPUB · PDF · CBZ · CBR · MP3 · M4B</span
+        ><input type="file" multiple id="files"
+      /></label>
+      <p id="file-message" role="status"></p>
+    </dialog>
+    <div id="player" hidden></div>
+    <audio id="audio" src="assets/sample.m4b" preload="metadata"></audio>
+    <script src="app.js"></script>
+  </body>
+</html>
