@@ -691,11 +691,15 @@ test('collections keep a cross-page order, details context, and Home choices', a
   await page.getByLabel('Search your library', { exact: true }).fill('Listening Practice');
   await page.getByRole('button', { name: 'Search to add' }).click();
   await page
+    .getByRole('group', { name: 'Match Listening Practice', exact: true })
+    .filter({ hasText: '2 files' })
     .getByRole('button', { name: 'Add Listening Practice to collection', exact: true })
     .click();
   await expect(page.getByRole('heading', { name: '27 works, your order.' })).toBeVisible();
   // Repeated additions never duplicate a work or alter its order.
   await page
+    .getByRole('group', { name: 'Match Listening Practice', exact: true })
+    .filter({ hasText: '2 files' })
     .getByRole('button', { name: 'Add Listening Practice to collection', exact: true })
     .click();
   await expect(page.getByRole('button', { name: 'Save collection', exact: true })).toBeEnabled();
@@ -727,4 +731,62 @@ test('collections keep a cross-page order, details context, and Home choices', a
   await expect(page.getByRole('alert')).toContainText('This collection changed');
   await page.getByRole('button', { name: 'Reload collection', exact: true }).click();
   await expect(page.getByRole('heading', { name: name + ' revised', exact: true })).toBeVisible();
+});
+
+test('collection history navigation disables edits until the requested identity loads', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  const collections = [];
+  for (const suffix of ['A', 'B']) {
+    const response = await page.request.post('/api/collections', {
+      headers: { 'X-Stacks-Request': '1' },
+      data: { name: `Navigation ${testInfo.project.name} ${suffix}` },
+    });
+    expect(response.status()).toBe(200);
+    collections.push(await response.json());
+  }
+  const [first, second] = collections;
+  expect(first.revision).toBe(second.revision);
+  await page.goto(`/?view=collections&collection=${first.id}`);
+  await expect(page.getByRole('heading', { name: first.name, exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '← All collections', exact: true }).click();
+  await page
+    .getByRole('button')
+    .filter({ has: page.getByRole('heading', { name: second.name, exact: true }) })
+    .click();
+  await expect(page.getByRole('heading', { name: second.name, exact: true })).toBeVisible();
+  // Browser history retains the list entry between A and B. Delay B on Forward.
+  await page.goBack();
+  await expect(page.getByLabel('New collection name')).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: first.name, exact: true })).toBeVisible();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requested!: () => void;
+  const incoming = new Promise<void>((resolve) => {
+    requested = resolve;
+  });
+  await page.route(`**/api/collections/${second.id}/works*`, async (route) => {
+    requested();
+    await gate;
+    await route.continue();
+  });
+  await page.goForward();
+  await page.goForward();
+  await incoming;
+  await expect(page.getByRole('button', { name: 'Save collection', exact: true })).toBeDisabled();
+  await expect(page.getByLabel('Collection name', { exact: true })).toBeDisabled();
+  await expect(page.getByRole('region', { name: 'Collection contents' })).toHaveCount(0);
+  release();
+  await expect(page.getByRole('heading', { name: second.name, exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save collection', exact: true })).toBeEnabled();
+  const unchanged = (await (await page.request.get(`/api/collections/${second.id}/works`)).json())
+    .collection;
+  expect(unchanged.name).toBe(second.name);
+  expect(unchanged.revision).toBe(second.revision);
 });

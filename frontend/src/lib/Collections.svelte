@@ -33,6 +33,13 @@
   let searchSequence = 0;
   async function load() {
     const current = ++sequence;
+    if (page?.collection.id !== id) {
+      page = null;
+      if (id) {
+        name = '';
+        home = false;
+      }
+    }
     error = '';
     try {
       if (id) {
@@ -84,6 +91,7 @@
   }
   async function save(event: SubmitEvent) {
     event.preventDefault();
+    if (id && page?.collection.id !== id) return;
     busy = true;
     error = '';
     const target = id;
@@ -107,7 +115,7 @@
     workId?: string,
     seriesId?: string,
   ) {
-    if (!page || busy) return;
+    if (!page || page.collection.id !== id || busy) return;
     busy = true;
     error = '';
     const target = id;
@@ -166,18 +174,20 @@
   <label
     >{id ? 'Collection name' : 'New collection name'}<input
       bind:value={name}
+      disabled={!!id && page?.collection.id !== id}
       required
       maxlength="1024"
     /></label
   >
   <label class="check"
-    ><input type="checkbox" bind:checked={home} /> Show next unfinished Library work on Home</label
+    ><input type="checkbox" bind:checked={home} disabled={!!id && page?.collection.id !== id} /> Show
+    next unfinished Library work on Home</label
   >
-  <button class="primary" disabled={busy || (!!id && !page)}
+  <button class="primary" disabled={busy || (!!id && page?.collection.id !== id)}
     >{id ? 'Save collection' : 'Create collection'}</button
   >
 </form>
-{#if id && page}
+{#if id && page?.collection.id === id}
   <section aria-label="Collection contents">
     <div class="section-top">
       <h2>{page.total} {page.total === 1 ? 'work' : 'works'}, your order.</h2>
@@ -266,8 +276,20 @@
         Appends currently owned works in series order. Existing entries keep their place; future
         imports can be added later.
       </p>{/if}
-    {#each results?.items || [] as work}<div class="result">
-        <span>{work.title}</span><button
+    {#each results?.items || [] as work}<div
+        class="result"
+        role="group"
+        aria-label={`Match ${work.title}`}
+      >
+        <span
+          >{work.title}<small
+            >{work.authors.join(', ')} · {work.editions
+              .flatMap((e) => e.representations.map((r) => r.format.toUpperCase()))
+              .join(' · ')} · {work.editions.flatMap((e) =>
+              e.representations.flatMap((r) => r.assets),
+            ).length} files</small
+          ></span
+        ><button
           disabled={busy}
           onclick={() => change('add', work.id)}
           aria-label={`Add ${work.title} to collection`}>Add</button
