@@ -334,6 +334,8 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   await page.getByRole('button', { name: 'Library', exact: true }).click();
   await page.locator('input[type=file]').setInputFiles('../backend/tests/fixtures/listening.m4b');
   await expect(page.getByRole('status')).toContainText(/added/);
+  await page.getByLabel('Search books or authors').fill('Listening Practice');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.locator('button.book').filter({ hasText: 'M4B' }).click();
   await page.getByRole('button', { name: 'Listen · M4B', exact: true }).waitFor();
   const saveRoute = `**/api/representations/${representation.id}/progress`;
