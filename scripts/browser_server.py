@@ -1,15 +1,19 @@
 """Disposable real backend serving the production web build for browser tests."""
 
+import io
 import tempfile
+import zipfile
 from pathlib import Path
 
 import uvicorn
+from PIL import Image, ImageDraw
 from pypdf import PdfWriter
 from stacks.app import create_app
 from stacks.config import Settings
 from stacks.library import Library
 from stacks.samples import epub_bytes
 from stacks.samples import main as samples
+from stacks.schemas import MembershipEdit, SeriesEdit, WorkEdit
 
 samples()
 writer = PdfWriter()
@@ -38,6 +42,45 @@ with tempfile.TemporaryDirectory(prefix="stacks-browser-") as directory:
             (Path("backend/tests/fixtures/tone.mp3"), "Disc 2/01.mp3"),
         ]
     )
+    old_run = library.save_series(SeriesEdit(name="Orbit", run="1999"))
+    new_run = library.save_series(SeriesEdit(name="Orbit", run="2026"))
+    comic_titles = [
+        (f"Orbit {index:02d}", old_run.id, float(index), f"#{index}") for index in range(1, 26)
+    ]
+    comic_titles += [
+        ("Orbit Annual", old_run.id, 1.5, "Annual 1"),
+        ("Orbit Returns", new_run.id, 1.0, "#1"),
+        ("A Standalone Comic", None, 0, ""),
+    ]
+    for title, run_id, position, designation in comic_titles:
+        cover = Image.new("RGB", (240, 360), "#304e46")
+        draw = ImageDraw.Draw(cover)
+        draw.ellipse((35, 70, 205, 240), outline="#d9e293", width=4)
+        draw.line((20, 280, 220, 280), fill="#d9e293", width=3)
+        draw.text((25, 310), title, fill="#f4f1e9")
+        image = io.BytesIO()
+        cover.save(image, format="PNG")
+        path = Path(f"samples/{title}.cbz")
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("001.png", image.getvalue())
+            archive.writestr(
+                "ComicInfo.xml",
+                f"<ComicInfo><Title>{title}</Title><Writer>Stacks Samples</Writer></ComicInfo>",
+            )
+        work = library.import_file(path, path.name).work
+        if run_id:
+            library.edit(
+                work.id,
+                WorkEdit(
+                    revision=work.revision,
+                    title=work.title,
+                    authors=work.authors,
+                    description=work.description,
+                    memberships=[
+                        MembershipEdit(series_id=run_id, position=position, designation=designation)
+                    ],
+                ),
+            )
     library.close()
     uvicorn.run(
         create_app(

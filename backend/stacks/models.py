@@ -115,6 +115,7 @@ class Series(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
     name: Mapped[str] = mapped_column(Text)
     run: Mapped[str] = mapped_column(Text, default="")
+    following: Mapped[bool] = mapped_column(default=False, server_default="0")
     revision: Mapped[int] = mapped_column(default=1)
 
 

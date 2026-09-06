@@ -287,6 +287,25 @@
         "title": "EditionOut",
         "type": "object"
       },
+      "FollowEdit": {
+        "properties": {
+          "following": {
+            "title": "Following",
+            "type": "boolean"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "following"
+        ],
+        "title": "FollowEdit",
+        "type": "object"
+      },
       "GroupCommit": {
         "properties": {
           "resolutions": {
@@ -504,6 +523,58 @@
           "series"
         ],
         "title": "MembershipOut",
+        "type": "object"
+      },
+      "NextOut": {
+        "properties": {
+          "designation": {
+            "title": "Designation",
+            "type": "string"
+          },
+          "series": {
+            "$ref": "#/components/schemas/SeriesOut"
+          },
+          "work": {
+            "$ref": "#/components/schemas/WorkOut"
+          }
+        },
+        "required": [
+          "series",
+          "work",
+          "designation"
+        ],
+        "title": "NextOut",
+        "type": "object"
+      },
+      "NextPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NextOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "NextPage",
         "type": "object"
       },
       "OperationOut": {
@@ -1013,6 +1084,98 @@
         "title": "RepresentationOut",
         "type": "object"
       },
+      "RunOut": {
+        "properties": {
+          "finished": {
+            "title": "Finished",
+            "type": "integer"
+          },
+          "owned": {
+            "title": "Owned",
+            "type": "integer"
+          },
+          "series": {
+            "$ref": "#/components/schemas/SeriesOut"
+          }
+        },
+        "required": [
+          "series",
+          "owned",
+          "finished"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "RunPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "RunPage",
+        "type": "object"
+      },
+      "RunWorksPage": {
+        "properties": {
+          "finished_work_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Finished Work Ids",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "finished_work_ids"
+        ],
+        "title": "RunWorksPage",
+        "type": "object"
+      },
       "SeriesEdit": {
         "properties": {
           "name": {
@@ -1042,6 +1205,10 @@
       },
       "SeriesOut": {
         "properties": {
+          "following": {
+            "title": "Following",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -1067,7 +1234,8 @@
         },
         "required": [
           "name",
-          "id"
+          "id",
+          "following"
         ],
         "title": "SeriesOut",
         "type": "object"
@@ -1391,6 +1559,116 @@
         "summary": "Create Backup"
       }
     },
+    "/api/browse/series": {
+      "get": {
+        "operationId": "browse_series_api_browse_series_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 300,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "library",
+                "archive"
+              ],
+              "title": "Scope",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "medium",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ebook",
+                    "comic",
+                    "audio"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Medium"
+            }
+          },
+          {
+            "in": "query",
+            "name": "following",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Following",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Browse Series"
+      }
+    },
     "/api/catalog": {
       "get": {
         "operationId": "catalog_api_catalog_get",
@@ -1442,6 +1720,37 @@
               ],
               "title": "Scope",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "medium",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ebook",
+                    "comic",
+                    "audio"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Medium"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unassigned",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unassigned",
+              "type": "boolean"
             }
           }
         ],
@@ -1537,6 +1846,59 @@
           }
         },
         "summary": "Continue List"
+      }
+    },
+    "/api/home/next": {
+      "get": {
+        "operationId": "next_followed_api_home_next_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Next Followed"
       }
     },
     "/api/import": {
@@ -2048,6 +2410,43 @@
       }
     },
     "/api/series/{series_id}": {
+      "get": {
+        "operationId": "get_series_api_series__series_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Series"
+      },
       "patch": {
         "operationId": "edit_series_api_series__series_id__patch",
         "parameters": [
@@ -2096,6 +2495,55 @@
         "summary": "Edit Series"
       }
     },
+    "/api/series/{series_id}/following": {
+      "patch": {
+        "operationId": "follow_series_api_series__series_id__following_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Follow Series"
+      }
+    },
     "/api/series/{series_id}/works": {
       "get": {
         "operationId": "series_works_api_series__series_id__works_get",
@@ -2131,6 +2579,42 @@
               "title": "Offset",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "library",
+                "archive"
+              ],
+              "title": "Scope",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "medium",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ebook",
+                    "comic",
+                    "audio"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Medium"
+            }
           }
         ],
         "responses": {
@@ -2138,7 +2622,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CatalogPage"
+                  "$ref": "#/components/schemas/RunWorksPage"
                 }
               }
             },

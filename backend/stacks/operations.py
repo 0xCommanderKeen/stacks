@@ -290,6 +290,15 @@ class CatalogOperations:
                 else:
                     setattr(target.personal, field, values[field])
             session.flush()
+        # A chosen shelf conflict is an explicit decision. Otherwise a newly combined
+        # followed membership promotes the default while retaining any override.
+        if (
+            target.personal is not None
+            and "personal:shelf" not in resolutions
+            and any(member.series.following for member in target.memberships)
+        ):
+            target.personal.default_shelf = "library"
+            session.flush()
         remains = session.scalar(
             select(Representation.id).join(Edition).where(Edition.work_id == source.id).limit(1)
         )

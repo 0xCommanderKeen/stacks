@@ -31,11 +31,13 @@ from stacks.reading import Reading
 from stacks.schemas import (
     CatalogPage,
     ContinuePage,
+    FollowEdit,
     GroupCommit,
     GroupPreview,
     GroupRequest,
     ImportResult,
     Login,
+    NextPage,
     OperationOut,
     OperationPage,
     PersonalEdit,
@@ -45,6 +47,8 @@ from stacks.schemas import (
     RecordEdit,
     RecordOut,
     RecordPage,
+    RunPage,
+    RunWorksPage,
     SeriesEdit,
     SeriesOut,
     SeriesPage,
@@ -52,6 +56,7 @@ from stacks.schemas import (
     WorkEdit,
     WorkOut,
 )
+from stacks.series import SeriesCatalog
 
 COOKIE = "stacks_session"
 SESSION_SECONDS = 7 * 86400
@@ -196,8 +201,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         limit: int = Query(default=60, ge=1, le=100),
         offset: int = Query(default=0, ge=0),
         scope: Literal["all", "library", "archive"] = "all",
+        medium: Literal["ebook", "comic", "audio"] | None = None,
+        unassigned: bool = False,
     ):
-        return lib.list(q, limit, offset, scope=scope)
+        return lib.list(q, limit, offset, scope=scope, medium=medium, unassigned=unassigned)
 
     @app.get("/api/works/{work_id}", response_model=WorkOut)
     def work(work_id: str, lib: Auth):
@@ -247,6 +254,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from None
 
+    @app.get("/api/browse/series", response_model=RunPage)
+    def browse_series(
+        lib: Auth,
+        q: str = Query("", max_length=300),
+        scope: Literal["all", "library", "archive"] = "all",
+        medium: Literal["ebook", "comic", "audio"] | None = None,
+        following: bool = False,
+        limit: int = Query(24, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        return SeriesCatalog(lib).browse(q, scope, medium, following, limit, offset)
+
+    @app.get("/api/home/next", response_model=NextPage)
+    def next_followed(
+        lib: Auth, limit: int = Query(12, ge=1, le=100), offset: int = Query(0, ge=0)
+    ):
+        return SeriesCatalog(lib).next(limit, offset)
+
+    @app.get("/api/series/{series_id}", response_model=SeriesOut)
+    def get_series(series_id: str, lib: Auth):
+        return SeriesCatalog(lib).get(series_id)
+
+    @app.patch("/api/series/{series_id}/following", response_model=SeriesOut)
+    def follow_series(series_id: str, body: FollowEdit, lib: Auth):
+        try:
+            return SeriesCatalog(lib).follow(series_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
     @app.get("/api/series", response_model=SeriesPage)
     def series(
         lib: Auth,
@@ -267,14 +303,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from None
 
-    @app.get("/api/series/{series_id}/works", response_model=CatalogPage)
+    @app.get("/api/series/{series_id}/works", response_model=RunWorksPage)
     def series_works(
         series_id: str,
         lib: Auth,
         limit: int = Query(default=60, ge=1, le=100),
         offset: int = Query(default=0, ge=0),
+        scope: Literal["all", "library", "archive"] = "all",
+        medium: Literal["ebook", "comic", "audio"] | None = None,
     ):
-        return lib.list(limit=limit, offset=offset, series_id=series_id)
+        return SeriesCatalog(lib).works(series_id, limit, offset, scope, medium)
 
     @app.post("/api/operations/preview", response_model=GroupPreview)
     def preview_group(body: GroupRequest, lib: Auth):

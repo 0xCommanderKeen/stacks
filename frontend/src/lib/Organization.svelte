@@ -64,6 +64,25 @@
     }
   }
 
+  async function toggleFollow(series: Series) {
+    const workId = book.id;
+    busy = true;
+    error = '';
+    try {
+      await json(`/series/${series.id}/following`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ revision: series.revision, following: !series.following }),
+      });
+      const updated = await json<Book>(`/works/${workId}`);
+      if (book.id === workId) onupdate(updated);
+    } catch (cause) {
+      error = String(cause);
+    } finally {
+      busy = false;
+    }
+  }
+
   async function edit() {
     error = '';
     editingRevision = book.revision;
@@ -258,6 +277,15 @@
   {:else}
     {#each book.memberships as member}<p>
         {member.series.name} · {member.series.run} · {member.designation}
+        <button
+          type="button"
+          class="follow"
+          disabled={busy}
+          onclick={() => toggleFollow(member.series)}
+          >{member.series.following ? 'Unfollow' : 'Follow'}
+          {member.series.name}
+          {member.series.run}</button
+        >
         <span class="muted">(order {member.position})</span>
       </p>{/each}
     {#each book.editions as edition}
@@ -283,6 +311,16 @@
 </section>
 
 <style>
+  .follow {
+    display: block;
+    margin-top: 0.5rem;
+    border: 1px solid var(--line);
+    padding: 0.4rem 0.6rem;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.8rem;
+  }
   .organization {
     margin: 2rem 0;
     padding-top: 1.5rem;

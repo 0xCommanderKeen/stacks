@@ -5,6 +5,8 @@
   import CatalogGroups from '$lib/CatalogGroups.svelte';
   import AudioPlayer from '$lib/AudioPlayer.svelte';
   import Personal from '$lib/Personal.svelte';
+  import RunBrowser from '$lib/RunBrowser.svelte';
+  import FollowedNext from '$lib/FollowedNext.svelte';
   import type { components } from '$lib/schema';
   import {
     ApiError,
@@ -28,6 +30,11 @@
   let q = $state('');
   let appliedQuery = $state('');
   let scope = $state('library');
+  let medium = $state('');
+  let seriesId = $state('');
+  let runOffset = $state(0);
+  let unassigned = $state(false);
+  let nextOffset = $state(0);
   let offset = $state(0);
   let selected = $state<Book | null>(null);
   let view = $state<'library' | 'settings' | 'home'>('library');
@@ -66,15 +73,21 @@
 
   async function load(nextOffset = offset, query = appliedQuery) {
     const sequence = ++loadSequence;
+    if (medium === 'comic' && !unassigned) {
+      appliedQuery = query;
+      offset = nextOffset;
+      status = await json<Status>('/status');
+      return;
+    }
     let result = await json<Page>(
-      `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}&scope=${scope}`,
+      `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}&scope=${scope}${medium ? '&medium=' + medium : ''}${unassigned ? '&unassigned=true' : ''}`,
     );
     if (sequence !== loadSequence) return;
     if (!result.items.length && nextOffset > 0) {
       nextOffset = result.total ? Math.floor((result.total - 1) / pageSize) * pageSize : 0;
       if (result.total) {
         result = await json<Page>(
-          `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}&scope=${scope}`,
+          `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}&scope=${scope}${medium ? '&medium=' + medium : ''}${unassigned ? '&unassigned=true' : ''}`,
         );
         if (sequence !== loadSequence) return;
       }
@@ -93,6 +106,15 @@
   async function openFromUrl() {
     const params = new URLSearchParams(location.search);
     q = params.get('q') || '';
+    medium = ['ebook', 'comic', 'audio'].includes(params.get('media') || '')
+      ? params.get('media')!
+      : '';
+    seriesId = medium === 'comic' ? params.get('series') || '' : '';
+    unassigned = medium === 'comic' && params.get('unassigned') === '1';
+    const runs = Number(params.get('run_offset') || 0);
+    runOffset = Number.isSafeInteger(runs) && runs >= 0 ? runs : 0;
+    const next = Number(params.get('next_offset') || 0);
+    nextOffset = Number.isSafeInteger(next) && next >= 0 ? next : 0;
     scope = ['all', 'library', 'archive'].includes(params.get('scope') || '')
       ? params.get('scope')!
       : 'library';
@@ -136,6 +158,11 @@
 
   function setUrl() {
     const params = new URLSearchParams();
+    if (medium) params.set('media', medium);
+    if (seriesId) params.set('series', seriesId);
+    if (unassigned) params.set('unassigned', '1');
+    if (runOffset) params.set('run_offset', String(runOffset));
+    if (view === 'home' && nextOffset) params.set('next_offset', String(nextOffset));
     if (scope !== 'library') params.set('scope', scope);
     if (appliedQuery) params.set('q', appliedQuery);
     if (offset) params.set('offset', String(offset));
@@ -214,6 +241,18 @@
       setUrl();
       await load().catch(fail);
     }
+  }
+
+  async function changeMedia(value: string) {
+    medium = value;
+    seriesId = '';
+    runOffset = 0;
+    offset = 0;
+    unassigned = false;
+    q = '';
+    appliedQuery = '';
+    setUrl();
+    await load().catch(fail);
   }
 
   async function search(event: SubmitEvent) {
@@ -426,6 +465,20 @@
           <p>Start an audiobook in your library. Its saved place will appear here.</p>
           <button class="secondary" onclick={libraryView}>Browse library</button>
         </section>{/if}
+      <FollowedNext
+        onopen={(book, id) => {
+          medium = book.editions.some((e) => e.medium === 'comic') ? 'comic' : '';
+          seriesId = medium === 'comic' ? id : '';
+          offset = 0;
+          runOffset = 0;
+          unassigned = false;
+          q = '';
+          appliedQuery = '';
+          open(book);
+        }}
+        bind:offset={nextOffset}
+        onnavigate={setUrl}
+      />
     {:else if view === 'settings'}
       <div class="eyebrow">LOOK AFTER YOUR LIBRARY</div>
       <h1>Keep it <em>safe.</em></h1>
@@ -562,10 +615,16 @@
         </section>
       </div>
     {:else}
-      <div class="page-heading">
+      <div class="page-heading" class:compact={!!medium}>
         <div>
           <div class="eyebrow">YOUR OWN READING ROOM</div>
-          <h1>Good books.<br /><em>All in one place.</em></h1>
+          {#if medium}<h1>
+              {medium === 'comic'
+                ? 'Comic runs.'
+                : medium === 'audio'
+                  ? 'Your listening shelf.'
+                  : 'Your books.'}
+            </h1>{:else}<h1>Good books.<br /><em>All in one place.</em></h1>{/if}
         </div>
         <div class="heading-aside">
           <p>A little order for<br />everything you love to read.</p>
@@ -582,6 +641,21 @@
           /><span class="small muted">Books, comics & audio · originals kept intact</span>
         </div>
       </div>
+      <div class="media-tabs" role="group" aria-label="Publication type">
+        {#each [['', 'Everything'], ['ebook', 'Books'], ['comic', 'Comics'], ['audio', 'Audio']] as [value, label]}<button
+            class:active={medium === value}
+            onclick={() => changeMedia(value)}>{label}</button
+          >{/each}
+      </div>
+      {#if unassigned}<button
+          class="back"
+          onclick={async () => {
+            unassigned = false;
+            offset = 0;
+            setUrl();
+            await load().catch(fail);
+          }}>← All comic runs</button
+        >{/if}
       <div class="catalog-toolbar">
         <div class="catalog-count">Your books <span>{status?.books || 0}</span></div>
         <label class="scope-selector"
@@ -597,16 +671,39 @@
             ><option value="all">Everything owned</option></select
           ></label
         >
-        <form class="search" onsubmit={search}>
-          <label class="sr-only" for="search">Search books or authors</label><input
-            id="search"
-            type="search"
-            placeholder="Find a book or author…"
-            bind:value={q}
-          /><button type="submit" aria-label="Search">↵</button>
-        </form>
+        {#if !seriesId}<form class="search" onsubmit={search}>
+            <label class="sr-only" for="search"
+              >{medium === 'comic' && !unassigned
+                ? 'Search comic runs'
+                : 'Search books or authors'}</label
+            ><input
+              id="search"
+              type="search"
+              placeholder={medium === 'comic' && !unassigned
+                ? 'Find a series or run…'
+                : 'Find a book or author…'}
+              bind:value={q}
+            /><button type="submit" aria-label="Search">↵</button>
+          </form>{/if}
       </div>
-      {#if !books.length}
+      {#if medium === 'comic' && !unassigned}
+        <RunBrowser
+          {scope}
+          query={appliedQuery}
+          bind:seriesId
+          bind:runOffset
+          bind:offset
+          onopen={open}
+          onnavigate={setUrl}
+          onunassigned={async () => {
+            unassigned = true;
+            seriesId = '';
+            offset = 0;
+            setUrl();
+            await load().catch(fail);
+          }}
+        />
+      {:else if !books.length}
         <section class="empty">
           <div class="empty-mark" aria-hidden="true">▥</div>
           <h2>

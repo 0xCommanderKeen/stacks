@@ -519,3 +519,80 @@ test('archiving the final book on a page returns to the last populated page', as
   await expect(page.getByRole('heading', { name: 'No books found.' })).toBeVisible();
   await expect(page).not.toHaveURL(/offset=/);
 });
+
+test('comic runs stay distinct, ordered, followed, and available through Home', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await page
+    .getByRole('group', { name: 'Publication type' })
+    .getByRole('button', { name: 'Comics', exact: true })
+    .click();
+  const runs = page.getByRole('region', { name: 'Comic runs' });
+  await expect(
+    runs.getByRole('button', { name: 'Open run Orbit 1999', exact: true }),
+  ).toBeVisible();
+  await expect(
+    runs.getByRole('button', { name: 'Open run Orbit 2026', exact: true }),
+  ).toBeVisible();
+  await runs.getByRole('button', { name: 'Open run Orbit 1999', exact: true }).click();
+  await expect(page).toHaveURL(/series=/);
+  await expect(runs.locator('button.book').first()).toHaveAttribute('aria-label', 'Open Orbit 01');
+  await expect(runs.locator('button.book').nth(1)).toHaveAttribute(
+    'aria-label',
+    'Open Orbit Annual',
+  );
+  await runs.getByRole('button', { name: 'Next issues →', exact: true }).click();
+  await expect(page).toHaveURL(/offset=24/);
+  await expect(runs.locator('button.book')).toHaveCount(2);
+  await runs.locator('button.book').first().click();
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  await expect(runs.locator('button.book')).toHaveCount(2);
+  await page.reload();
+  await expect(runs.locator('button.book')).toHaveCount(2);
+  // Restore a deliberate follow state for each viewport's independent session.
+  const unfollow = runs.getByRole('button', { name: 'Unfollow series', exact: true });
+  if (await unfollow.isVisible()) await unfollow.click();
+  await runs.getByRole('button', { name: 'Follow series', exact: true }).click();
+  await expect(runs.getByRole('button', { name: 'Unfollow series', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  const next = page.getByRole('region', { name: 'Next in followed series' });
+  await expect(next.getByRole('button', { name: 'Open next Orbit 01', exact: true })).toBeVisible();
+  await next.getByRole('button', { name: 'Open next Orbit 01', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Orbit 01', exact: true })).toBeVisible();
+  const originalUrl = page.url();
+  const personal = page.getByRole('region', { name: 'Personal library details' });
+  await personal.getByRole('button', { name: 'Add reading record' }).click();
+  await personal.getByLabel('Started', { exact: true }).fill('2026-09-01');
+  await personal.getByLabel('Finished (optional)').fill('2026-09-02');
+  await personal.getByRole('button', { name: 'Save reading record' }).click();
+  await expect(personal.getByRole('status')).toContainText('Reading record saved');
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(
+    next.getByRole('button', { name: 'Open next Orbit Annual', exact: true }),
+  ).toBeVisible();
+  await page.goto(originalUrl);
+  await personal
+    .getByRole('button', { name: 'Remove record from 2026-09-01', exact: true })
+    .click();
+  await expect(personal.getByRole('status')).toContainText('Reading record removed');
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  await runs.getByRole('button', { name: 'All comic runs' }).click();
+  await runs.getByRole('button', { name: 'Comics without a series' }).click();
+  await expect(
+    page.getByRole('button', { name: 'Open A Standalone Comic', exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page).toHaveURL(/unassigned=1/);
+  await page.getByRole('button', { name: 'All comic runs' }).click();
+  await expect(
+    runs.getByRole('button', { name: 'Open run Orbit 2026', exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('comic-runs.png'), fullPage: true });
+});
