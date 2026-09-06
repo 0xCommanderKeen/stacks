@@ -117,7 +117,7 @@
   {#if error}<p role="alert">{error}</p>{/if}
   <form onsubmit={search}>
     <label for="metadata-query">Title or author to look up</label>
-    <div class="search">
+    <div class="lookup">
       <input id="metadata-query" bind:value={q} maxlength="300" required disabled={busy} /><button
         class="secondary"
         disabled={busy || !q.trim()}>Search Open Library</button
@@ -222,12 +222,12 @@
     display: block;
     margin: 0.8rem 0;
   }
-  .search {
+  .lookup {
     display: flex;
     flex-wrap: wrap;
     gap: 0.6rem;
   }
-  .search input {
+  .lookup input {
     flex: 1;
     min-width: 150px;
     background: transparent;
@@ -255,6 +255,16 @@
   }
   li p {
     margin: 0.3rem 0;
+  }
+  nav {
+    height: auto;
+    width: 100%;
+  }
+  nav button {
+    height: auto;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--line);
+    font-size: 0.85rem;
   }
   .proposal {
     border: 1px solid var(--line);
