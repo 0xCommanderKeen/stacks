@@ -71,7 +71,7 @@
     opacity: 0.65;
   }
   .cover-author {
-    font-size: 9px;
+    font-size: clamp(2px, 5cqi, 9px);
     letter-spacing: 0.13em;
     text-transform: uppercase;
     line-height: 1.6;
@@ -79,7 +79,7 @@
   .cover-title {
     font-family: inherit;
     font-weight: 600;
-    font-size: clamp(12px, 12cqi, 28px);
+    font-size: clamp(3px, 12cqi, 28px);
     line-height: 1.15;
     margin-top: 12%;
     overflow: hidden;
@@ -87,8 +87,8 @@
   }
   .cover-bottom {
     margin-top: auto;
-    padding-top: 10px;
-    font-size: 8px;
+    padding-top: 5cqi;
+    font-size: clamp(2px, 4cqi, 8px);
     letter-spacing: 0.16em;
   }
   .tone-1 {

@@ -401,6 +401,7 @@
     white-space: nowrap;
   }
   label {
+    margin: 0;
     font-size: 0.75rem;
     display: flex;
     align-items: center;
@@ -414,6 +415,7 @@
     border: 1px solid var(--line);
     padding: 0.3rem;
     max-width: 100%;
+    min-width: 0;
   }
   .save-state {
     font-size: 0.7rem;
@@ -466,11 +468,19 @@
       gap: 0.4rem;
     }
     .track-options {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 0.5rem;
-      flex-wrap: wrap;
     }
     .track-options label {
-      max-width: 45%;
+      max-width: 100%;
+    }
+    .track-options select {
+      flex: 1;
+    }
+    .save-state,
+    .track-options a {
+      grid-column: 1 / -1;
     }
     .player-title .eyebrow {
       display: none;
