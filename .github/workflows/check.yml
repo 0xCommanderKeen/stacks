@@ -22,6 +22,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: '10.6.5'
+      - run: sudo apt-get update && sudo apt-get install -y unar
       - run: make install
       - run: make check
       - run: pnpm --dir frontend exec playwright install --with-deps chromium

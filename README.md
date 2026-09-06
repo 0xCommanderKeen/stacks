@@ -3,9 +3,10 @@
 A personal library for books, comics, and audiobooks.
 
 Stacks is a clean-start project focused on safe imports, useful cataloging,
-comic series, and dependable audiobook playback. The first working slice supports
-**EPUB import, catalog search, metadata editing, original downloads, and backup/restore**.
-Comics and audiobooks follow in the next phases.
+comic series, and dependable audiobook playback. The current development version supports
+**EPUB, PDF, CBZ, CBR, MP3, M4A, and M4B import, catalog search, edition/series editing,
+original downloads, and backup/restore**. Playback, bulk intake, and reversible grouping
+are subsequent milestones.
 
 - [Implementation plan](docs/rebuild/PLAN.md)
 - [Proposed domain language](CONTEXT.md)
@@ -17,7 +18,8 @@ not belong in it.
 
 ## Run locally
 
-Requires Python 3.13, uv, Node 22, and pnpm 10.6.5.
+Requires Python 3.13, uv, Node 22, and pnpm 10.6.5. Compressed CBR inspection also
+requires a rarfile-supported decompressor, such as `unar` (the backend bundled in the container).
 
 ```sh
 cp .env.example .env
@@ -95,3 +97,5 @@ CI runs the same checks and the container restoration exercise. Backend response
 schemas generate the committed TypeScript contract through `make types`.
 
 Implementation targets Linux/NAS and macOS. Windows is not currently supported.
+
+Current format and series behavior is documented in [Formats and series](docs/formats-and-series.md).

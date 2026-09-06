@@ -27,6 +27,7 @@ class Work(Base):
     revision: Mapped[int] = mapped_column(default=1)
     created_at: Mapped[str] = mapped_column(default=now, index=True)
     editions: Mapped[list["Edition"]] = relationship(cascade="all, delete-orphan")
+    memberships: Mapped[list["SeriesMembership"]] = relationship(cascade="all, delete-orphan")
     credits: Mapped[list["Credit"]] = relationship(
         cascade="all, delete-orphan", order_by="Credit.position"
     )
@@ -56,6 +57,8 @@ class Edition(Base):
     language: Mapped[str] = mapped_column(default="")
     publisher: Mapped[str] = mapped_column(Text, default="")
     identifier: Mapped[str] = mapped_column(Text, default="")
+    narrator: Mapped[str] = mapped_column(Text, default="", server_default="")
+    abridgement: Mapped[str] = mapped_column(default="unknown", server_default="unknown")
     representations: Mapped[list["Representation"]] = relationship(cascade="all, delete-orphan")
 
 
@@ -102,3 +105,22 @@ class LoginSession(Base):
     __tablename__ = "login_session"
     digest: Mapped[str] = mapped_column(String(64), primary_key=True)
     expires_at: Mapped[int]
+
+
+class Series(Base):
+    __tablename__ = "series"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    name: Mapped[str] = mapped_column(Text)
+    run: Mapped[str] = mapped_column(Text, default="")
+    revision: Mapped[int] = mapped_column(default=1)
+
+
+class SeriesMembership(Base):
+    __tablename__ = "series_membership"
+    __table_args__ = (UniqueConstraint("series_id", "work_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    series_id: Mapped[str] = mapped_column(ForeignKey("series.id"), index=True)
+    work_id: Mapped[str] = mapped_column(ForeignKey("work.id"), index=True)
+    designation: Mapped[str] = mapped_column(Text, default="")
+    position: Mapped[float]
+    series: Mapped[Series] = relationship()

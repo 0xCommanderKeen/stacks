@@ -119,9 +119,26 @@ def main():
                         "PATCH",
                         {"Content-Type": "application/json"},
                     )
+                    fixtures = Path(__file__).resolve().parents[1] / "backend/tests/fixtures"
+                    for filename in ("compressed.cbr", "tone.mp3", "tone.m4a"):
+                        content = (fixtures / filename).read_bytes()
+                        imported = json.load(
+                            request(
+                                "/api/import",
+                                content,
+                                headers={
+                                    "Content-Type": "application/octet-stream",
+                                    "X-Filename": filename,
+                                },
+                            )
+                        )
+                        original = imported["work"]["editions"][0]["representations"][0]["assets"][
+                            0
+                        ]
+                        assert request(f"/api/assets/{original['id']}/download").read() == content
                     (root / "backup.zip").write_bytes(request("/api/backup", b"", "POST").read())
                     (root / "backup.zip").chmod(0o644)
-                catalog = json.load(request("/api/catalog"))
+                catalog = json.load(request("/api/catalog?q=Restored"))
                 assert catalog["items"][0]["title"] == "Restored from the shipped image"
                 asset = catalog["items"][0]["editions"][0]["representations"][0]["assets"][0]
                 assert request(f"/api/assets/{asset['id']}/download").read() == publication
