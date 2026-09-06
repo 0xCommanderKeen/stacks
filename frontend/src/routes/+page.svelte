@@ -390,7 +390,11 @@
               {#each selected.editions as edition}{#each edition.representations as representation}{#each representation.assets as asset}<a
                       class="button primary"
                       href="/api/assets/{asset.id}/download"
-                      download>Download {representation.format.toUpperCase()} <span>↓</span></a
+                      download
+                      >Download {representation.format.toUpperCase()}{representation.assets.length >
+                      1
+                        ? ` · ${asset.original_name}`
+                        : ''} <span>↓</span></a
                     >{/each}{/each}{/each}<button class="secondary" onclick={startEdit}
                 >Edit details</button
               >

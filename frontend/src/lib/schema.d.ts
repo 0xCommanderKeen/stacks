@@ -452,6 +452,17 @@ export interface components {
        */
       run: string;
     };
+    /** SeriesPage */
+    SeriesPage: {
+      /** Items */
+      items: components['schemas']['SeriesOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
     /** StatusOut */
     StatusOut: {
       /** Books */
@@ -752,6 +763,8 @@ export interface operations {
     parameters: {
       query?: {
         q?: string;
+        limit?: number;
+        offset?: number;
       };
       header?: never;
       path?: never;
@@ -765,7 +778,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['SeriesOut'][];
+          'application/json': components['schemas']['SeriesPage'];
         };
       };
       /** @description Validation Error */
@@ -849,7 +862,10 @@ export interface operations {
   };
   series_works_api_series__series_id__works_get: {
     parameters: {
-      query?: never;
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
       header?: never;
       path: {
         series_id: string;
@@ -864,7 +880,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['WorkOut'][];
+          'application/json': components['schemas']['CatalogPage'];
         };
       };
       /** @description Validation Error */

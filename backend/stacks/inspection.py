@@ -84,7 +84,7 @@ def _comic(path: Path, fmt: str, facts: dict) -> bytes | None:
 
         pages = sorted(
             [n for n in names if Path(n).suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}],
-            key=natural_key,
+            key=lambda name: (natural_key(name), name),
         )
         if not pages:
             raise InvalidBook("The comic has no supported image pages.")

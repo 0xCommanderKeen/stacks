@@ -28,7 +28,15 @@ from stacks.models import (
     Work,
     identity,
 )
-from stacks.schemas import CatalogPage, ImportResult, SeriesEdit, SeriesOut, WorkEdit, WorkOut
+from stacks.schemas import (
+    CatalogPage,
+    ImportResult,
+    SeriesEdit,
+    SeriesOut,
+    SeriesPage,
+    WorkEdit,
+    WorkOut,
+)
 
 
 def digest(path: Path) -> str:
@@ -141,9 +149,17 @@ class Library:
             raise FileNotFoundError("The original file is unavailable.")
         return path
 
-    def list(self, q: str = "", limit: int = 60, offset: int = 0) -> CatalogPage:
+    def list(
+        self, q: str = "", limit: int = 60, offset: int = 0, series_id: str | None = None
+    ) -> CatalogPage:
         with self.sessions() as session:
             query = select(Work)
+            ordering = (Work.created_at.desc(), Work.id)
+            if series_id:
+                if session.get(Series, series_id) is None:
+                    raise KeyError(series_id)
+                query = query.join(SeriesMembership).where(SeriesMembership.series_id == series_id)
+                ordering = (SeriesMembership.position, Work.id)
             if q.strip():
                 pattern = (
                     "%"
@@ -167,7 +183,7 @@ class Library:
                     .selectinload(Edition.representations)
                     .selectinload(Representation.assets),
                 )
-                .order_by(Work.created_at.desc(), Work.id)
+                .order_by(*ordering)
                 .limit(limit)
                 .offset(offset)
             )
@@ -226,12 +242,19 @@ class Library:
             session.flush()
             return work_out(work)
 
-    def series(self, q: str = "") -> list[SeriesOut]:
+    def series(self, q: str = "", limit: int = 60, offset: int = 0) -> SeriesPage:
         with self.sessions() as session:
-            query = select(Series).order_by(Series.name, Series.run, Series.id).limit(1000)
+            query = select(Series)
             if q:
                 query = query.where(Series.name.contains(q, autoescape=True))
-            return [series_out(s) for s in session.scalars(query)]
+            total = session.scalar(select(func.count()).select_from(query.subquery()))
+            query = query.order_by(Series.name, Series.run, Series.id).limit(limit).offset(offset)
+            return SeriesPage(
+                items=[series_out(s) for s in session.scalars(query)],
+                total=total,
+                limit=limit,
+                offset=offset,
+            )
 
     def save_series(self, edit: SeriesEdit, series_id: str | None = None) -> SeriesOut:
         with self.lock, self.sessions.begin() as session:
@@ -246,21 +269,6 @@ class Library:
             session.flush()
             return series_out(series)
 
-    def series_works(self, series_id: str) -> list[WorkOut]:
-        with self.sessions() as session:
-            if session.get(Series, series_id) is None:
-                raise KeyError(series_id)
-            return [
-                work_out(w)
-                for w in session.scalars(
-                    select(Work)
-                    .join(SeriesMembership)
-                    .where(SeriesMembership.series_id == series_id)
-                    .order_by(SeriesMembership.position, Work.id)
-                    .limit(1000)
-                )
-            ]
-
     def import_file(self, source: Path, original_name: str) -> ImportResult:
         """Source is an owned temporary upload. Caller cleans it up; never touch external files."""
         return self.import_files([(source, original_name)])
@@ -269,7 +277,7 @@ class Library:
         """An ordered audio set is one representation; other formats have exactly one asset."""
         if not sources or len(sources) > 2000:
             raise InvalidBook("Choose between 1 and 2000 files.")
-        sources = sorted(sources, key=lambda item: natural_key(item[1]))
+        sources = sorted(sources, key=lambda item: (natural_key(item[1]), item[1]))
         if any(not safe_member(name) or len(name) > 1024 for _, name in sources):
             raise InvalidBook("Invalid original filename.")
         inspections = [inspect_file(path, name) for path, name in sources]

@@ -206,9 +206,9 @@ def test_series_runs_labels_order_and_stale_edits(client):
         )
         assert response.status_code == 200, response.text
         works.append(response.json())
-    ordered = client.get(f"/api/series/{runs[0]['id']}/works").json()
+    ordered = client.get(f"/api/series/{runs[0]['id']}/works").json()["items"]
     assert [w["title"] for w in ordered] == ["1/2", "Annual 2024", "Special"]
-    assert client.get(f"/api/series/{runs[1]['id']}/works").json() == []
+    assert client.get(f"/api/series/{runs[1]['id']}/works").json()["items"] == []
     assert ordered[0]["editions"][0]["language"] == "sl"
     request = {"name": "Renamed Rooms", "run": "2020", "revision": 1}
     assert client.patch(f"/api/series/{runs[0]['id']}", json=request).status_code == 200
@@ -231,3 +231,91 @@ def test_comic_page_order(tmp_path):
             lib.import_files([(path, "../outside.cbz")])
     finally:
         lib.close()
+
+
+def test_series_and_members_are_paginated_without_truncation(client):
+    from stacks.models import Series, SeriesMembership, Work
+
+    lib = client.app.state.library
+    with lib.sessions.begin() as session:
+        for index in range(1001):
+            session.add(Series(name=f"Run {index:04d}", run=""))
+        run = Series(name="Long Series", run="2024")
+        session.add(run)
+        session.flush()
+        run_id = run.id
+        for index in range(1001):
+            session.add(
+                Work(
+                    title=f"Issue {index}",
+                    memberships=[
+                        SeriesMembership(series_id=run_id, designation=str(index), position=index)
+                    ],
+                )
+            )
+    page = client.get("/api/series?q=Run&offset=1000&limit=100").json()
+    assert page["total"] == 1001 and page["items"][0]["name"] == "Run 1000"
+    page = client.get(f"/api/series/{run_id}/works?offset=1000&limit=100").json()
+    assert page["total"] == 1001 and page["items"][0]["title"] == "Issue 1000"
+    assert client.get("/api/series?limit=1001").status_code == 422
+
+
+def test_equal_natural_names_have_stable_audio_identity(tmp_path):
+    from mutagen.id3 import ID3, TIT2
+
+    paths = []
+    for i, name in enumerate(["1.mp3", "01.mp3"]):
+        path = tmp_path / name
+        path.write_bytes((FIXTURES / "tone.mp3").read_bytes())
+        tags = ID3(path)
+        tags.add(TIT2(encoding=3, text=[f"Track {i}"]))
+        tags.save(path)
+        paths.append((path, name))
+    lib = Library(tmp_path / "data")
+    try:
+        first = lib.import_files(paths)
+        second = lib.import_files(list(reversed(paths)))
+        assert second.duplicate and second.work.id == first.work.id
+        assert [a.original_name for a in first.work.editions[0].representations[0].assets] == [
+            "01.mp3",
+            "1.mp3",
+        ]
+    finally:
+        lib.close()
+
+
+def test_compressed_cbr_uses_real_decompression(client):
+    import rarfile
+
+    path = FIXTURES / "compressed.cbr"
+    with rarfile.RarFile(path) as archive:
+        assert archive.getinfo("ComicInfo.xml").compress_type != rarfile.RAR_M0
+    response = upload(client, path.read_bytes(), "compressed.cbr")
+    assert response.status_code == 200, response.text
+    assert response.json()["work"]["title"] == "Compressed Rooms"
+    assert response.json()["work"]["editions"][0]["representations"][0]["has_cover"]
+
+
+def test_previous_stacks_schema_opens_without_changing_originals(tmp_path):
+    import stacks.db as db
+    from alembic import command
+    from alembic.config import Config
+
+    lib = Library(tmp_path / "data")
+    path = tmp_path / "old.pdf"
+    path.write_bytes(pdf_bytes())
+    work = lib.import_file(path, path.name).work
+    config = Config()
+    config.set_main_option("script_location", str(Path(db.__file__).parent / "migrations"))
+    with lib.engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.downgrade(config, "0001")
+    lib.close()
+    reopened = Library(tmp_path / "data")
+    try:
+        assert reopened.get(work.id).editions[0].narrator == ""
+        with reopened.sessions() as session:
+            asset = session.scalar(select(Asset))
+            assert reopened.resolve(asset.relative_path).read_bytes() == pdf_bytes()
+    finally:
+        reopened.close()

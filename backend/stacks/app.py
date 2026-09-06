@@ -31,6 +31,7 @@ from stacks.schemas import (
     Login,
     SeriesEdit,
     SeriesOut,
+    SeriesPage,
     StatusOut,
     WorkEdit,
     WorkOut,
@@ -190,9 +191,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from None
 
-    @app.get("/api/series", response_model=list[SeriesOut])
-    def series(lib: Auth, q: str = Query(default="", max_length=300)):
-        return lib.series(q)
+    @app.get("/api/series", response_model=SeriesPage)
+    def series(
+        lib: Auth,
+        q: str = Query(default="", max_length=300),
+        limit: int = Query(default=60, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return lib.series(q, limit, offset)
 
     @app.post("/api/series", response_model=SeriesOut)
     def create_series(body: SeriesEdit, lib: Auth):
@@ -205,9 +211,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from None
 
-    @app.get("/api/series/{series_id}/works", response_model=list[WorkOut])
-    def series_works(series_id: str, lib: Auth):
-        return lib.series_works(series_id)
+    @app.get("/api/series/{series_id}/works", response_model=CatalogPage)
+    def series_works(
+        series_id: str,
+        lib: Auth,
+        limit: int = Query(default=60, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return lib.list(limit=limit, offset=offset, series_id=series_id)
 
     @app.post(
         "/api/import",

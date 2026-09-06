@@ -119,7 +119,16 @@ test('PDF details and distinct series survive reload', async ({ page }, testInfo
   await page.getByLabel('Series name', { exact: true }).fill('Reading Rooms');
   await page.getByLabel('Run label').fill(testInfo.project.name);
   await page.getByRole('button', { name: 'Create series', exact: true }).click();
-  await page.getByLabel('Issue or volume label').last().fill('Annual 2024');
+  await expect(
+    page.getByRole('group', { name: `Reading Rooms · ${testInfo.project.name}`, exact: true }),
+  ).toBeVisible();
+  await page.getByLabel('Find a series').fill('no-matching-series');
+  await page.getByRole('button', { name: 'Search series', exact: true }).click();
+  await expect(page.getByLabel('Existing series').locator('option')).toHaveCount(1);
+  await page
+    .getByRole('group', { name: `Reading Rooms · ${testInfo.project.name}`, exact: true })
+    .getByLabel('Issue or volume label')
+    .fill('Annual 2024');
   await page.getByLabel('Reading order').last().fill('2.5');
   await page.getByRole('button', { name: 'Save editions & series', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Organize editions & series' })).toBeVisible();
@@ -128,5 +137,49 @@ test('PDF details and distinct series survive reload', async ({ page }, testInfo
     page.getByText(new RegExp(`Reading Rooms · ${testInfo.project.name} · Annual 2024`)),
   ).toBeVisible();
   await expect(page.getByText('EBOOK · sl', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Organize editions & series' }).click();
+  await page
+    .getByRole('group', { name: `Reading Rooms · ${testInfo.project.name}`, exact: true })
+    .getByRole('button', { name: 'Edit this series' })
+    .click();
+  await page
+    .getByLabel('Series run label', { exact: true })
+    .fill(`${testInfo.project.name} · corrected`);
+  const workId = new URL(page.url()).searchParams.get('book');
+  const current = await (await page.request.get(`/api/works/${workId}`)).json();
+  const concurrent = await page.request.patch(`/api/works/${workId}`, {
+    headers: { 'X-Stacks-Request': '1' },
+    data: {
+      revision: current.revision,
+      title: current.title,
+      authors: current.authors,
+      description: current.description,
+      editions: current.editions.map(
+        (e: { id: string; language: string; publisher: string; identifier: string }) => ({
+          id: e.id,
+          language: 'de',
+          publisher: e.publisher,
+          identifier: e.identifier,
+        }),
+      ),
+    },
+  });
+  expect(concurrent.ok()).toBe(true);
+  await page.getByRole('button', { name: 'Save series metadata', exact: true }).click();
+  await expect(
+    page.getByRole('group', {
+      name: `Reading Rooms · ${testInfo.project.name} · corrected`,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Save editions & series', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('another tab');
+  await page.reload();
+  await expect(page.getByText('EBOOK · de', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(
+      new RegExp(`Reading Rooms · ${testInfo.project.name} · corrected · Annual 2024`),
+    ),
+  ).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('editions-series.png'), fullPage: true });
 });

@@ -11,11 +11,63 @@
   let memberships = $state<Membership[]>([]);
   let series = $state<Series[]>([]);
   let seriesId = $state('');
+  let knownSeries = $state<Record<string, Series>>({});
+  let editingRevision = 0;
+  let seriesQuery = $state('');
+  let appliedSeriesQuery = '';
+  let seriesTotal = $state(0);
+  let seriesOffset = $state(0);
+  function seriesLabel(id: string) {
+    const item = knownSeries[id];
+    return item ? `${item.name} · ${item.run}` : id;
+  }
+  async function loadSeries(append = false) {
+    try {
+      const query = append ? appliedSeriesQuery : seriesQuery;
+      const result = await json<components['schemas']['SeriesPage']>(
+        `/series?q=${encodeURIComponent(query)}&offset=${append ? seriesOffset : 0}`,
+      );
+      for (const item of result.items) knownSeries[item.id] = item;
+      series = append ? [...series, ...result.items] : result.items;
+      seriesOffset = result.offset + result.items.length;
+      seriesTotal = result.total;
+      appliedSeriesQuery = query;
+    } catch (cause) {
+      error = String(cause);
+    }
+  }
   let seriesName = $state('');
   let seriesRun = $state('');
+  let seriesEditing = $state<Series | null>(null);
+  function editSeries(id: string) {
+    const item = knownSeries[id];
+    seriesEditing = item ? { ...item } : null;
+  }
+  async function saveSeries() {
+    if (!seriesEditing) return;
+    busy = true;
+    error = '';
+    try {
+      const updated = await json<Series>(`/series/${seriesEditing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(seriesEditing),
+      });
+      knownSeries[updated.id] = updated;
+      series = series.map((s) => (s.id === updated.id ? updated : s));
+      onupdate(await json<Book>(`/works/${book.id}`));
+      seriesEditing = null;
+    } catch (cause) {
+      error = String(cause);
+    } finally {
+      busy = false;
+    }
+  }
 
   async function edit() {
     error = '';
+    editingRevision = book.revision;
+    for (const member of book.memberships) knownSeries[member.series_id] = member.series;
     editions = structuredClone($state.snapshot(book.editions));
     memberships = book.memberships.map(({ series_id, designation, position }) => ({
       series_id,
@@ -23,7 +75,7 @@
       position,
     }));
     try {
-      series = await json<Series[]>('/series');
+      await loadSeries();
       editing = true;
     } catch (cause) {
       error = String(cause);
@@ -42,6 +94,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: seriesName, run: seriesRun }),
       });
+      knownSeries[created.id] = created;
       series = [...series, created];
       seriesId = created.id;
       addMembership();
@@ -62,7 +115,7 @@
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          revision: book.revision,
+          revision: editingRevision,
           title: book.title,
           authors: book.authors,
           description: book.description,
@@ -114,10 +167,9 @@
       {/each}
       {#each memberships as member, i}
         <fieldset>
-          <legend
-            >{series.find((s) => s.id === member.series_id)?.name} · {series.find(
-              (s) => s.id === member.series_id,
-            )?.run}</legend
+          <legend>{seriesLabel(member.series_id)}</legend>
+          <button type="button" class="secondary" onclick={() => editSeries(member.series_id)}
+            >Edit this series</button
           >
           <label
             >Issue or volume label<input
@@ -142,6 +194,29 @@
           >
         </fieldset>
       {/each}
+      {#if seriesEditing}
+        <fieldset>
+          <legend>Edit series metadata</legend>
+          <label>Series title<input bind:value={seriesEditing.name} maxlength="1024" /></label>
+          <label>Series run label<input bind:value={seriesEditing.run} maxlength="1024" /></label>
+          <button
+            type="button"
+            class="secondary"
+            disabled={busy || !seriesEditing.name.trim()}
+            onclick={saveSeries}>Save series metadata</button
+          >
+          <button type="button" class="secondary" onclick={() => (seriesEditing = null)}
+            >Cancel series edit</button
+          >
+        </fieldset>
+      {/if}
+      <label>Find a series<input bind:value={seriesQuery} maxlength="300" /></label>
+      <button type="button" class="secondary" onclick={() => loadSeries()}>Search series</button>
+      {#if seriesOffset < seriesTotal}<button
+          type="button"
+          class="secondary"
+          onclick={() => loadSeries(true)}>More series</button
+        >{/if}
       <label
         >Existing series<select bind:value={seriesId}
           ><option value="">Choose a series</option>{#each series as item}<option value={item.id}
@@ -194,7 +269,8 @@
       </p>
       {#each edition.representations as representation}
         {#if representation.facts.page_count}<p class="small">
-            {String(representation.facts.page_count)} pages
+            {String(representation.facts.page_count)}
+            {representation.facts.page_count === 1 ? 'page' : 'pages'}
           </p>{/if}
         {#if representation.facts.duration_seconds}<p class="small">
             {Math.round(Number(representation.facts.duration_seconds) / 60)} minutes · {representation

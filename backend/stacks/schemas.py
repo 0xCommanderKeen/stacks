@@ -47,6 +47,13 @@ class SeriesOut(SeriesEdit):
     id: str
 
 
+class SeriesPage(BaseModel):
+    items: list[SeriesOut]
+    total: int
+    limit: int
+    offset: int
+
+
 class MembershipEdit(BaseModel):
     series_id: str
     designation: str = Field(default="", max_length=128)
