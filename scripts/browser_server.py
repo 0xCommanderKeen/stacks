@@ -15,10 +15,32 @@ from pypdf import PdfWriter
 from stacks.app import create_app
 from stacks.config import Settings
 from stacks.library import Library
+from stacks.openlibrary import OpenLibrary
 from stacks.samples import epub_bytes
 from stacks.samples import main as samples
 from stacks.schemas import MembershipEdit, SeriesEdit, TrashRequest, WorkEdit
 from stacks.trash import Trash
+
+
+# Only the disposable test server substitutes provider transport; catalog operations stay real.
+def fixture_lookup(self, **request):
+    if request["kind"] == "details":
+        return {"description": "A description from the test catalog."}
+    offset = request.get("offset", 0)
+    return {
+        "matches": [
+            {
+                "key": f"/works/OL{index + 1}W",
+                "title": f"{request['q']} suggested {index + 1}",
+                "authors": ["Provider Writer"],
+            }
+            for index in range(offset, min(offset + 5, 12))
+        ],
+        "total": 12,
+    }
+
+
+OpenLibrary.request = fixture_lookup
 
 samples()
 writer = PdfWriter()
@@ -28,6 +50,7 @@ writer.write("samples/An Open Page.pdf")
 writer.add_metadata({"/Title": "A Different Format"})
 writer.write("samples/A Different Format.pdf")
 for viewport in ("desktop", "phone"):
+    Path(f"samples/Metadata {viewport}.epub").write_bytes(epub_bytes(f"Metadata {viewport}"))
     Path(f"samples/Cover selection {viewport}.epub").write_bytes(
         epub_bytes(f"Cover selection {viewport}")
     )

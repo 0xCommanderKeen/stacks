@@ -30,6 +30,7 @@ from stacks.models import (
     InboxCandidate,
     IntakeItem,
     IntakeJob,
+    MetadataSuggestion,
     PersonalState,
     Progress,
     ReadingRecord,
@@ -43,6 +44,7 @@ from stacks.models import (
     WorkRedirect,
     identity,
 )
+from stacks.provenance import imported, manual_changes
 from stacks.schemas import (
     AcceptedMetadata,
     CatalogPage,
@@ -360,6 +362,15 @@ class Library:
                     if series.following and work.personal is not None:
                         work.personal.default_shelf = "library"
                 work.memberships = updated
+            manual_changes(
+                work,
+                {
+                    "title": work.title,
+                    "authors": [c.contributor.name for c in work.credits],
+                    "description": work.description,
+                },
+                edit.model_dump(),
+            )
             work.title, work.description = edit.title, edit.description
             work.revision += 1
             # Names aren't identities: update ordered credits without globally merging names.
@@ -770,7 +781,11 @@ class Library:
             metadata = json.loads(operation.extracted_json)
             accepted = metadata.get("accepted_metadata", {})
             chosen = metadata | {key: value for key, value in accepted.items() if value is not None}
-            work = Work(title=chosen["title"], description=chosen["description"])
+            work = Work(
+                title=chosen["title"],
+                description=chosen["description"],
+                metadata_origins_json=imported(accepted),
+            )
             if metadata.get("source_root") or accepted:
                 shelf = accepted.get("shelf", "default")
                 work.personal = PersonalState(
@@ -869,6 +884,7 @@ class Library:
         with self.lock, self.engine.connect() as connection:
             tables = {}
             for model in (
+                MetadataSuggestion,
                 CoverBlob,
                 Work,
                 Contributor,
@@ -910,4 +926,4 @@ class Library:
             roots.update(
                 {row["root"]: {"kind": "external"} for row in tables["intake_job"] if row["root"]}
             )
-            return {"schema_version": 13, "roots": roots, "tables": tables}
+            return {"schema_version": 14, "roots": roots, "tables": tables}

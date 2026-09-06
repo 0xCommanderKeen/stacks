@@ -26,6 +26,7 @@ from stacks.config import Settings
 from stacks.covers import Covers
 from stacks.curation import Curation
 from stacks.devices import Devices
+from stacks.enrichment import Enrichment
 from stacks.epub import InvalidBook
 from stacks.inspection import FORMATS
 from stacks.intake import Intake
@@ -40,6 +41,7 @@ from stacks.models import (
     WorkRedirect,
 )
 from stacks.opds import ACQUISITION, NAVIGATION, Opds
+from stacks.openlibrary import OpenLibrary, ProviderUnavailable
 from stacks.operations import CatalogOperations
 from stacks.reading import Reading
 from stacks.schemas import (
@@ -69,6 +71,9 @@ from stacks.schemas import (
     JobOut,
     JobPage,
     Login,
+    MetadataAccept,
+    MetadataSearch,
+    MetadataState,
     NextPage,
     OperationOut,
     OperationPage,
@@ -88,6 +93,8 @@ from stacks.schemas import (
     SourceOut,
     SourceRegistration,
     StatusOut,
+    SuggestionOut,
+    SuggestionPage,
     TrashOperationOut,
     TrashPage,
     TrashRequest,
@@ -112,6 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app):
         app.state.library = await to_thread.run_sync(Library, settings.data_dir, settings.sources)
+        app.state.enrichment = Enrichment(app.state.library, OpenLibrary(settings.provider_contact))
         app.state.intake = Intake(app.state.library)
         app.state.intake.start()
         try:
@@ -726,6 +734,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         offset: int = Query(default=0, ge=0),
     ):
         return Reading(lib).continue_list(limit, offset)
+
+    @app.get("/api/works/{work_id}/metadata", response_model=MetadataState)
+    def metadata_state(work_id: str, request: Request, lib: Auth):
+        try:
+            return request.app.state.enrichment.state(work_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post("/api/works/{work_id}/metadata/search", response_model=SuggestionPage)
+    def metadata_search(work_id: str, body: MetadataSearch, request: Request, lib: Auth):
+        try:
+            return request.app.state.enrichment.search(work_id, body)
+        except ProviderUnavailable as exc:
+            raise HTTPException(502, str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post("/api/works/{work_id}/metadata/{suggestion_id}/details", response_model=SuggestionOut)
+    def metadata_details(work_id: str, suggestion_id: str, request: Request, lib: Auth):
+        try:
+            return request.app.state.enrichment.details(work_id, suggestion_id)
+        except ProviderUnavailable as exc:
+            raise HTTPException(502, str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post("/api/works/{work_id}/metadata/{suggestion_id}/accept", response_model=WorkOut)
+    def metadata_accept(
+        work_id: str, suggestion_id: str, body: MetadataAccept, request: Request, lib: Auth
+    ):
+        try:
+            return request.app.state.enrichment.accept(work_id, suggestion_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
 
     @app.post("/api/works/{work_id}/cover", response_model=WorkOut)
     async def choose_cover(work_id: str, request: Request, lib: Auth, revision: int = Query(ge=1)):

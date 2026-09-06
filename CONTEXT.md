@@ -100,3 +100,12 @@ The blob is the owner's original image, with byte identity and manual provenance
 its thumbnail is derived. Grouping explicitly resolves differing selections,
 split carries the choice, and retained originals support guarded undo and backup.
 See `docs/chosen-covers.md`.
+
+### Selected field origin (implemented)
+
+Each descriptive Work field has a compact origin for its current selected value:
+embedded facts, manual choice, or an explicitly accepted Open Library suggestion.
+Manual corrections are protected. Provider proposals are separate bounded cached
+records and never refresh selected values automatically. Group/split/undo retain
+the origins of selected values; covers keep their own manual provenance.
+See `docs/metadata-suggestions.md`.

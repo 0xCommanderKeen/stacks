@@ -585,3 +585,52 @@ class DeviceIssued(BaseModel):
     username: str
     password: str
     catalog_url: str
+
+
+class FieldOrigin(BaseModel):
+    source: Literal["manual", "embedded", "openlibrary"]
+    protected: bool
+    selected_at: str | None = None
+    provider_key: str | None = None
+    source_url: str | None = None
+
+
+class SuggestedValues(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=1024)
+    authors: list[str] | None = Field(default=None, max_length=20)
+    description: str | None = Field(default=None, max_length=20000)
+
+
+class SuggestionOut(BaseModel):
+    id: str
+    provider_key: str
+    source_url: str
+    fetched_at: str
+    detailed: bool
+    values: SuggestedValues
+
+
+class MetadataSearch(BaseModel):
+    q: str = Field(min_length=1, max_length=300)
+    offset: int = Field(default=0, ge=0, le=10000)
+
+
+class SuggestionPage(BaseModel):
+    items: list[SuggestionOut]
+    total: int
+    offset: int
+    limit: int = 5
+
+
+class MetadataState(BaseModel):
+    work: WorkOut
+    origins: dict[str, FieldOrigin]
+
+
+class MetadataAccept(BaseModel):
+    suggestion_fetched_at: str
+    revision: int = Field(ge=1)
+    fields: list[Literal["title", "authors", "description"]] = Field(min_length=1, max_length=3)
+    replace_protected: list[Literal["title", "authors", "description"]] = Field(
+        default_factory=list, max_length=3
+    )

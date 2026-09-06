@@ -810,6 +810,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/works/{work_id}/metadata': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Metadata State */
+    get: operations['metadata_state_api_works__work_id__metadata_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/works/{work_id}/metadata/search': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Metadata Search */
+    post: operations['metadata_search_api_works__work_id__metadata_search_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/works/{work_id}/metadata/{suggestion_id}/accept': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Metadata Accept */
+    post: operations['metadata_accept_api_works__work_id__metadata__suggestion_id__accept_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/works/{work_id}/metadata/{suggestion_id}/details': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Metadata Details */
+    post: operations['metadata_details_api_works__work_id__metadata__suggestion_id__details_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/works/{work_id}/personal': {
     parameters: {
       query?: never;
@@ -1461,6 +1529,22 @@ export interface components {
       /** Representations */
       representations: components['schemas']['RepresentationOut'][];
     };
+    /** FieldOrigin */
+    FieldOrigin: {
+      /** Protected */
+      protected: boolean;
+      /** Provider Key */
+      provider_key?: string | null;
+      /** Selected At */
+      selected_at?: string | null;
+      /**
+       * Source
+       * @enum {string}
+       */
+      source: 'manual' | 'embedded' | 'openlibrary';
+      /** Source Url */
+      source_url?: string | null;
+    };
     /** FollowEdit */
     FollowEdit: {
       /** Following */
@@ -1600,6 +1684,35 @@ export interface components {
       series: components['schemas']['SeriesOut'];
       /** Series Id */
       series_id: string;
+    };
+    /** MetadataAccept */
+    MetadataAccept: {
+      /** Fields */
+      fields: ('title' | 'authors' | 'description')[];
+      /** Replace Protected */
+      replace_protected?: ('title' | 'authors' | 'description')[];
+      /** Revision */
+      revision: number;
+      /** Suggestion Fetched At */
+      suggestion_fetched_at: string;
+    };
+    /** MetadataSearch */
+    MetadataSearch: {
+      /**
+       * Offset
+       * @default 0
+       */
+      offset: number;
+      /** Q */
+      q: string;
+    };
+    /** MetadataState */
+    MetadataState: {
+      /** Origins */
+      origins: {
+        [key: string]: components['schemas']['FieldOrigin'];
+      };
+      work: components['schemas']['WorkOut'];
     };
     /** NextOut */
     NextOut: {
@@ -1931,6 +2044,43 @@ export interface components {
        * @default 0.1.0
        */
       version: string;
+    };
+    /** SuggestedValues */
+    SuggestedValues: {
+      /** Authors */
+      authors?: string[] | null;
+      /** Description */
+      description?: string | null;
+      /** Title */
+      title?: string | null;
+    };
+    /** SuggestionOut */
+    SuggestionOut: {
+      /** Detailed */
+      detailed: boolean;
+      /** Fetched At */
+      fetched_at: string;
+      /** Id */
+      id: string;
+      /** Provider Key */
+      provider_key: string;
+      /** Source Url */
+      source_url: string;
+      values: components['schemas']['SuggestedValues'];
+    };
+    /** SuggestionPage */
+    SuggestionPage: {
+      /** Items */
+      items: components['schemas']['SuggestionOut'][];
+      /**
+       * Limit
+       * @default 5
+       */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
     };
     /** TrashEntryOut */
     TrashEntryOut: {
@@ -3715,6 +3865,140 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  metadata_state_api_works__work_id__metadata_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MetadataState'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  metadata_search_api_works__work_id__metadata_search_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MetadataSearch'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SuggestionPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  metadata_accept_api_works__work_id__metadata__suggestion_id__accept_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+        suggestion_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MetadataAccept'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  metadata_details_api_works__work_id__metadata__suggestion_id__details_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+        suggestion_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SuggestionOut'];
         };
       };
       /** @description Validation Error */
