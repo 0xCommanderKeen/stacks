@@ -170,6 +170,7 @@ class Library:
                 "This data directory is already open. Run one Stacks process."
             ) from None
         self.lock = threading.RLock()
+        self.ingest_lock = threading.RLock()
         try:
             self.managed = self.data_dir / "managed"
             self.staging = self.data_dir / "staging"
@@ -387,6 +388,10 @@ class Library:
         return self._ingest(sources)
 
     def _ingest(self, sources: list[tuple[Path, str]], root: str | None = None) -> ImportResult:
+        with self.ingest_lock:
+            return self._ingest_locked(sources, root)
+
+    def _ingest_locked(self, sources, root):
         if not sources or len(sources) > 2000:
             raise InvalidBook("Choose between 1 and 2000 files.")
         sources = sorted(sources, key=lambda item: (natural_key(item[1]), item[1]))
@@ -502,44 +507,44 @@ class Library:
                     .where(ImportOperation.sha256 == sha, ImportOperation.state != "complete")
                     .order_by(ImportOperation.created_at)
                 )
-            if pending:
-                work_id = self._publish(pending)
-                return ImportResult(work=self.get(work_id), duplicate=False)
-            operation_id = identity()
-            stage = self.staging / operation_id
-            stage.mkdir()
-            try:
-                for (source, _), entry in [] if root else zip(sources, entries, strict=True):
-                    destination = stage / entry["filename"]
-                    with source.open("rb") as incoming, destination.open("xb") as out:
-                        shutil.copyfileobj(incoming, out, 1024**2)
-                        out.flush()
-                        os.fsync(out.fileno())
-                    if digest(destination) != entry["sha256"]:
-                        raise OSError("File verification failed; the upload was not imported.")
-                if cover:
-                    write_durable(stage / "cover.jpg", cover)
-                sync_dir(stage)
-                sync_dir(self.staging)
-                with self.sessions.begin() as session:
-                    session.add(
-                        ImportOperation(
-                            id=operation_id,
-                            sha256=sha,
-                            size=sum(e["size"] for e in entries),
-                            original_name=original_name,
-                            extracted_json=json.dumps(metadata, ensure_ascii=False),
-                        )
-                    )
-            except BaseException:
-                # If a journal commit is ambiguous, preserve the stage for startup recovery.
-                with self.sessions() as session:
-                    recorded = session.get(ImportOperation, operation_id)
-                if recorded is None:
-                    shutil.rmtree(stage)
-                raise
-            work_id = self._publish(operation_id)
+        if pending:
+            work_id = self._publish(pending)
             return ImportResult(work=self.get(work_id), duplicate=False)
+        operation_id = identity()
+        stage = self.staging / operation_id
+        stage.mkdir()
+        try:
+            for (source, _), entry in [] if root else zip(sources, entries, strict=True):
+                destination = stage / entry["filename"]
+                with source.open("rb") as incoming, destination.open("xb") as out:
+                    shutil.copyfileobj(incoming, out, 1024**2)
+                    out.flush()
+                    os.fsync(out.fileno())
+                if digest(destination) != entry["sha256"]:
+                    raise OSError("File verification failed; the upload was not imported.")
+            if cover:
+                write_durable(stage / "cover.jpg", cover)
+            sync_dir(stage)
+            sync_dir(self.staging)
+            with self.lock, self.sessions.begin() as session:
+                session.add(
+                    ImportOperation(
+                        id=operation_id,
+                        sha256=sha,
+                        size=sum(e["size"] for e in entries),
+                        original_name=original_name,
+                        extracted_json=json.dumps(metadata, ensure_ascii=False),
+                    )
+                )
+        except BaseException:
+            # If a journal commit is ambiguous, preserve the stage for startup recovery.
+            with self.sessions() as session:
+                recorded = session.get(ImportOperation, operation_id)
+            if recorded is None:
+                shutil.rmtree(stage)
+            raise
+        work_id = self._publish(operation_id)
+        return ImportResult(work=self.get(work_id), duplicate=False)
 
     def _publish(self, operation_id: str) -> str:
         with self.sessions() as session:
@@ -582,7 +587,7 @@ class Library:
         # Re-establish durability on both paths before acknowledging the catalog commit.
         sync_dir(self.managed)
         sync_dir(self.staging)
-        with self.sessions.begin() as session:
+        with self.lock, self.sessions.begin() as session:
             operation = session.get(ImportOperation, operation_id)
             metadata = json.loads(operation.extracted_json)
             work = Work(title=metadata["title"], description=metadata["description"])
@@ -628,6 +633,10 @@ class Library:
             return work.id
 
     def recover(self):
+        with self.ingest_lock:
+            self._recover_locked()
+
+    def _recover_locked(self):
         with self.lock, self.sessions() as session:
             pending = list(
                 session.scalars(
@@ -638,7 +647,7 @@ class Library:
             try:
                 self._publish(operation_id)
             except (OSError, ValueError, InvalidBook, IntegrityError) as exc:
-                with self.sessions.begin() as session:
+                with self.lock, self.sessions.begin() as session:
                     operation = session.get(ImportOperation, operation_id)
                     operation.state, operation.error = (
                         "error",
