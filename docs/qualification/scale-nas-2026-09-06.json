@@ -340,6 +340,124 @@
           }
         ],
         "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
+      },
+      "portable": {
+        "export": {
+          "seconds": 12.6,
+          "peak_rss_bytes": 78745600
+        },
+        "import": {
+          "seconds": 47.181,
+          "peak_rss_bytes": 79810560
+        },
+        "catalog_bytes": 81061918,
+        "tables": {
+          "cover_blob": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "work": {
+            "rows": 50001,
+            "sha256": "c8e6fa43594f9d6a977104c2eb45b5dca1826e86fe7b19a72535fa2e0d028ba0"
+          },
+          "contributor": {
+            "rows": 1001,
+            "sha256": "71bb68d09fda72b98aaa90c6c85da0087afd53da46fb4c4770c4493638e4408b"
+          },
+          "credit": {
+            "rows": 50001,
+            "sha256": "9d0a3ab71f585140a1d8dbea6da6eea4215c52e83a602bcc4156f59b79236b39"
+          },
+          "edition": {
+            "rows": 50001,
+            "sha256": "d2ced193cb8f5a67b8e75d07dce304ca86959ebb1273421c721f7715d4e1a614"
+          },
+          "representation": {
+            "rows": 50001,
+            "sha256": "6d327f8c83f4d421ae348092e4ec78da86e00284a8f0ecdb0faf7667ef483167"
+          },
+          "asset": {
+            "rows": 50001,
+            "sha256": "5037148d23eee3b67fea2dd3ff2b51c33d923a2c033353ccd0ae123c871feead"
+          },
+          "series": {
+            "rows": 2000,
+            "sha256": "22643dacd7d1daae991d1d5b5f21bbf32aaa4a1b6ab2b6a1183604ffac0e27c7"
+          },
+          "series_membership": {
+            "rows": 40000,
+            "sha256": "9c506872a0d0e382442bbf1dfe1bf89daa24eea5c017c8045104196161373985"
+          },
+          "work_redirect": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "catalog_operation": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "collection": {
+            "rows": 50,
+            "sha256": "dea60e3c5f77fc4d8e7ae72df6cfcf424244c320cf3a4b4633d1f4a5aaed422b"
+          },
+          "collection_entry": {
+            "rows": 5000,
+            "sha256": "173e140edeca9138608e0a5d06a1e975be76e871b310f7749ccaac3c978f976f"
+          },
+          "progress": {
+            "rows": 1,
+            "sha256": "f0c4a12975d3d4b09fa2ae54337e250ae6fd0fab733e56019c5832597db4145f"
+          },
+          "personal_state": {
+            "rows": 50000,
+            "sha256": "a370f48584a651a643ed097ea043d4ca745c90d6f3f14cd7b3cf761c8c772b89"
+          },
+          "reading_record": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "intake_job": {
+            "rows": 1,
+            "sha256": "5b6441647af8757bdf48489bb005667ffcd09791846a17c62d8e7d7332144b80"
+          },
+          "scan_directory": {
+            "rows": 1,
+            "sha256": "93715d9e2c636e11606912f00ce9c4b4461d3035a010f69c9daea1ba1129c221"
+          },
+          "inbox_candidate": {
+            "rows": 500,
+            "sha256": "c3dc60a5d84ac365bf040f775ec57889c9b9a4b50743466132e2b9d0c0f5a087"
+          },
+          "intake_item": {
+            "rows": 500,
+            "sha256": "395c43598d20ea46aa49c7c7ed54b409974e0cb17616bb2691517d34bfbb1b98"
+          },
+          "trash_operation": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "trash_file": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "metadata_suggestion": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "backup_record": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "import_operation": {
+            "rows": 1,
+            "sha256": "39b23b55df6605513e0c28548d3f3e023e456717a7ab9ab4276bcc5bfc1b952e"
+          },
+          "integrity": "ok",
+          "foreign_key_errors": 0,
+          "authority_rows": 0
+        },
+        "mismatched_tables": [],
+        "limitations": "Offline round trip of a settled disposable synthetic catalog; original media is deliberately omitted. Peak RSS is a separate fresh process per phase. Fingerprints compare all catalog columns ordered by stable primary keys."
       }
     },
     "100000": {
@@ -673,6 +791,124 @@
           }
         ],
         "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
+      },
+      "portable": {
+        "export": {
+          "seconds": 17.921,
+          "peak_rss_bytes": 79060992
+        },
+        "import": {
+          "seconds": 102.842,
+          "peak_rss_bytes": 81567744
+        },
+        "catalog_bytes": 161495113,
+        "tables": {
+          "cover_blob": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "work": {
+            "rows": 100001,
+            "sha256": "56b04d7527ccb449e3bb08b8f0f92ee571bdd0a65b277b97f9722dddfcf1958c"
+          },
+          "contributor": {
+            "rows": 1001,
+            "sha256": "d8e0b7f2636fe89c47f699579237319d1badafa52140b7520e8728fc805dc3b6"
+          },
+          "credit": {
+            "rows": 100001,
+            "sha256": "3e8622622a9013db042ca78b77629ced785134166361b0a28e998b7b1581dec0"
+          },
+          "edition": {
+            "rows": 100001,
+            "sha256": "422ace38dfefa17a3ad5cae688ddafac5c84ca80a9708e36806f3fe573f567c0"
+          },
+          "representation": {
+            "rows": 100001,
+            "sha256": "1a316183a0b73058775426db9f02c165b262ca54265a6047eaf18eeca858e6ce"
+          },
+          "asset": {
+            "rows": 100001,
+            "sha256": "cebfb2a032fa4fb9c00343b024d69951131730f5da7df6191a76d89781217e34"
+          },
+          "series": {
+            "rows": 4000,
+            "sha256": "ecdbaeb96ea9b516780fcaa39a594afab2570f3177905983b97afa517c6af304"
+          },
+          "series_membership": {
+            "rows": 80000,
+            "sha256": "f40826071f974163865312652e695bc3d98d93ae98460b60aa43f2bafd17fd68"
+          },
+          "work_redirect": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "catalog_operation": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "collection": {
+            "rows": 100,
+            "sha256": "bc25ee909b810d053ff87ff3207bb4e29fe36de0ca1c33d6b471832fe358a648"
+          },
+          "collection_entry": {
+            "rows": 10000,
+            "sha256": "56228a7b9b1bdc6a3dee589b338dfdc1ad54d1969f85bd69981b27fc416b129b"
+          },
+          "progress": {
+            "rows": 1,
+            "sha256": "10d867f3aab6fbd11b5ade52afe8855afea5788bdfcf4d2a623b3f7c4f59f351"
+          },
+          "personal_state": {
+            "rows": 100000,
+            "sha256": "850ae80f500fdc5c21f9780aadac04d362dcebe8ec5642f6eece596aae7b4b8b"
+          },
+          "reading_record": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "intake_job": {
+            "rows": 1,
+            "sha256": "112721c6742d554f4aa5adba7525e922ce01a91cbd04176b882529ab8bd77fd8"
+          },
+          "scan_directory": {
+            "rows": 1,
+            "sha256": "ecd349948f3b39dade53d701e25a643ac622d0a331cd7b9e2437fe394b2d1321"
+          },
+          "inbox_candidate": {
+            "rows": 500,
+            "sha256": "4bea0b54d5226154ea841396037dd77a1368a186bc6e2cb6b31ae4b2714ecea2"
+          },
+          "intake_item": {
+            "rows": 500,
+            "sha256": "393c24277ff4f335e8e03dda133b5cff7ceaf0435385b21e5d524115b0f821ac"
+          },
+          "trash_operation": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "trash_file": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "metadata_suggestion": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "backup_record": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "import_operation": {
+            "rows": 1,
+            "sha256": "08fe86eeb2065564a269a5a4ba720af2267134688d32515084601347ced391fc"
+          },
+          "integrity": "ok",
+          "foreign_key_errors": 0,
+          "authority_rows": 0
+        },
+        "mismatched_tables": [],
+        "limitations": "Offline round trip of a settled disposable synthetic catalog; original media is deliberately omitted. Peak RSS is a separate fresh process per phase. Fingerprints compare all catalog columns ordered by stable primary keys."
       }
     }
   }

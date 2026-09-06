@@ -20,7 +20,7 @@ time; it was stopped before offline portability measurements.
 The two datasets contain 50,000 and 100,000 synthetic Works, plus one imported,
 verified 20-second M4B. Distribution: 80% comic, 18% ebook, 2% audio; 10% Archive;
 75% use a shared small derived JPEG. Each Work has an author from 1,000 contributors.
-Series contain 25 entries, with 2,000/4,000 distinct runs and repeated names.
+Series contain 5–25 comic entries, with 2,000/4,000 distinct runs and repeated names.
 Ten percent of Works belong to collections. All synthetic creation timestamps
 are equal, deliberately exercising a large ordering tie. Real imports normally
 have different timestamps. The artificial catalog rows reference absent originals;
@@ -89,6 +89,29 @@ First HTTP requests are recorded separately in the JSON. They are first requests
 after service startup, **not** measurements after flushing NAS filesystem caches.
 The 100k first series request took 3.891 seconds. Shared caches and concurrent
 activity can affect all results.
+
+## Portable catalog round trips
+
+Both offline NAS round trips completed with zero mismatched catalog tables.
+Every column was compared in stable primary-key order, including saved progress.
+Both restored databases passed integrity and foreign-key checks and contained
+zero login sessions or device credentials. These checks ran before the additional
+progress-continuity follow-up described above.
+
+| Portable operation | 50k | 100k |
+| --- | ---: | ---: |
+| Export size | 81,061,918 bytes | 161,495,113 bytes |
+| Export duration | 12.600 s | 17.921 s |
+| Export peak RSS | 75.1 MiB | 75.4 MiB |
+| Import duration | 47.181 s | 102.842 s |
+| Import peak RSS | 76.1 MiB | 77.8 MiB |
+
+Doubling the catalog did not double process memory; both phases stayed below
+78 MiB peak RSS in this fixture. Each measurement includes normal application
+initialization in a fresh Python process. Export includes snapshot and file
+publication; import includes format/domain validation, database insertion,
+integrity checks and publication. Originals and chosen-cover bytes are omitted
+by the portable format; this is catalog recovery, not a media backup restore.
 
 ## Reproducing the disposable measurement
 
