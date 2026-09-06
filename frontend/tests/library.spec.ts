@@ -596,3 +596,52 @@ test('comic runs stay distinct, ordered, followed, and available through Home', 
   );
   await page.screenshot({ path: testInfo.outputPath('comic-runs.png'), fullPage: true });
 });
+
+test('new run search and shelf filters reset run paging while back preserves it', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  const work = (await (await page.request.get('/api/catalog?q=Orbit%2001')).json()).items[0];
+  const prefix = `ZZ Slice ${testInfo.project.name}`;
+  const memberships = [...work.memberships];
+  for (let index = 0; index < 30; index++) {
+    const response = await page.request.post('/api/series', {
+      headers: { 'X-Stacks-Request': '1' },
+      data: { name: `${prefix} ${String(index).padStart(2, '0')}`, run: '2026' },
+    });
+    expect(response.ok()).toBe(true);
+    memberships.push({ series_id: (await response.json()).id, position: 1, designation: '#1' });
+  }
+  const edited = await page.request.patch(`/api/works/${work.id}`, {
+    headers: { 'X-Stacks-Request': '1' },
+    data: { ...work, memberships },
+  });
+  expect(edited.ok()).toBe(true);
+  await page
+    .getByRole('group', { name: 'Publication type' })
+    .getByRole('button', { name: 'Comics', exact: true })
+    .click();
+  const runs = page.getByRole('region', { name: 'Comic runs' });
+  await runs.getByRole('button', { name: 'Next runs →', exact: true }).click();
+  await expect(page).toHaveURL(/run_offset=24/);
+  await page.getByLabel('Search comic runs').fill(prefix);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page).not.toHaveURL(/run_offset=/);
+  const first = runs.getByRole('button', { name: `Open run ${prefix} 00 2026`, exact: true });
+  await expect(first).toBeVisible();
+  await runs.getByRole('button', { name: 'Next runs →', exact: true }).click();
+  await expect(page).toHaveURL(/run_offset=24/);
+  await page.getByRole('combobox', { name: 'Library scope' }).selectOption('all');
+  await expect(page).not.toHaveURL(/run_offset=/);
+  await expect(first).toBeVisible();
+  await runs.getByRole('button', { name: 'Next runs →', exact: true }).click();
+  await expect(runs.locator('.run-card')).toHaveCount(6);
+  await runs.locator('.run-card').first().click();
+  await runs.getByRole('button', { name: 'All comic runs' }).click();
+  await expect(page).toHaveURL(/run_offset=24/);
+  await page.reload();
+  await expect(runs.locator('.run-card')).toHaveCount(6);
+});

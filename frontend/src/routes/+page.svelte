@@ -259,6 +259,7 @@
     event.preventDefault();
     error = '';
     selected = null;
+    runOffset = 0;
     try {
       await load(0, q);
       setUrl();
@@ -664,6 +665,7 @@
             bind:value={scope}
             onchange={async () => {
               offset = 0;
+              runOffset = 0;
               setUrl();
               await load().catch(fail);
             }}
