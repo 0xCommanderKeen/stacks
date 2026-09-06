@@ -20,6 +20,7 @@ from sqlalchemy import delete, func, select
 from starlette.background import BackgroundTask
 
 from stacks.backup import backup
+from stacks.collections import Collections
 from stacks.config import Settings
 from stacks.curation import Curation
 from stacks.epub import InvalidBook
@@ -30,6 +31,12 @@ from stacks.operations import CatalogOperations
 from stacks.reading import Reading
 from stacks.schemas import (
     CatalogPage,
+    CollectionChange,
+    CollectionEdit,
+    CollectionNextPage,
+    CollectionOut,
+    CollectionPage,
+    CollectionWorksPage,
     ContinuePage,
     FollowEdit,
     GroupCommit,
@@ -253,6 +260,50 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             Curation(lib).delete_record(work_id, record_id, revision)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/collections", response_model=CollectionPage)
+    def collections(
+        lib: Auth,
+        q: str = Query(default="", max_length=1024),
+        limit: int = Query(default=24, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return Collections(lib).list(q, limit, offset)
+
+    @app.post("/api/collections", response_model=CollectionOut)
+    def create_collection(body: CollectionEdit, lib: Auth):
+        return Collections(lib).save(body)
+
+    @app.patch("/api/collections/{collection_id}", response_model=CollectionOut)
+    def edit_collection(collection_id: str, body: CollectionEdit, lib: Auth):
+        try:
+            return Collections(lib).save(body, collection_id)
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from error
+
+    @app.post("/api/collections/{collection_id}/entries", response_model=CollectionOut)
+    def change_collection(collection_id: str, body: CollectionChange, lib: Auth):
+        try:
+            return Collections(lib).change(collection_id, body)
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from error
+
+    @app.get("/api/collections/{collection_id}/works", response_model=CollectionWorksPage)
+    def collection_works(
+        collection_id: str,
+        lib: Auth,
+        limit: int = Query(default=24, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return Collections(lib).works(collection_id, limit, offset)
+
+    @app.get("/api/home/collections", response_model=CollectionNextPage)
+    def collection_next(
+        lib: Auth,
+        limit: int = Query(default=12, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return Collections(lib).next(limit, offset)
 
     @app.get("/api/browse/series", response_model=RunPage)
     def browse_series(

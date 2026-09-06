@@ -4,9 +4,12 @@ import json
 
 from sqlalchemy import delete, func, insert, or_, select, update
 
+from stacks.collections import append_work, touch
 from stacks.library import work_out
 from stacks.models import (
     CatalogOperation,
+    Collection,
+    CollectionEntry,
     Contributor,
     Credit,
     Edition,
@@ -34,7 +37,10 @@ def _rows(session, model, condition):
 def _snapshot(session, work_ids):
     editions = select(Edition.id).where(Edition.work_id.in_(work_ids))
     contributors = select(Credit.contributor_id).where(Credit.work_id.in_(work_ids))
+    collections = select(CollectionEntry.collection_id).where(CollectionEntry.work_id.in_(work_ids))
     return {
+        "collection": _rows(session, Collection, Collection.id.in_(collections)),
+        "collection_entry": _rows(session, CollectionEntry, CollectionEntry.work_id.in_(work_ids)),
         "work": _rows(session, Work, Work.id.in_(work_ids)),
         "contributor": _rows(session, Contributor, Contributor.id.in_(contributors)),
         "credit": _rows(session, Credit, Credit.work_id.in_(work_ids)),
@@ -71,6 +77,8 @@ def _saved_snapshot(raw):
     # Earlier operations predate personal state. Empty new tables preserve their meaning.
     snapshot.setdefault("personal_state", [])
     snapshot.setdefault("reading_record", [])
+    snapshot.setdefault("collection", [])
+    snapshot.setdefault("collection_entry", [])
     return snapshot
 
 
@@ -170,6 +178,26 @@ class CatalogOperations:
             work_ids = [source.id, target.id if target else data["new_work_id"]]
             data["work_ids"] = work_ids
             conflicts = _conflicts(source_out, target_out)
+            full_merge = target is not None and (
+                request.mode == "editions"
+                or sum(len(e.representations) for e in source.editions) == 1
+            )
+            if full_merge:
+                entries = session.scalars(
+                    select(CollectionEntry).where(CollectionEntry.work_id.in_(work_ids))
+                ).all()
+                targets = {e.collection_id: e for e in entries if e.work_id == target.id}
+                for entry in entries:
+                    other = targets.get(entry.collection_id)
+                    if entry.work_id == source.id and other:
+                        collection = session.get(Collection, entry.collection_id)
+                        conflicts.append(
+                            ConflictOut(
+                                field=f"collection:{collection.id}",
+                                source=f"{collection.name}: source position {entry.position}",
+                                target=f"{collection.name}: target position {other.position}",
+                            )
+                        )
             data["conflicts"] = [c.model_dump() for c in conflicts]
             operation = CatalogOperation(
                 request_json=json.dumps(data), before_json=json.dumps(_snapshot(session, work_ids))
@@ -306,8 +334,37 @@ class CatalogOperations:
         if remains:
             records = records.where(ReadingRecord.representation_id == data["representation_id"])
         session.execute(records.values(work_id=target.id, revision=ReadingRecord.revision + 1))
+        self._collections(session, source.id, target.id, bool(remains), resolutions)
         if not remains:
             session.add(WorkRedirect(source_id=source.id, target_id=target.id))
+
+    @staticmethod
+    def _collections(session, source_id, target_id, copy, resolutions):
+        for entry in session.scalars(
+            select(CollectionEntry).where(CollectionEntry.work_id == source_id)
+        ).all():
+            other = session.scalar(
+                select(CollectionEntry).where(
+                    CollectionEntry.collection_id == entry.collection_id,
+                    CollectionEntry.work_id == target_id,
+                )
+            )
+            if copy:
+                if other:
+                    continue
+                append_work(session, entry.collection_id, target_id)
+            else:
+                if other:
+                    if resolutions[f"collection:{entry.collection_id}"] == "target":
+                        session.delete(entry)
+                    else:
+                        session.delete(other)
+                        session.flush()
+                        entry.work_id = target_id
+                else:
+                    entry.work_id = target_id
+            touch(session.get(Collection, entry.collection_id))
+            session.flush()
 
     @staticmethod
     def _split(session, data):
@@ -376,6 +433,8 @@ class CatalogOperations:
             .values(work_id=new.id, revision=ReadingRecord.revision + 1)
         )
 
+        CatalogOperations._collections(session, source.id, new.id, True, {})
+
     def undo(self, operation_id):
         with self.library.lock, self.library.sessions.begin() as session:
             operation = session.get(CatalogOperation, operation_id)
@@ -398,6 +457,8 @@ class CatalogOperations:
                     work.pop("revision")
                 for record in snapshot["reading_record"]:
                     record.pop("revision")
+                for collection in snapshot["collection"]:
+                    collection.pop("revision")
             if comparable != expected:
                 raise ValueError(
                     "These works changed since grouping. Undo would overwrite newer edits."
@@ -422,10 +483,18 @@ class CatalogOperations:
             (WorkRedirect, WorkRedirect.source_id),
             (PersonalState, PersonalState.work_id),
             (ReadingRecord, ReadingRecord.work_id),
+            (CollectionEntry, CollectionEntry.work_id),
         ):
             session.execute(delete(model).where(column.in_(work_ids)))
             for row in before[model.__tablename__]:
                 session.execute(insert(model).values(**row))
+        revisions = {c["id"]: c["revision"] for c in current["collection"]}
+        for row in before["collection"]:
+            session.execute(
+                update(Collection)
+                .where(Collection.id == row["id"])
+                .values(**{**row, "revision": revisions[row["id"]] + 1})
+            )
         for model in (Edition, Work):
             old_ids = {r["id"] for r in before[model.__tablename__]}
             new_ids = {r["id"] for r in after[model.__tablename__]} - old_ids

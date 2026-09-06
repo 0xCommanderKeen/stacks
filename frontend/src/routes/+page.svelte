@@ -6,6 +6,8 @@
   import AudioPlayer from '$lib/AudioPlayer.svelte';
   import Personal from '$lib/Personal.svelte';
   import RunBrowser from '$lib/RunBrowser.svelte';
+  import Collections from '$lib/Collections.svelte';
+  import CollectionNext from '$lib/CollectionNext.svelte';
   import FollowedNext from '$lib/FollowedNext.svelte';
   import type { components } from '$lib/schema';
   import {
@@ -35,9 +37,13 @@
   let runOffset = $state(0);
   let unassigned = $state(false);
   let nextOffset = $state(0);
+  let collectionId = $state('');
+  let collectionOffset = $state(0);
+  let collectionListOffset = $state(0);
+  let collectionNextOffset = $state(0);
   let offset = $state(0);
   let selected = $state<Book | null>(null);
-  let view = $state<'library' | 'settings' | 'home'>('library');
+  let view = $state<'library' | 'settings' | 'home' | 'collections'>('library');
   let continuing = $state<components['schemas']['ContinuePage'] | null>(null);
   let homeOffset = $state(0);
   let player = $state<{
@@ -105,6 +111,14 @@
 
   async function openFromUrl() {
     const params = new URLSearchParams(location.search);
+    collectionId = params.get('collection') || '';
+    for (const key of ['collection_offset', 'collection_list_offset', 'collection_next_offset']) {
+      const value = Number(params.get(key) || 0);
+      const safe = Number.isSafeInteger(value) && value >= 0 ? value : 0;
+      if (key === 'collection_offset') collectionOffset = safe;
+      else if (key === 'collection_list_offset') collectionListOffset = safe;
+      else collectionNextOffset = safe;
+    }
     q = params.get('q') || '';
     medium = ['ebook', 'comic', 'audio'].includes(params.get('media') || '')
       ? params.get('media')!
@@ -125,7 +139,9 @@
         ? 'settings'
         : params.get('view') === 'home'
           ? 'home'
-          : 'library';
+          : params.get('view') === 'collections'
+            ? 'collections'
+            : 'library';
     const continuationOffset = Number(params.get('continue_offset') || 0);
     homeOffset =
       Number.isSafeInteger(continuationOffset) && continuationOffset >= 0 ? continuationOffset : 0;
@@ -158,6 +174,10 @@
 
   function setUrl() {
     const params = new URLSearchParams();
+    if (collectionId) params.set('collection', collectionId);
+    if (collectionOffset) params.set('collection_offset', String(collectionOffset));
+    if (collectionListOffset) params.set('collection_list_offset', String(collectionListOffset));
+    if (collectionNextOffset) params.set('collection_next_offset', String(collectionNextOffset));
     if (medium) params.set('media', medium);
     if (seriesId) params.set('series', seriesId);
     if (unassigned) params.set('unassigned', '1');
@@ -279,7 +299,7 @@
   }
 
   function open(book: Book) {
-    view = 'library';
+    if (view !== 'collections') view = 'library';
     selected = book;
     editing = false;
     error = '';
@@ -399,7 +419,15 @@
     >
     <nav aria-label="Main navigation">
       <button class:active={view === 'home'} onclick={showHome}>Home</button>
-      <button class:active={view === 'library'} onclick={libraryView}>Library</button><button
+      <button class:active={view === 'library'} onclick={libraryView}>Library</button>
+      <button
+        class:active={view === 'collections'}
+        onclick={() => {
+          selected = null;
+          view = 'collections';
+          setUrl();
+        }}>Collections</button
+      ><button
         class:active={view === 'settings'}
         onclick={() => {
           view = 'settings';
@@ -480,6 +508,24 @@
         bind:offset={nextOffset}
         onnavigate={setUrl}
       />
+      <CollectionNext
+        bind:offset={collectionNextOffset}
+        onnavigate={setUrl}
+        onopen={(book, id) => {
+          collectionId = id;
+          collectionOffset = 0;
+          view = 'collections';
+          open(book);
+        }}
+      />
+    {:else if view === 'collections' && !selected}
+      <Collections
+        bind:id={collectionId}
+        bind:offset={collectionOffset}
+        bind:listOffset={collectionListOffset}
+        onopen={open}
+        onnavigate={setUrl}
+      />
     {:else if view === 'settings'}
       <div class="eyebrow">LOOK AFTER YOUR LIBRARY</div>
       <h1>Keep it <em>safe.</em></h1>
@@ -510,7 +556,16 @@
         </section>
       </div>
     {:else if selected}
-      <button class="back" onclick={libraryView}>← Back to library</button>
+      <button
+        class="back"
+        onclick={() => {
+          if (view === 'collections') {
+            selected = null;
+            editing = false;
+            setUrl();
+          } else libraryView();
+        }}>← Back to {view === 'collections' ? 'collection' : 'library'}</button
+      >
       <div class="detail">
         <div class="detail-cover"><Cover book={selected} large /></div>
         <section class="detail-copy">

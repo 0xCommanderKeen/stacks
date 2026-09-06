@@ -305,3 +305,62 @@ class NextPage(BaseModel):
 
 class RunWorksPage(CatalogPage):
     finished_work_ids: list[str]
+
+
+class CollectionEdit(BaseModel):
+    revision: int = Field(default=1, ge=1)
+    name: str = Field(min_length=1, max_length=1024)
+    home: bool = False
+
+    @field_validator("name")
+    @classmethod
+    def not_blank(cls, value):
+        if not value.strip():
+            raise ValueError("A collection name is required.")
+        return value.strip()
+
+
+class CollectionOut(CollectionEdit):
+    id: str
+    count: int
+
+
+class CollectionPage(BaseModel):
+    items: list[CollectionOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class CollectionChange(BaseModel):
+    revision: int = Field(ge=1)
+    action: Literal["add", "remove", "up", "down", "add_series"]
+    work_id: str | None = None
+    series_id: str | None = None
+
+
+class CollectionEntryOut(BaseModel):
+    id: str
+    position: int
+    work: WorkOut
+    finished: bool
+
+
+class CollectionWorksPage(BaseModel):
+    collection: CollectionOut
+    items: list[CollectionEntryOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class CollectionNextOut(BaseModel):
+    collection: CollectionOut
+    work: WorkOut
+
+
+class CollectionNextPage(BaseModel):
+    items: list[CollectionNextOut]
+    total: int
+    limit: int
+    offset: int

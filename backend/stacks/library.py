@@ -19,6 +19,8 @@ from stacks.inspection import inspect_file, natural_key
 from stacks.models import (
     Asset,
     CatalogOperation,
+    Collection,
+    CollectionEntry,
     Contributor,
     Credit,
     Edition,
@@ -540,6 +542,8 @@ class Library:
                 SeriesMembership,
                 WorkRedirect,
                 CatalogOperation,
+                Collection,
+                CollectionEntry,
                 Progress,
                 PersonalState,
                 ReadingRecord,
@@ -550,4 +554,4 @@ class Library:
                         select(model.__table__).order_by(*model.__table__.primary_key.columns)
                     ).mappings()
                 ]
-            return {"schema_version": 6, "roots": {"managed": "managed/"}, "tables": tables}
+            return {"schema_version": 7, "roots": {"managed": "managed/"}, "tables": tables}

@@ -656,3 +656,75 @@ test('new run search and shelf filters reset run paging while back preserves it'
   await page.reload();
   await expect(runs.locator('.run-card')).toHaveCount(6);
 });
+
+test('collections keep a cross-page order, details context, and Home choices', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page.getByRole('button', { name: 'Collections', exact: true }).click();
+  const name = `Weekend reading ${testInfo.project.name}`;
+  await page.getByLabel('New collection name').fill(name);
+  await page.getByLabel('Show next unfinished Library work on Home').check();
+  await page.getByRole('button', { name: 'Create collection', exact: true }).click();
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Find', exact: true }).selectOption('series');
+  await page.getByLabel('Search your library', { exact: true }).fill('Orbit');
+  await page.getByRole('button', { name: 'Search to add' }).click();
+  await page.getByRole('button', { name: 'Add series Orbit 1999', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '26 works, your order.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Next works →', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open Orbit 24', exact: true })).toBeVisible();
+  const move = page.getByRole('button', { name: 'Move Orbit 24 up', exact: true });
+  await move.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name: 'Open Orbit 23', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Open Orbit 23', exact: true }).click();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Orbit 23', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '← Back to collection', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open Orbit 23', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '← Previous works', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Open Orbit 24', exact: true })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Find', exact: true }).selectOption('works');
+  await page.getByLabel('Search your library', { exact: true }).fill('Listening Practice');
+  await page.getByRole('button', { name: 'Search to add' }).click();
+  await page
+    .getByRole('button', { name: 'Add Listening Practice to collection', exact: true })
+    .click();
+  await expect(page.getByRole('heading', { name: '27 works, your order.' })).toBeVisible();
+  // Repeated additions never duplicate a work or alter its order.
+  await page
+    .getByRole('button', { name: 'Add Listening Practice to collection', exact: true })
+    .click();
+  await expect(page.getByRole('button', { name: 'Save collection', exact: true })).toBeEnabled();
+  await expect(page.getByRole('heading', { name: '27 works, your order.' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('collection.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'From your collections.' })).toBeVisible();
+  const homeSection = page.getByRole('region', { name: 'Next in collections', exact: true });
+  await homeSection
+    .getByRole('button', { name: 'Open collection next Orbit 01', exact: true })
+    .filter({ hasText: name })
+    .click();
+  await page.getByRole('button', { name: '← Back to collection', exact: true }).click();
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+  // A second client editing the same collection is protected by its revision.
+  const collectionId = new URL(page.url()).searchParams.get('collection')!;
+  const current = (await (await page.request.get(`/api/collections/${collectionId}/works`)).json())
+    .collection;
+  const changed = await page.request.patch(`/api/collections/${collectionId}`, {
+    headers: { 'X-Stacks-Request': '1' },
+    data: { ...current, name: name + ' revised' },
+  });
+  expect(changed.status()).toBe(200);
+  await page.getByLabel('Collection name', { exact: true }).fill(name + ' stale');
+  await page.getByRole('button', { name: 'Save collection', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('This collection changed');
+  await page.getByRole('button', { name: 'Reload collection', exact: true }).click();
+  await expect(page.getByRole('heading', { name: name + ' revised', exact: true })).toBeVisible();
+});

@@ -181,3 +181,25 @@ class ReadingRecord(Base):
     finished: Mapped[str | None]
     revision: Mapped[int] = mapped_column(default=1)
     created_at: Mapped[str] = mapped_column(default=now)
+
+
+class Collection(Base):
+    __tablename__ = "collection"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    name: Mapped[str] = mapped_column(Text)
+    home: Mapped[bool] = mapped_column(default=False)
+    revision: Mapped[int] = mapped_column(default=1)
+    # Content lineage can be restored by undo; client revisions never go backwards.
+    state_id: Mapped[str] = mapped_column(String(36), default=identity)
+
+
+class CollectionEntry(Base):
+    __tablename__ = "collection_entry"
+    __table_args__ = (
+        UniqueConstraint("collection_id", "work_id"),
+        UniqueConstraint("collection_id", "position"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    collection_id: Mapped[str] = mapped_column(ForeignKey("collection.id"), index=True)
+    work_id: Mapped[str] = mapped_column(ForeignKey("work.id"), index=True)
+    position: Mapped[int]
