@@ -169,3 +169,50 @@ class OperationPage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class ChapterOut(BaseModel):
+    title: str
+    start: float
+
+
+class AudioTrackOut(BaseModel):
+    asset_id: str
+    title: str
+    original_name: str
+    duration: float
+    chapters: list[ChapterOut]
+
+
+class ProgressEdit(BaseModel):
+    revision: int = Field(ge=0)
+    asset_id: str
+    position: float = Field(ge=0, le=1e9, allow_inf_nan=False)
+    speed: float = Field(default=1, ge=0.5, le=3, allow_inf_nan=False)
+    completed: bool = False
+
+
+class ProgressOut(ProgressEdit):
+    representation_id: str
+    updated_at: str | None
+
+
+class PlaybackOut(BaseModel):
+    representation_id: str
+    work_id: str
+    title: str
+    tracks: list[AudioTrackOut]
+    progress: ProgressOut
+
+
+class ContinueOut(BaseModel):
+    work: WorkOut
+    representation_id: str
+    progress: ProgressOut
+
+
+class ContinuePage(BaseModel):
+    items: list[ContinueOut]
+    total: int
+    limit: int
+    offset: int

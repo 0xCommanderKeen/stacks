@@ -91,7 +91,7 @@ def test_format_import_download_restart_backup(client, tmp_path, fmt):
     work = response.json()["work"]
     rep = work["editions"][0]["representations"][0]
     assert rep["format"] == fmt
-    assert rep["capabilities"] == ["download"]
+    assert "download" in rep["capabilities"]
     asset = rep["assets"][0]
     assert client.get(f"/api/assets/{asset['id']}/download").content == content
     if fmt in {"cbz", "cbr"}:

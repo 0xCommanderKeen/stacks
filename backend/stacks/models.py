@@ -140,3 +140,16 @@ class CatalogOperation(Base):
     before_json: Mapped[str] = mapped_column(Text)
     after_json: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(default=now)
+
+
+class Progress(Base):
+    __tablename__ = "progress"
+    representation_id: Mapped[str] = mapped_column(
+        ForeignKey("representation.id"), primary_key=True
+    )
+    asset_id: Mapped[str] = mapped_column(ForeignKey("asset.id"))
+    position: Mapped[float] = mapped_column(default=0)
+    speed: Mapped[float] = mapped_column(default=1)
+    completed: Mapped[bool] = mapped_column(default=False)
+    revision: Mapped[int] = mapped_column(default=1)
+    updated_at: Mapped[str] = mapped_column(default=now, index=True)

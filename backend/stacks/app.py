@@ -26,8 +26,10 @@ from stacks.inspection import FORMATS
 from stacks.library import Library
 from stacks.models import Asset, ImportOperation, LoginSession, Representation, Work, WorkRedirect
 from stacks.operations import CatalogOperations
+from stacks.reading import Reading
 from stacks.schemas import (
     CatalogPage,
+    ContinuePage,
     GroupCommit,
     GroupPreview,
     GroupRequest,
@@ -35,6 +37,9 @@ from stacks.schemas import (
     Login,
     OperationOut,
     OperationPage,
+    PlaybackOut,
+    ProgressEdit,
+    ProgressOut,
     SeriesEdit,
     SeriesOut,
     SeriesPage,
@@ -140,6 +145,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             password_hasher.verify(password_hash, body.password)
         except VerifyMismatchError:
             raise HTTPException(401, "Incorrect password.") from None
+        with attempts_lock:
+            attempts.clear()
         token = secrets.token_urlsafe(32)
         with lib.sessions.begin() as session:
             session.execute(delete(LoginSession).where(LoginSession.expires_at < int(time.time())))
@@ -318,6 +325,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     ("", "application/octet-stream"),
                 )[1],
             )
+
+    @app.get("/api/representations/{representation_id}/playback", response_model=PlaybackOut)
+    def playback(representation_id: str, lib: Auth):
+        try:
+            return Reading(lib).playback(representation_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.patch("/api/representations/{representation_id}/progress", response_model=ProgressOut)
+    def progress(representation_id: str, body: ProgressEdit, lib: Auth):
+        try:
+            return Reading(lib).update(representation_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.head("/api/assets/{asset_id}/stream", include_in_schema=False)
+    @app.get("/api/assets/{asset_id}/stream")
+    def stream(asset_id: str, lib: Auth):
+        try:
+            path, name = Reading(lib).stream(asset_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+        return FileResponse(
+            path,
+            filename=name,
+            content_disposition_type="inline",
+            media_type=FORMATS[Path(name).suffix.lower().lstrip(".")][1],
+        )
+
+    @app.get("/api/home/continue", response_model=ContinuePage)
+    def continue_list(
+        lib: Auth,
+        limit: int = Query(default=24, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return Reading(lib).continue_list(limit, offset)
 
     @app.get("/api/representations/{representation_id}/cover")
     def cover(representation_id: str, lib: Auth):

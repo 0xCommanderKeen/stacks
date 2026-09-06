@@ -29,6 +29,42 @@
         "title": "AssetOut",
         "type": "object"
       },
+      "AudioTrackOut": {
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterOut"
+            },
+            "title": "Chapters",
+            "type": "array"
+          },
+          "duration": {
+            "title": "Duration",
+            "type": "number"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "title",
+          "original_name",
+          "duration",
+          "chapters"
+        ],
+        "title": "AudioTrackOut",
+        "type": "object"
+      },
       "CatalogPage": {
         "properties": {
           "items": {
@@ -60,6 +96,24 @@
         "title": "CatalogPage",
         "type": "object"
       },
+      "ChapterOut": {
+        "properties": {
+          "start": {
+            "title": "Start",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "start"
+        ],
+        "title": "ChapterOut",
+        "type": "object"
+      },
       "ConflictOut": {
         "properties": {
           "field": {
@@ -81,6 +135,58 @@
           "target"
         ],
         "title": "ConflictOut",
+        "type": "object"
+      },
+      "ContinueOut": {
+        "properties": {
+          "progress": {
+            "$ref": "#/components/schemas/ProgressOut"
+          },
+          "representation_id": {
+            "title": "Representation Id",
+            "type": "string"
+          },
+          "work": {
+            "$ref": "#/components/schemas/WorkOut"
+          }
+        },
+        "required": [
+          "work",
+          "representation_id",
+          "progress"
+        ],
+        "title": "ContinueOut",
+        "type": "object"
+      },
+      "ContinuePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContinueOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ContinuePage",
         "type": "object"
       },
       "EditionEdit": {
@@ -462,6 +568,134 @@
         "title": "OperationPage",
         "type": "object"
       },
+      "PlaybackOut": {
+        "properties": {
+          "progress": {
+            "$ref": "#/components/schemas/ProgressOut"
+          },
+          "representation_id": {
+            "title": "Representation Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "tracks": {
+            "items": {
+              "$ref": "#/components/schemas/AudioTrackOut"
+            },
+            "title": "Tracks",
+            "type": "array"
+          },
+          "work_id": {
+            "title": "Work Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "representation_id",
+          "work_id",
+          "title",
+          "tracks",
+          "progress"
+        ],
+        "title": "PlaybackOut",
+        "type": "object"
+      },
+      "ProgressEdit": {
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "completed": {
+            "default": false,
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "position": {
+            "maximum": 1000000000.0,
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "number"
+          },
+          "revision": {
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "speed": {
+            "default": 1,
+            "maximum": 3.0,
+            "minimum": 0.5,
+            "title": "Speed",
+            "type": "number"
+          }
+        },
+        "required": [
+          "revision",
+          "asset_id",
+          "position"
+        ],
+        "title": "ProgressEdit",
+        "type": "object"
+      },
+      "ProgressOut": {
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "completed": {
+            "default": false,
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "position": {
+            "maximum": 1000000000.0,
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "number"
+          },
+          "representation_id": {
+            "title": "Representation Id",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "speed": {
+            "default": 1,
+            "maximum": 3.0,
+            "minimum": 0.5,
+            "title": "Speed",
+            "type": "number"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "revision",
+          "asset_id",
+          "position",
+          "representation_id",
+          "updated_at"
+        ],
+        "title": "ProgressOut",
+        "type": "object"
+      },
       "RepresentationOut": {
         "properties": {
           "assets": {
@@ -828,6 +1062,43 @@
         "summary": "Download"
       }
     },
+    "/api/assets/{asset_id}/stream": {
+      "get": {
+        "operationId": "stream_api_assets__asset_id__stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream"
+      }
+    },
     "/api/backup": {
       "post": {
         "operationId": "create_backup_api_backup_post",
@@ -922,6 +1193,59 @@
           }
         },
         "summary": "Export"
+      }
+    },
+    "/api/home/continue": {
+      "get": {
+        "operationId": "continue_list_api_home_continue_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContinuePage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Continue List"
       }
     },
     "/api/import": {
@@ -1242,6 +1566,94 @@
           }
         },
         "summary": "Cover"
+      }
+    },
+    "/api/representations/{representation_id}/playback": {
+      "get": {
+        "operationId": "playback_api_representations__representation_id__playback_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "representation_id",
+            "required": true,
+            "schema": {
+              "title": "Representation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybackOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Playback"
+      }
+    },
+    "/api/representations/{representation_id}/progress": {
+      "patch": {
+        "operationId": "progress_api_representations__representation_id__progress_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "representation_id",
+            "required": true,
+            "schema": {
+              "title": "Representation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgressEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Progress"
       }
     },
     "/api/series": {
