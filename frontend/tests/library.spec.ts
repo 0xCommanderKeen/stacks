@@ -364,14 +364,25 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   // A second device saves after this player's last acknowledged revision.
   await expect.poll(async () => (await progress()).speed).toBe(1.5);
   await expect(player.getByText('Place saved', { exact: true })).toBeVisible();
-  const current = await progress();
-  const other = await page.request.patch(`/api/representations/${representation.id}/progress`, {
-    headers: { 'X-Stacks-Request': '1' },
-    data: { ...current, position: 15 },
-  });
-  expect(other.ok()).toBe(true);
-  await player.getByRole('slider', { name: 'Listening position' }).focus();
-  await page.keyboard.press('ArrowLeft');
+  // Pause can still deliver a final save after its UI event. The second device
+  // reloads a raced revision, just as a real client must, before taking ownership.
+  await expect
+    .poll(async () => {
+      const current = await progress();
+      const other = await page.request.patch(`/api/representations/${representation.id}/progress`, {
+        headers: { 'X-Stacks-Request': '1' },
+        data: { ...current, position: 15 },
+      });
+      if (other.status() === 409) return false;
+      expect(other.status(), await other.text()).toBe(200);
+      return true;
+    })
+    .toBe(true);
+  const positionControl = player.getByRole('slider', { name: 'Listening position' });
+  if (await positionControl.isEnabled()) {
+    await positionControl.focus();
+    await page.keyboard.press('ArrowLeft');
+  }
   await expect(player.getByRole('alert')).toContainText('another device');
   await player.getByRole('button', { name: 'Reload saved position' }).click();
   await expect(player.getByRole('slider', { name: 'Listening position' })).toHaveValue('15');
