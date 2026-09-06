@@ -74,3 +74,13 @@ observations; their original bytes are never managed or copied by registration.
 New registrations default to Archive. A library backup includes owned files and
 external references; registered original bytes require separate source protection.
 See [read-only sources](docs/read-only-sources.md).
+
+
+### Trash (implemented)
+
+Trash hides a Work while preserving its bibliographic identity, personal choices,
+reading history, and ordered memberships. Managed originals relocate through a
+verified per-asset journal; external registrations only change catalog visibility.
+Restore preserves Work/Representation/Asset identities. Historical storage receipts
+prevent an older catalog undo from erasing newer recovery history. See
+[recoverable Trash](docs/recoverable-trash.md).

@@ -36,6 +36,8 @@ from stacks.models import (
     ScanDirectory,
     Series,
     SeriesMembership,
+    TrashFile,
+    TrashOperation,
     Work,
     WorkRedirect,
     identity,
@@ -99,6 +101,7 @@ def personal_out(state):
 def work_out(work: Work) -> WorkOut:
     return WorkOut(
         id=work.id,
+        trashed_at=work.trashed_at,
         personal=personal_out(work.personal),
         title=work.title,
         authors=[c.contributor.name for c in work.credits],
@@ -249,7 +252,8 @@ class Library:
     ) -> CatalogPage:
         with self.sessions() as session:
             query = select(Work).where(
-                ~select(WorkRedirect.source_id).where(WorkRedirect.source_id == Work.id).exists()
+                Work.trashed_at.is_(None),
+                ~select(WorkRedirect.source_id).where(WorkRedirect.source_id == Work.id).exists(),
             )
             if scope != "all":
                 query = query.outerjoin(PersonalState).where(
@@ -325,6 +329,8 @@ class Library:
                 raise KeyError(work_id)
             if session.get(WorkRedirect, work_id):
                 raise ValueError("This work was regrouped. Open its current page before saving.")
+            if work.trashed_at:
+                raise ValueError("Restore this book from Trash before editing it.")
             if work.revision != edit.revision:
                 raise ValueError("This book changed in another tab. Reload before saving.")
             if edit.editions is not None:
@@ -879,6 +885,8 @@ class Library:
                 ScanDirectory,
                 InboxCandidate,
                 IntakeItem,
+                TrashOperation,
+                TrashFile,
             ):
                 tables[model.__tablename__] = [
                     dict(row)
@@ -898,4 +906,4 @@ class Library:
             roots.update(
                 {row["root"]: {"kind": "external"} for row in tables["intake_job"] if row["root"]}
             )
-            return {"schema_version": 10, "roots": roots, "tables": tables}
+            return {"schema_version": 11, "roots": roots, "tables": tables}

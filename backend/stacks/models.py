@@ -26,6 +26,7 @@ class Work(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     revision: Mapped[int] = mapped_column(default=1)
     created_at: Mapped[str] = mapped_column(default=now, index=True)
+    trashed_at: Mapped[str | None] = mapped_column(Text, default=None, index=True)
     personal: Mapped["PersonalState | None"] = relationship(
         cascade="all, delete-orphan", uselist=False
     )
@@ -268,3 +269,30 @@ class IntakeItem(Base):
     result_representation_id: Mapped[str | None] = mapped_column(String(36), default=None)
     error: Mapped[str | None] = mapped_column(Text, default=None)
     state: Mapped[str] = mapped_column(default="pending", index=True)
+
+
+class TrashOperation(Base):
+    __tablename__ = "trash_operation"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    work_id: Mapped[str] = mapped_column(ForeignKey("work.id"), index=True)
+    action: Mapped[str]
+    state: Mapped[str] = mapped_column(default="queued", index=True)
+    revision: Mapped[int] = mapped_column(default=1)
+    error: Mapped[str | None] = mapped_column(Text, default=None)
+    created_at: Mapped[str] = mapped_column(default=now)
+
+
+class TrashFile(Base):
+    __tablename__ = "trash_file"
+    __table_args__ = (
+        UniqueConstraint("operation_id", "asset_id"),
+        Index("ix_trash_file_pending", "operation_id", "done", "id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    operation_id: Mapped[str] = mapped_column(ForeignKey("trash_operation.id"))
+    asset_id: Mapped[str] = mapped_column(ForeignKey("asset.id"))
+    source: Mapped[str] = mapped_column(Text)
+    destination: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    size: Mapped[int] = mapped_column(BigInteger)
+    done: Mapped[bool] = mapped_column(default=False)

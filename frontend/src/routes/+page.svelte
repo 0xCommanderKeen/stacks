@@ -6,6 +6,8 @@
   import AudioPlayer from '$lib/AudioPlayer.svelte';
   import Personal from '$lib/Personal.svelte';
   import Inbox from '$lib/Inbox.svelte';
+  import Trash from '$lib/Trash.svelte';
+  import TrashAction from '$lib/TrashAction.svelte';
   import SourceRoots from '$lib/SourceRoots.svelte';
   import OriginalStatus from '$lib/OriginalStatus.svelte';
   import RunBrowser from '$lib/RunBrowser.svelte';
@@ -46,13 +48,16 @@
   let collectionNextOffset = $state(0);
   let offset = $state(0);
   let selected = $state<Book | null>(null);
-  let view = $state<'library' | 'settings' | 'home' | 'collections' | 'inbox'>('library');
+  let view = $state<'library' | 'settings' | 'home' | 'collections' | 'inbox' | 'trash'>('library');
+  let trashQuery = $state('');
+  let trashOffset = $state(0);
   let continuing = $state<components['schemas']['ContinuePage'] | null>(null);
   let homeOffset = $state(0);
   let player = $state<{
     start: (id: string, play?: boolean) => Promise<void>;
     flush: () => Promise<void>;
     pauseAndFlush: () => Promise<void>;
+    releaseWork: (id: string) => Promise<void>;
   }>(null!);
   async function loadHome(nextOffset = homeOffset) {
     continuing = await json<components['schemas']['ContinuePage']>(
@@ -122,6 +127,9 @@
       else if (key === 'collection_list_offset') collectionListOffset = safe;
       else collectionNextOffset = safe;
     }
+    trashQuery = params.get('trash_q') || '';
+    const trashStart = Number(params.get('trash_offset') || 0);
+    trashOffset = Number.isSafeInteger(trashStart) && trashStart >= 0 ? trashStart : 0;
     q = params.get('q') || '';
     medium = ['ebook', 'comic', 'audio'].includes(params.get('media') || '')
       ? params.get('media')!
@@ -146,7 +154,9 @@
             ? 'collections'
             : params.get('view') === 'inbox'
               ? 'inbox'
-              : 'library';
+              : params.get('view') === 'trash'
+                ? 'trash'
+                : 'library';
     const continuationOffset = Number(params.get('continue_offset') || 0);
     homeOffset =
       Number.isSafeInteger(continuationOffset) && continuationOffset >= 0 ? continuationOffset : 0;
@@ -179,6 +189,10 @@
 
   function setUrl() {
     const params = new URLSearchParams();
+    if (view === 'trash') {
+      if (trashQuery) params.set('trash_q', trashQuery);
+      if (trashOffset) params.set('trash_offset', String(trashOffset));
+    }
     if (collectionId) params.set('collection', collectionId);
     if (collectionOffset) params.set('collection_offset', String(collectionOffset));
     if (collectionListOffset) params.set('collection_list_offset', String(collectionListOffset));
@@ -304,7 +318,7 @@
   }
 
   function open(book: Book) {
-    if (view !== 'collections') view = 'library';
+    if (view !== 'collections' && view !== 'trash') view = 'library';
     selected = book;
     editing = false;
     error = '';
@@ -448,6 +462,14 @@
           setUrl();
         }}>Settings</button
       >
+      <button
+        class:active={view === 'trash'}
+        onclick={() => {
+          selected = null;
+          view = 'trash';
+          setUrl();
+        }}>Trash</button
+      >
     </nav>
     <button class="signout" onclick={signOut}>Sign out <span>↗</span></button>
   </header>
@@ -539,6 +561,8 @@
         onopen={open}
         onnavigate={setUrl}
       />
+    {:else if view === 'trash' && !selected}
+      <Trash bind:query={trashQuery} bind:offset={trashOffset} onopen={open} onnavigate={setUrl} />
     {:else if view === 'inbox'}
       <Inbox onopen={open} />
     {:else if view === 'settings'}
@@ -576,18 +600,25 @@
       <button
         class="back"
         onclick={() => {
-          if (view === 'collections') {
+          if (view === 'collections' || view === 'trash') {
             selected = null;
             editing = false;
             setUrl();
           } else libraryView();
-        }}>← Back to {view === 'collections' ? 'collection' : 'library'}</button
+        }}
+        >← Back to {view === 'collections'
+          ? 'collection'
+          : view === 'trash'
+            ? 'Trash'
+            : 'library'}</button
       >
       <div class="detail">
         <div class="detail-cover"><Cover book={selected} large /></div>
         <section class="detail-copy">
           <div class="eyebrow">
-            IN YOUR {selected.personal.shelf === 'archive' ? 'ARCHIVE' : 'LIBRARY'} · {formats(
+            {selected.trashed_at
+              ? 'IN TRASH'
+              : `IN YOUR ${selected.personal.shelf === 'archive' ? 'ARCHIVE' : 'LIBRARY'}`} · {formats(
               selected,
             )}
           </div>
@@ -615,49 +646,58 @@
           {:else}
             <h1>{selected.title}</h1>
             <p class="byline">{selected.authors.join(' · ') || 'Unknown author'}</p>
-            <div class="actions">
-              {#each selected.editions as edition}{#each edition.representations as representation}{#if representation.capabilities.includes('listen')}<button
-                      class="primary"
-                      onclick={() => player.start(representation.id)}
-                      >Listen · {representation.format.toUpperCase()}{edition.narrator
-                        ? ` · ${edition.narrator}`
-                        : ''}</button
-                    >{/if}{#each representation.assets as asset}<a
-                      class="button primary"
-                      href="/api/assets/{asset.id}/download"
-                      download
-                      >Download {representation.format.toUpperCase()}{representation.assets.length >
-                      1
-                        ? ` · ${asset.original_name}`
-                        : ''} <span>↓</span></a
-                    >{/each}{/each}{/each}<button class="secondary" onclick={startEdit}
-                >Edit details</button
-              >
-            </div>
+            {#if !selected.trashed_at}<div class="actions">
+                {#each selected.editions as edition}{#each edition.representations as representation}{#if representation.capabilities.includes('listen')}<button
+                        class="primary"
+                        onclick={() => player.start(representation.id)}
+                        >Listen · {representation.format.toUpperCase()}{edition.narrator
+                          ? ` · ${edition.narrator}`
+                          : ''}</button
+                      >{/if}{#each representation.assets as asset}<a
+                        class="button primary"
+                        href="/api/assets/{asset.id}/download"
+                        download
+                        >Download {representation.format.toUpperCase()}{representation.assets
+                          .length > 1
+                          ? ` · ${asset.original_name}`
+                          : ''} <span>↓</span></a
+                      >{/each}{/each}{/each}<button class="secondary" onclick={startEdit}
+                  >Edit details</button
+                >
+              </div>{/if}
             <p class="description">
               {selected.description ||
                 'A good book needs no introduction. Add a description to make this one easier to find again.'}
             </p>
             <OriginalStatus book={selected} />
-            <Organization
-              book={selected}
-              onupdate={(book) => {
-                selected = book;
-                void load().catch(fail);
-              }}
-            />
-            {#key selected.id}<CatalogGroups
-                book={selected}
-                onchange={async (id) => {
-                  selected = await json<Book>(`/works/${id}`);
-                  await load();
-                  setUrl();
-                }}
-              />{/key}
-            {#key selected.id}<Personal
+            {#if !selected.trashed_at}<Organization
                 book={selected}
                 onupdate={(book) => {
                   selected = book;
+                  void load().catch(fail);
+                }}
+              />
+              {#key selected.id}<CatalogGroups
+                  book={selected}
+                  onchange={async (id) => {
+                    selected = await json<Book>(`/works/${id}`);
+                    await load();
+                    setUrl();
+                  }}
+                />{/key}
+              {#key selected.id}<Personal
+                  book={selected}
+                  onupdate={(book) => {
+                    selected = book;
+                    void load().catch(fail);
+                  }}
+                />{/key}{/if}
+            {#key selected.id}<TrashAction
+                book={selected}
+                beforeTrash={() => player?.releaseWork(selected!.id)}
+                onupdate={(book) => {
+                  selected = book;
+                  editing = false;
                   void load().catch(fail);
                 }}
               />{/key}

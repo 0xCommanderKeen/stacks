@@ -37,6 +37,7 @@ from stacks.schemas import (
     JobOut,
     JobPage,
 )
+from stacks.trash import Trash
 
 ACTIVE = ("queued", "running")
 LOG = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ class Interrupted(Exception):
 class Intake:
     def __init__(self, library, stable_seconds=30):
         self.library = library
+        self.trash = Trash(library)
         self.stable_seconds = stable_seconds
         self.stop = threading.Event()
         self.wake = threading.Event()
@@ -333,7 +335,10 @@ class Intake:
             self._close_directory()
 
     def step(self):
-        """One directory chunk and one inspection; also used for deterministic restart tests."""
+        """One bounded storage/acceptance/scan step; SQLite owns recovery checkpoints."""
+        if self.trash.step(self.stop.is_set):
+            self._close_directory()
+            return True
         with self.library.lock, self.library.sessions.begin() as session:
             job = session.scalar(
                 select(IntakeJob)

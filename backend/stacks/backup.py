@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from stacks.epub import safe_member
 from stacks.library import Library, digest, sync_dir
-from stacks.models import Asset, ImportOperation
+from stacks.models import Asset, ImportOperation, TrashOperation
 
 
 def backup(library: Library, output: Path):
@@ -30,6 +30,12 @@ def backup(library: Library, output: Path):
                 )
                 if pending:
                     raise ValueError("Recover unfinished imports before creating a full backup.")
+                if session.scalar(
+                    select(TrashOperation.id).where(TrashOperation.state != "complete")
+                ):
+                    raise ValueError(
+                        "Finish pending trash relocations before creating a full backup."
+                    )
                 external_roots = {}
                 for asset in session.scalars(select(Asset)):
                     if asset.root != "managed":
@@ -128,6 +134,7 @@ def restore(archive_path: Path, destination: Path):
                 ("0008",),
                 ("0009",),
                 ("0010",),
+                ("0011",),
             }:
                 raise ValueError("This Stacks version cannot restore the backup schema.")
             external_roots = {}

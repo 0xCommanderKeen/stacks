@@ -17,6 +17,7 @@ from stacks.models import (
     ReadingRecord,
     Representation,
     SeriesMembership,
+    TrashOperation,
     Work,
     WorkRedirect,
     identity,
@@ -39,6 +40,13 @@ def _snapshot(session, work_ids):
     contributors = select(Credit.contributor_id).where(Credit.work_id.in_(work_ids))
     collections = select(CollectionEntry.collection_id).where(CollectionEntry.work_id.in_(work_ids))
     return {
+        "trash_history": list(
+            session.scalars(
+                select(TrashOperation.id)
+                .where(TrashOperation.work_id.in_(work_ids))
+                .order_by(TrashOperation.id)
+            )
+        ),
         "collection": _rows(session, Collection, Collection.id.in_(collections)),
         "collection_entry": _rows(session, CollectionEntry, CollectionEntry.work_id.in_(work_ids)),
         "work": _rows(session, Work, Work.id.in_(work_ids)),
@@ -79,6 +87,9 @@ def _saved_snapshot(raw):
     snapshot.setdefault("reading_record", [])
     snapshot.setdefault("collection", [])
     snapshot.setdefault("collection_entry", [])
+    snapshot.setdefault("trash_history", [])
+    for work in snapshot["work"]:
+        work.setdefault("trashed_at", None)
     return snapshot
 
 
@@ -224,6 +235,8 @@ class CatalogOperations:
             raise KeyError(work_id)
         if session.get(WorkRedirect, work_id):
             raise ValueError("This work was regrouped. Open its current page before continuing.")
+        if work.trashed_at:
+            raise ValueError("Restore this book from Trash before changing it.")
         return work
 
     def commit(self, operation_id, resolutions):

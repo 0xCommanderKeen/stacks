@@ -68,6 +68,13 @@
       throw new Error('Listening position is not saved. Retry before signing out.');
   }
 
+  export async function releaseWork(workId: string) {
+    if (data?.work_id !== workId) return;
+    await pauseAndFlush();
+    generation++;
+    data = null;
+  }
+
   export async function start(representationId: string, play = true) {
     const sequence = ++generation;
     audio?.pause();

@@ -24,6 +24,8 @@ class Curation:
             raise KeyError(work_id)
         if session.get(WorkRedirect, work_id):
             raise ValueError("This work was regrouped. Open its current page before continuing.")
+        if work.trashed_at:
+            raise ValueError("Restore this book from Trash before changing it.")
         return work
 
     def edit(self, work_id, edit: PersonalEdit):
