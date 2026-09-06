@@ -11,3 +11,5 @@ ComicInfo series name, volume/year, and issue designation remain extracted sugge
 Edition edits retain language, publisher, identifier, narrator, and abridgement independently. All edition/membership changes check the owning work revision; series metadata uses its own revision. Editing never moves files. Catalog export schema 2 includes series and memberships. The restore command accepts schema 0001 and 0002 backups; opening an older Stacks library applies the additive migration. No Polica state is imported.
 
 The model gate is not complete until Phase 2b exercises alternate representations, multiple editions, and reversible grouping/splitting. Real-device behavior and large-source throughput remain release gates.
+
+RAR compatibility: rarfile is pinned to 4.2. Version 4.5 generated `bsdtar -f -- archive`, which fails on the Debian container despite passing on macOS. The compressed RAR5 fixture is exercised in the packaged image so dependency upgrades must preserve this path.

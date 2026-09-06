@@ -14,7 +14,7 @@ dependencies = [
   "argon2-cffi>=23,<26",
   "pypdf>=6.17,<7",
   "mutagen>=1.47,<2",
-  "rarfile>=4.2,<5",
+  "rarfile==4.2",
 ]
 
 [dependency-groups]
