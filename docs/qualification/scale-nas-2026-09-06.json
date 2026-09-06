@@ -1,0 +1,1679 @@
+{
+  "date": "2026-09-06",
+  "application_commit": "1cf2943e106a53e956503d0c40e336518754e824",
+  "image": "stacks:qualification-1cf2943",
+  "image_id": "sha256:fb9783dc470cda9a60f34788f75792c8f690c472876829d2810204c58e05f24c",
+  "limits": {
+    "cpus": 2,
+    "memory_gib": 2,
+    "uid": 10001
+  },
+  "datasets": {
+    "50000": {
+      "fixture": {
+        "synthetic_works": 50000,
+        "actual_audio_works": 1,
+        "distribution": {
+          "comic_percent": 80,
+          "ebook_percent": 18,
+          "audio_percent": 2,
+          "archive_percent": 10,
+          "embedded_cover_percent": 75
+        },
+        "series": 2000,
+        "contributors": 1000,
+        "intake_files": 500,
+        "audio_representation_id": "25c8e6b5-cb2d-4d00-aad3-debebf253729",
+        "audio_asset_id": "f47ae0fc-bf24-4b3d-8f4a-c43bf9f4f427",
+        "seed_seconds": 10.347,
+        "limitations": "Catalog-scale rows reference intentionally absent synthetic originals; a verified audiobook and generated EPUB intake fixtures exercise media I/O."
+      },
+      "http": {
+        "cold_first_requests": {
+          "catalog": {
+            "first_request_ms": 379.887,
+            "status": 200
+          },
+          "search_common": {
+            "first_request_ms": 533.417,
+            "status": 200
+          },
+          "search_title": {
+            "first_request_ms": 396.969,
+            "status": 200
+          },
+          "search_missing": {
+            "first_request_ms": 438.414,
+            "status": 200
+          },
+          "archive": {
+            "first_request_ms": 277.562,
+            "status": 200
+          },
+          "series": {
+            "first_request_ms": 459.74,
+            "status": 200
+          },
+          "collections": {
+            "first_request_ms": 42.456,
+            "status": 200
+          },
+          "collection_works": {
+            "first_request_ms": 78.82,
+            "status": 200
+          }
+        },
+        "warm": {
+          "catalog": {
+            "samples": 30,
+            "median_ms": 92.615,
+            "p95_ms": 148.305,
+            "max_ms": 174.002
+          },
+          "search_common": {
+            "samples": 30,
+            "median_ms": 475.161,
+            "p95_ms": 558.525,
+            "max_ms": 822.512
+          },
+          "search_title": {
+            "samples": 30,
+            "median_ms": 421.239,
+            "p95_ms": 505.08,
+            "max_ms": 648.212
+          },
+          "search_missing": {
+            "samples": 30,
+            "median_ms": 446.66,
+            "p95_ms": 518.602,
+            "max_ms": 519.475
+          },
+          "archive": {
+            "samples": 30,
+            "median_ms": 223.216,
+            "p95_ms": 318.139,
+            "max_ms": 334.893
+          },
+          "series": {
+            "samples": 30,
+            "median_ms": 213.324,
+            "p95_ms": 298.734,
+            "max_ms": 300.003
+          },
+          "collections": {
+            "samples": 30,
+            "median_ms": 38.436,
+            "p95_ms": 115.798,
+            "max_ms": 119.816
+          },
+          "collection_works": {
+            "samples": 30,
+            "median_ms": 42.038,
+            "p95_ms": 105.872,
+            "max_ms": 124.761
+          }
+        },
+        "concurrent_audio_ranges": {
+          "samples": 199,
+          "median_ms": 31.308,
+          "p95_ms": 119.325,
+          "max_ms": 129.857
+        },
+        "audio_errors": [],
+        "intake_after_measurement": {
+          "state": "running",
+          "discovered": 500,
+          "completed": 274,
+          "remaining": 226,
+          "failed": 0
+        },
+        "limitations": "First HTTP requests after process startup are not a flushed NAS filesystem cache. Range polling is service continuity evidence, not physical-device acceptance."
+      },
+      "grid": {
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "browser": "Chromium desktop",
+        "first_navigation_ms": 687.6964999999998,
+        "warm": {
+          "samples": 15,
+          "median_ms": 811.0482919999995,
+          "p95_ms": 836.6179160000002,
+          "max_ms": 836.6179160000002
+        },
+        "visible_grid_tiles": 24,
+        "loaded_covers": 17,
+        "page_errors": [],
+        "audio_samples": [
+          {
+            "position": 0.278566,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 0.781915,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.291704,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.802985,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.327117,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.835146,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.340504,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.848081,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.355015,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.863302,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.36784,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.874776,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.382274,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.905435,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.409772,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.917111,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.418364,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.924633,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.43324,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.945663,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.45097,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.964688,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.467202,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.987128,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.498528,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.005755,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.510913,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.013762,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.524374,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.040874,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.54555,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 16.048974,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          }
+        ],
+        "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
+      },
+      "portable": {
+        "export": {
+          "seconds": 12.6,
+          "peak_rss_bytes": 78745600
+        },
+        "import": {
+          "seconds": 47.181,
+          "peak_rss_bytes": 79810560
+        },
+        "catalog_bytes": 81061918,
+        "tables": {
+          "cover_blob": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "work": {
+            "rows": 50001,
+            "sha256": "c8e6fa43594f9d6a977104c2eb45b5dca1826e86fe7b19a72535fa2e0d028ba0"
+          },
+          "contributor": {
+            "rows": 1001,
+            "sha256": "71bb68d09fda72b98aaa90c6c85da0087afd53da46fb4c4770c4493638e4408b"
+          },
+          "credit": {
+            "rows": 50001,
+            "sha256": "9d0a3ab71f585140a1d8dbea6da6eea4215c52e83a602bcc4156f59b79236b39"
+          },
+          "edition": {
+            "rows": 50001,
+            "sha256": "d2ced193cb8f5a67b8e75d07dce304ca86959ebb1273421c721f7715d4e1a614"
+          },
+          "representation": {
+            "rows": 50001,
+            "sha256": "6d327f8c83f4d421ae348092e4ec78da86e00284a8f0ecdb0faf7667ef483167"
+          },
+          "asset": {
+            "rows": 50001,
+            "sha256": "5037148d23eee3b67fea2dd3ff2b51c33d923a2c033353ccd0ae123c871feead"
+          },
+          "series": {
+            "rows": 2000,
+            "sha256": "22643dacd7d1daae991d1d5b5f21bbf32aaa4a1b6ab2b6a1183604ffac0e27c7"
+          },
+          "series_membership": {
+            "rows": 40000,
+            "sha256": "9c506872a0d0e382442bbf1dfe1bf89daa24eea5c017c8045104196161373985"
+          },
+          "work_redirect": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "catalog_operation": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "collection": {
+            "rows": 50,
+            "sha256": "dea60e3c5f77fc4d8e7ae72df6cfcf424244c320cf3a4b4633d1f4a5aaed422b"
+          },
+          "collection_entry": {
+            "rows": 5000,
+            "sha256": "173e140edeca9138608e0a5d06a1e975be76e871b310f7749ccaac3c978f976f"
+          },
+          "progress": {
+            "rows": 1,
+            "sha256": "f0c4a12975d3d4b09fa2ae54337e250ae6fd0fab733e56019c5832597db4145f"
+          },
+          "personal_state": {
+            "rows": 50000,
+            "sha256": "a370f48584a651a643ed097ea043d4ca745c90d6f3f14cd7b3cf761c8c772b89"
+          },
+          "reading_record": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "intake_job": {
+            "rows": 1,
+            "sha256": "5b6441647af8757bdf48489bb005667ffcd09791846a17c62d8e7d7332144b80"
+          },
+          "scan_directory": {
+            "rows": 1,
+            "sha256": "93715d9e2c636e11606912f00ce9c4b4461d3035a010f69c9daea1ba1129c221"
+          },
+          "inbox_candidate": {
+            "rows": 500,
+            "sha256": "c3dc60a5d84ac365bf040f775ec57889c9b9a4b50743466132e2b9d0c0f5a087"
+          },
+          "intake_item": {
+            "rows": 500,
+            "sha256": "395c43598d20ea46aa49c7c7ed54b409974e0cb17616bb2691517d34bfbb1b98"
+          },
+          "trash_operation": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "trash_file": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "metadata_suggestion": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "backup_record": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "import_operation": {
+            "rows": 1,
+            "sha256": "39b23b55df6605513e0c28548d3f3e023e456717a7ab9ab4276bcc5bfc1b952e"
+          },
+          "integrity": "ok",
+          "foreign_key_errors": 0,
+          "authority_rows": 0
+        },
+        "mismatched_tables": [],
+        "limitations": "Offline round trip of a settled disposable synthetic catalog; original media is deliberately omitted. Peak RSS is a separate fresh process per phase. Fingerprints compare all catalog columns ordered by stable primary keys."
+      },
+      "continuity_followup": {
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "browser": "Chromium desktop",
+        "first_navigation_ms": 1223.5739170000002,
+        "warm": {
+          "samples": 15,
+          "median_ms": 443.60112500000105,
+          "p95_ms": 893.3827089999995,
+          "max_ms": 893.3827089999995
+        },
+        "visible_grid_tiles": 24,
+        "loaded_covers": 17,
+        "page_errors": [],
+        "audio_samples": [
+          {
+            "position": 0.05095,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 0.613449,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.125829,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.634677,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.146883,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.664739,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.176901,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.696296,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.216784,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.786013,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.354737,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.866876,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.375912,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.892384,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.400297,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.905528,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.413878,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.919979,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.427052,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.94446,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.449888,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.954286,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.462341,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.970155,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.48017,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.990859,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.528948,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.063513,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.650429,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.160483,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.668783,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 16.177145,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          }
+        ],
+        "concurrent_load": {
+          "requests": [
+            {
+              "status": 200,
+              "elapsed_ms": 792.3485419999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 422.66720799999894
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 460.79895900000156
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 384.3466669999998
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 426.2355829999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 418.82287499999984
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 407.6414169999989
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 462.49916699999994
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 523.7440830000014
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 373.66399999999885
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 374.1169169999994
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 386.0958750000009
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 461.3995419999992
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 402.4713329999977
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 473.73004100000253
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 383.40016599999944
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 384.1533750000017
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 426.88424999999916
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 389.25395800000115
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 367.6907500000016
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 376.48491699999795
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 439.9318749999984
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 369.5123339999991
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 374.7816249999996
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 386.3019999999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 442.9202910000022
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 391.18654199999946
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 418.8293339999982
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 407.42883300000176
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 420.4080419999991
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 461.21099999999933
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 421.1512909999983
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 527.8889999999992
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 495.4702079999988
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 529.6380000000026
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 399.2073750000018
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 521.883249999999
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 420.83250000000044
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 387.5564169999998
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 490.92833299999984
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 402.93354100000215
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 451.3789579999975
+            }
+          ],
+          "progress_saves": [
+            {
+              "status": 200,
+              "elapsed_ms": 5720.6201249999995
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 10728.013958000001
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 15869.308916
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 18130.780874999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 18166.99725
+            }
+          ],
+          "intake_before_audio": {
+            "state": "running",
+            "discovered": 500,
+            "completed": 3,
+            "remaining": 497,
+            "failed": 0
+          },
+          "intake_after_audio": {
+            "state": "running",
+            "discovered": 500,
+            "completed": 92,
+            "remaining": 408,
+            "failed": 0
+          },
+          "saved_progress": {
+            "revision": 9,
+            "asset_id": "f47ae0fc-bf24-4b3d-8f4a-c43bf9f4f427",
+            "position": 16.105361,
+            "speed": 1,
+            "completed": false,
+            "representation_id": "25c8e6b5-cb2d-4d00-aad3-debebf253729",
+            "updated_at": "2026-09-06T18:29:04.153446+00:00"
+          },
+          "paused_position": 16.189835
+        },
+        "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
+      }
+    },
+    "100000": {
+      "fixture": {
+        "synthetic_works": 100000,
+        "actual_audio_works": 1,
+        "distribution": {
+          "comic_percent": 80,
+          "ebook_percent": 18,
+          "audio_percent": 2,
+          "archive_percent": 10,
+          "embedded_cover_percent": 75
+        },
+        "series": 4000,
+        "contributors": 1000,
+        "intake_files": 500,
+        "audio_representation_id": "353f1f44-dde4-41d9-be01-3a422f08ad70",
+        "audio_asset_id": "c8930751-1e39-4795-ba90-73a811df0b7e",
+        "seed_seconds": 22.17,
+        "limitations": "Catalog-scale rows reference intentionally absent synthetic originals; a verified audiobook and generated EPUB intake fixtures exercise media I/O."
+      },
+      "http": {
+        "cold_first_requests": {
+          "catalog": {
+            "first_request_ms": 728.68,
+            "status": 200
+          },
+          "search_common": {
+            "first_request_ms": 1580.945,
+            "status": 200
+          },
+          "search_title": {
+            "first_request_ms": 825.011,
+            "status": 200
+          },
+          "search_missing": {
+            "first_request_ms": 738.894,
+            "status": 200
+          },
+          "archive": {
+            "first_request_ms": 564.897,
+            "status": 200
+          },
+          "series": {
+            "first_request_ms": 3890.816,
+            "status": 200
+          },
+          "collections": {
+            "first_request_ms": 350.399,
+            "status": 200
+          },
+          "collection_works": {
+            "first_request_ms": 150.113,
+            "status": 200
+          }
+        },
+        "warm": {
+          "catalog": {
+            "samples": 30,
+            "median_ms": 150.808,
+            "p95_ms": 245.851,
+            "max_ms": 362.948
+          },
+          "search_common": {
+            "samples": 30,
+            "median_ms": 1055.203,
+            "p95_ms": 2358.426,
+            "max_ms": 2501.55
+          },
+          "search_title": {
+            "samples": 30,
+            "median_ms": 944.797,
+            "p95_ms": 2226.408,
+            "max_ms": 2340.027
+          },
+          "search_missing": {
+            "samples": 30,
+            "median_ms": 977.296,
+            "p95_ms": 2329.751,
+            "max_ms": 2853.254
+          },
+          "archive": {
+            "samples": 30,
+            "median_ms": 508.233,
+            "p95_ms": 1009.495,
+            "max_ms": 1230.968
+          },
+          "series": {
+            "samples": 30,
+            "median_ms": 479.943,
+            "p95_ms": 1013.28,
+            "max_ms": 1398.008
+          },
+          "collections": {
+            "samples": 30,
+            "median_ms": 38.957,
+            "p95_ms": 102.983,
+            "max_ms": 115.114
+          },
+          "collection_works": {
+            "samples": 30,
+            "median_ms": 46.32,
+            "p95_ms": 122.488,
+            "max_ms": 122.572
+          }
+        },
+        "concurrent_audio_ranges": {
+          "samples": 459,
+          "median_ms": 34.268,
+          "p95_ms": 132.241,
+          "max_ms": 223.099
+        },
+        "audio_errors": [],
+        "intake_after_measurement": {
+          "state": "completed",
+          "discovered": 500,
+          "completed": 500,
+          "remaining": 0,
+          "failed": 0
+        },
+        "limitations": "First HTTP requests after process startup are not a flushed NAS filesystem cache. Range polling is service continuity evidence, not physical-device acceptance."
+      },
+      "grid": {
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "browser": "Chromium desktop",
+        "first_navigation_ms": 2182.4010419999995,
+        "warm": {
+          "samples": 15,
+          "median_ms": 1834.7344169999997,
+          "p95_ms": 2362.507749999997,
+          "max_ms": 2362.507749999997
+        },
+        "visible_grid_tiles": 24,
+        "loaded_covers": 18,
+        "page_errors": [],
+        "audio_samples": [
+          {
+            "position": 0.283778,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 0.790299,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.293703,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.813534,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.329376,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.834724,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.340744,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.848445,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.355753,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.86008,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.374971,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.890124,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.392189,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.908156,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.413966,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.917405,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.424069,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.930316,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.435916,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.940044,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.455929,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.9613,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.470959,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.976825,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.487536,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.99084,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.495713,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.000717,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.519643,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.02369,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.529702,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 16.036068,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          }
+        ],
+        "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
+      },
+      "portable": {
+        "export": {
+          "seconds": 17.921,
+          "peak_rss_bytes": 79060992
+        },
+        "import": {
+          "seconds": 102.842,
+          "peak_rss_bytes": 81567744
+        },
+        "catalog_bytes": 161495113,
+        "tables": {
+          "cover_blob": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "work": {
+            "rows": 100001,
+            "sha256": "56b04d7527ccb449e3bb08b8f0f92ee571bdd0a65b277b97f9722dddfcf1958c"
+          },
+          "contributor": {
+            "rows": 1001,
+            "sha256": "d8e0b7f2636fe89c47f699579237319d1badafa52140b7520e8728fc805dc3b6"
+          },
+          "credit": {
+            "rows": 100001,
+            "sha256": "3e8622622a9013db042ca78b77629ced785134166361b0a28e998b7b1581dec0"
+          },
+          "edition": {
+            "rows": 100001,
+            "sha256": "422ace38dfefa17a3ad5cae688ddafac5c84ca80a9708e36806f3fe573f567c0"
+          },
+          "representation": {
+            "rows": 100001,
+            "sha256": "1a316183a0b73058775426db9f02c165b262ca54265a6047eaf18eeca858e6ce"
+          },
+          "asset": {
+            "rows": 100001,
+            "sha256": "cebfb2a032fa4fb9c00343b024d69951131730f5da7df6191a76d89781217e34"
+          },
+          "series": {
+            "rows": 4000,
+            "sha256": "ecdbaeb96ea9b516780fcaa39a594afab2570f3177905983b97afa517c6af304"
+          },
+          "series_membership": {
+            "rows": 80000,
+            "sha256": "f40826071f974163865312652e695bc3d98d93ae98460b60aa43f2bafd17fd68"
+          },
+          "work_redirect": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "catalog_operation": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "collection": {
+            "rows": 100,
+            "sha256": "bc25ee909b810d053ff87ff3207bb4e29fe36de0ca1c33d6b471832fe358a648"
+          },
+          "collection_entry": {
+            "rows": 10000,
+            "sha256": "56228a7b9b1bdc6a3dee589b338dfdc1ad54d1969f85bd69981b27fc416b129b"
+          },
+          "progress": {
+            "rows": 1,
+            "sha256": "10d867f3aab6fbd11b5ade52afe8855afea5788bdfcf4d2a623b3f7c4f59f351"
+          },
+          "personal_state": {
+            "rows": 100000,
+            "sha256": "850ae80f500fdc5c21f9780aadac04d362dcebe8ec5642f6eece596aae7b4b8b"
+          },
+          "reading_record": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "intake_job": {
+            "rows": 1,
+            "sha256": "112721c6742d554f4aa5adba7525e922ce01a91cbd04176b882529ab8bd77fd8"
+          },
+          "scan_directory": {
+            "rows": 1,
+            "sha256": "ecd349948f3b39dade53d701e25a643ac622d0a331cd7b9e2437fe394b2d1321"
+          },
+          "inbox_candidate": {
+            "rows": 500,
+            "sha256": "4bea0b54d5226154ea841396037dd77a1368a186bc6e2cb6b31ae4b2714ecea2"
+          },
+          "intake_item": {
+            "rows": 500,
+            "sha256": "393c24277ff4f335e8e03dda133b5cff7ceaf0435385b21e5d524115b0f821ac"
+          },
+          "trash_operation": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "trash_file": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "metadata_suggestion": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "backup_record": {
+            "rows": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "import_operation": {
+            "rows": 1,
+            "sha256": "08fe86eeb2065564a269a5a4ba720af2267134688d32515084601347ced391fc"
+          },
+          "integrity": "ok",
+          "foreign_key_errors": 0,
+          "authority_rows": 0
+        },
+        "mismatched_tables": [],
+        "limitations": "Offline round trip of a settled disposable synthetic catalog; original media is deliberately omitted. Peak RSS is a separate fresh process per phase. Fingerprints compare all catalog columns ordered by stable primary keys."
+      },
+      "continuity_followup": {
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "browser": "Chromium desktop",
+        "first_navigation_ms": 1166.6190829999998,
+        "warm": {
+          "samples": 15,
+          "median_ms": 849.1542079999999,
+          "p95_ms": 1001.9567079999997,
+          "max_ms": 1001.9567079999997
+        },
+        "visible_grid_tiles": 24,
+        "loaded_covers": 18,
+        "page_errors": [],
+        "audio_samples": [
+          {
+            "position": 0.363685,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 0.870425,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.387094,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.893204,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.401527,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.908814,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.416009,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.925389,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.441831,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.951912,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.460378,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.98119,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.48641,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.991577,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.497356,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.003349,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.509524,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.012259,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.528508,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.033713,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.565696,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.070634,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.575766,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.081295,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.588261,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.088813,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.608308,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.117387,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.634081,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.140574,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.647474,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 16.154028,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          }
+        ],
+        "concurrent_load": {
+          "requests": [
+            {
+              "status": 200,
+              "elapsed_ms": 1867.327333000001
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1015.0092500000028
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 931.8327500000014
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 886.4008329999997
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 839.159166999998
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 890.2465420000008
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 863.4596249999995
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 853.7203330000011
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 906.2684169999993
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 921.875082999999
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1079.372792000002
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1184.8557500000024
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1074.5063750000008
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1111.8934999999983
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1107.424417000002
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1047.4959589999999
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1091.8372910000035
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 1120.8426250000048
+            }
+          ],
+          "progress_saves": [
+            {
+              "status": 200,
+              "elapsed_ms": 6502.365166
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 11501.029375000002
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 16499.42875
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 18670.956625
+            },
+            {
+              "status": 200,
+              "elapsed_ms": 18696.761458
+            }
+          ],
+          "intake_before_audio": {
+            "state": "running",
+            "discovered": 500,
+            "completed": 4,
+            "remaining": 496,
+            "failed": 0
+          },
+          "intake_after_audio": {
+            "state": "running",
+            "discovered": 500,
+            "completed": 77,
+            "remaining": 423,
+            "failed": 0
+          },
+          "saved_progress": {
+            "revision": 9,
+            "asset_id": "c8930751-1e39-4795-ba90-73a811df0b7e",
+            "position": 16.120355,
+            "speed": 1,
+            "completed": false,
+            "representation_id": "353f1f44-dde4-41d9-be01-3a422f08ad70",
+            "updated_at": "2026-09-06T18:30:53.173802+00:00"
+          },
+          "paused_position": 16.202565
+        },
+        "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
+      }
+    }
+  }
+}
