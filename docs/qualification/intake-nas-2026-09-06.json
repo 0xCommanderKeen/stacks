@@ -1,0 +1,79 @@
+{
+  "files": 337,
+  "bytes": 16229383396,
+  "formats": {
+    ".m4b": 1,
+    ".mp3": 2,
+    ".epub": 27,
+    ".pdf": 17,
+    ".cbz": 96,
+    ".cbr": 194
+  },
+  "image_revision": "7cf9f93cdc67bdc26614dc53f01844200a63d36f",
+  "schema_version": 11,
+  "phases": {
+    "discovery": {
+      "seconds": 307.896,
+      "restarted": true,
+      "catalog_search": {
+        "samples": 1492,
+        "median_ms": 3.13,
+        "p95_ms": 6.33,
+        "max_ms": 98.44
+      }
+    },
+    "acceptance": {
+      "seconds": 345.369,
+      "restarted": true,
+      "catalog_search": {
+        "samples": 1545,
+        "median_ms": 17.72,
+        "p95_ms": 35.12,
+        "max_ms": 259.12
+      }
+    },
+    "rescan": {
+      "seconds": 5.301,
+      "restarted": false,
+      "catalog_search": {
+        "samples": 23,
+        "median_ms": 26.24,
+        "p95_ms": 39.52,
+        "max_ms": 43.54
+      }
+    },
+    "reacceptance": {
+      "seconds": 317.848,
+      "restarted": false,
+      "catalog_search": {
+        "samples": 1425,
+        "median_ms": 18.16,
+        "p95_ms": 34.65,
+        "max_ms": 91.44
+      }
+    }
+  },
+  "candidate_states": {
+    "ready": 334,
+    "review": 3
+  },
+  "eligible_files": 337,
+  "acceptance": {
+    "completed": 337,
+    "duplicates": 0,
+    "failed": 0,
+    "remaining": 0
+  },
+  "works": 337,
+  "repeat": {
+    "duplicates": 337,
+    "failed": 0,
+    "completed": 0,
+    "remaining": 0
+  },
+  "no_duplicate_growth": true,
+  "source_observations_unchanged": true,
+  "managed_originals": 0,
+  "registered_originals": 337,
+  "byte_identity_mismatches": 0
+}
