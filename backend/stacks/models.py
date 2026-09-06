@@ -26,6 +26,7 @@ class Work(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     revision: Mapped[int] = mapped_column(default=1)
     created_at: Mapped[str] = mapped_column(default=now, index=True)
+    updated_at: Mapped[str] = mapped_column(default=now, onupdate=now)
     trashed_at: Mapped[str | None] = mapped_column(Text, default=None, index=True)
     personal: Mapped["PersonalState | None"] = relationship(
         cascade="all, delete-orphan", uselist=False
@@ -296,3 +297,13 @@ class TrashFile(Base):
     sha256: Mapped[str] = mapped_column(String(64))
     size: Mapped[int] = mapped_column(BigInteger)
     done: Mapped[bool] = mapped_column(default=False)
+
+
+class DeviceCredential(Base):
+    __tablename__ = "device_credential"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    name: Mapped[str] = mapped_column(Text)
+    digest: Mapped[str] = mapped_column(String(64), unique=True)
+    scope: Mapped[str]
+    created_at: Mapped[str] = mapped_column(default=now)
+    last_used_at: Mapped[str | None] = mapped_column(default=None)

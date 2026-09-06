@@ -131,6 +131,7 @@ class RecordPage(BaseModel):
 
 
 class WorkOut(BaseModel):
+    updated_at: str
     trashed_at: str | None
     id: str
     title: str
@@ -549,3 +550,37 @@ class TrashPage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class DeviceCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    scope: Literal["library", "all"] = "library"
+
+    @field_validator("name")
+    @classmethod
+    def named_device(cls, value):
+        if not value.strip():
+            raise ValueError("Name this reader or device.")
+        return value.strip()
+
+
+class DeviceOut(BaseModel):
+    id: str
+    name: str
+    scope: str
+    created_at: str
+    last_used_at: str | None
+
+
+class DevicePage(BaseModel):
+    items: list[DeviceOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class DeviceIssued(BaseModel):
+    device: DeviceOut
+    username: str
+    password: str
+    catalog_url: str

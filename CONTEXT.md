@@ -84,3 +84,11 @@ verified per-asset journal; external registrations only change catalog visibilit
 Restore preserves Work/Representation/Asset identities. Historical storage receipts
 prevent an older catalog undo from erasing newer recovery history. See
 [recoverable Trash](docs/recoverable-trash.md).
+
+### Reader credential (implemented)
+
+A named, revocable, read-only authority for an OPDS client. Its scope is either the
+Library shelf or Library plus Archive, evaluated against current work ownership
+on each request. It is independent of the owner session and is not portable
+catalog data. An acquisition delivers an original Asset, including individual
+ordered tracks of a multi-file audiobook. See `docs/reader-access.md`.

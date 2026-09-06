@@ -15,6 +15,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import delete, func, select
 from starlette.background import BackgroundTask
@@ -23,6 +24,7 @@ from stacks.backup import backup
 from stacks.collections import Collections
 from stacks.config import Settings
 from stacks.curation import Curation
+from stacks.devices import Devices
 from stacks.epub import InvalidBook
 from stacks.inspection import FORMATS
 from stacks.intake import Intake
@@ -36,6 +38,7 @@ from stacks.models import (
     Work,
     WorkRedirect,
 )
+from stacks.opds import ACQUISITION, NAVIGATION, Opds
 from stacks.operations import CatalogOperations
 from stacks.reading import Reading
 from stacks.schemas import (
@@ -53,6 +56,9 @@ from stacks.schemas import (
     CollectionPage,
     CollectionWorksPage,
     ContinuePage,
+    DeviceCreate,
+    DeviceIssued,
+    DevicePage,
     FollowEdit,
     GroupCommit,
     GroupPreview,
@@ -139,7 +145,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "same-origin"
         response.headers["X-Frame-Options"] = "DENY"
-        if request.url.path.startswith("/api/"):
+        if request.url.path.startswith(("/api/", "/opds")):
             response.headers["Cache-Control"] = "no-store"
         return response
 
@@ -168,6 +174,80 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return JSONResponse(
             {"detail": "The original file is unavailable. Check your storage."}, status_code=409
         )
+
+    basic = HTTPBasic(auto_error=False)
+
+    def device_reader(
+        request: Request,
+        lib: Annotated[Library, Depends(library)],
+        credentials: Annotated[HTTPBasicCredentials | None, Depends(basic)],
+    ):
+        scope = (
+            Devices(lib).authenticate(credentials.username, credentials.password)
+            if credentials
+            else None
+        )
+        if scope is None:
+            raise HTTPException(
+                401,
+                "Use a reader credential from Settings.",
+                headers={"WWW-Authenticate": 'Basic realm="Stacks", charset="UTF-8"'},
+            )
+        return Opds(lib, scope, str(request.url_for("opds_root")))
+
+    Reader = Annotated[Opds, Depends(device_reader)]
+
+    @app.post("/api/devices", response_model=DeviceIssued)
+    def issue_device(body: DeviceCreate, lib: Auth, request: Request):
+        try:
+            return Devices(lib).issue(body, str(request.url_for("opds_root")))
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/devices", response_model=DevicePage)
+    def list_devices(lib: Auth, limit: int = Query(24, ge=1, le=100), offset: int = Query(0, ge=0)):
+        return Devices(lib).list(limit, offset)
+
+    @app.delete("/api/devices/{device_id}", status_code=204)
+    def revoke_device(device_id: str, lib: Auth):
+        Devices(lib).revoke(device_id)
+
+    @app.get("/opds", name="opds_root")
+    def opds_root(reader: Reader):
+        return Response(reader.root(), media_type=NAVIGATION)
+
+    @app.get("/opds/search.xml")
+    def opds_search(reader: Reader):
+        return Response(reader.search(), media_type="application/opensearchdescription+xml")
+
+    @app.get("/opds/catalog")
+    def opds_catalog(
+        reader: Reader,
+        q: str = Query("", max_length=300),
+        medium: Literal["", "ebook", "comic", "audio"] = "",
+        limit: int = Query(24, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        return Response(reader.catalog(q, medium or None, limit, offset), media_type=NAVIGATION)
+
+    @app.get("/opds/works/{work_id}")
+    def opds_originals(
+        work_id: str,
+        reader: Reader,
+        limit: int = Query(24, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        return Response(reader.originals(work_id, limit, offset), media_type=ACQUISITION)
+
+    @app.head("/opds/assets/{asset_id}", include_in_schema=False)
+    @app.get("/opds/assets/{asset_id}")
+    def opds_asset(asset_id: str, reader: Reader):
+        path, name, media = reader.asset(asset_id)
+        return FileResponse(path, filename=name, media_type=media)
+
+    @app.get("/opds/covers/{representation_id}")
+    def opds_cover(representation_id: str, reader: Reader):
+        return FileResponse(reader.cover(representation_id), media_type="image/jpeg")
 
     @app.get("/health/live")
     def live():

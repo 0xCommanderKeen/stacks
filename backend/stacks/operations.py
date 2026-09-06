@@ -90,6 +90,7 @@ def _saved_snapshot(raw):
     snapshot.setdefault("trash_history", [])
     for work in snapshot["work"]:
         work.setdefault("trashed_at", None)
+        work.setdefault("updated_at", work["created_at"])
     return snapshot
 
 
@@ -468,6 +469,7 @@ class CatalogOperations:
             for snapshot in (comparable, expected):
                 for work in snapshot["work"]:
                     work.pop("revision")
+                    work.pop("updated_at", None)
                 for record in snapshot["reading_record"]:
                     record.pop("revision")
                 for collection in snapshot["collection"]:
