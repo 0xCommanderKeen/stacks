@@ -174,8 +174,14 @@ class Library:
         try:
             self.managed = self.data_dir / "managed"
             self.staging = self.data_dir / "staging"
+            self.uploads = self.data_dir / "uploads"
             self.managed.mkdir(exist_ok=True)
             self.staging.mkdir(exist_ok=True)
+            self.uploads.mkdir(exist_ok=True)
+            # The exclusive owner lock makes startup the only safe orphan-upload cleanup.
+            for upload in self.uploads.glob("upload-*"):
+                if upload.is_file() and not upload.is_symlink():
+                    upload.unlink()
             self.engine, self.sessions = initialize(self.data_dir / "catalog.sqlite3")
             self.recover()
         except BaseException:

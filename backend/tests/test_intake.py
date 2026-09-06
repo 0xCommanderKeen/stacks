@@ -126,3 +126,57 @@ def test_backup_refuses_pending_publication_without_waiting_for_file_io(
         finally:
             release.set()
         assert importing.result(timeout=3).work.title == "Pending publication"
+
+
+def test_recovery_preserves_upload_while_request_is_streaming(client, monkeypatch):
+    from anyio import to_thread
+    from starlette.requests import Request
+
+    library = client.app.state.library
+    original = epub_bytes("Streaming intake")
+    receiving, release = Event(), Event()
+    stream = Request.stream
+
+    async def delayed(request):
+        async for chunk in stream(request):
+            yield chunk
+            if chunk:
+                receiving.set()
+                assert await to_thread.run_sync(release.wait, 5)
+
+    monkeypatch.setattr(Request, "stream", delayed)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        uploading = executor.submit(
+            client.post,
+            "/api/import",
+            content=original,
+            headers={"X-Filename": "stream.epub"},
+        )
+        try:
+            assert receiving.wait(3)
+            temporary = next(library.uploads.iterdir())
+            executor.submit(library.recover).result(timeout=1)
+            assert temporary.is_file()
+        finally:
+            release.set()
+        response = uploading.result(timeout=3)
+    assert response.status_code == 200, response.text
+    asset = response.json()["work"]["editions"][0]["representations"][0]["assets"][0]
+    assert client.get(f"/api/assets/{asset['id']}/download").content == original
+    assert list(library.uploads.iterdir()) == []
+
+
+def test_orphan_uploads_are_cleaned_only_when_exclusive_owner_starts(tmp_path):
+    from stacks.library import Library
+
+    library = Library(tmp_path / "library")
+    orphan = library.uploads / "upload-interrupted.epub"
+    orphan.write_bytes(b"unfinished upload")
+    library.recover()
+    assert orphan.is_file()
+    library.close()
+    reopened = Library(tmp_path / "library")
+    try:
+        assert not orphan.exists()
+    finally:
+        reopened.close()

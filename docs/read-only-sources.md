@@ -80,3 +80,5 @@ transactions. Listening-position saves and catalog actions can therefore proceed
 while an original is being verified. Recovery waits for an active unjournaled copy
 before cleaning stages. A backup detects a pending publication and refuses it;
 it never promises an original that has not finished its durable publication.
+
+HTTP uploads use a separate temporary directory. Runtime recovery never cleans that directory; interrupted uploads are removed only at startup after acquiring the exclusive data-directory owner lock. This also protects completed uploads waiting for the ingestion lock.
