@@ -1,0 +1,679 @@
+{
+  "date": "2026-09-06",
+  "application_commit": "1cf2943e106a53e956503d0c40e336518754e824",
+  "image": "stacks:qualification-1cf2943",
+  "image_id": "sha256:fb9783dc470cda9a60f34788f75792c8f690c472876829d2810204c58e05f24c",
+  "limits": {
+    "cpus": 2,
+    "memory_gib": 2,
+    "uid": 10001
+  },
+  "datasets": {
+    "50000": {
+      "fixture": {
+        "synthetic_works": 50000,
+        "actual_audio_works": 1,
+        "distribution": {
+          "comic_percent": 80,
+          "ebook_percent": 18,
+          "audio_percent": 2,
+          "archive_percent": 10,
+          "embedded_cover_percent": 75
+        },
+        "series": 2000,
+        "contributors": 1000,
+        "intake_files": 500,
+        "audio_representation_id": "25c8e6b5-cb2d-4d00-aad3-debebf253729",
+        "audio_asset_id": "f47ae0fc-bf24-4b3d-8f4a-c43bf9f4f427",
+        "seed_seconds": 10.347,
+        "limitations": "Catalog-scale rows reference intentionally absent synthetic originals; a verified audiobook and generated EPUB intake fixtures exercise media I/O."
+      },
+      "http": {
+        "cold_first_requests": {
+          "catalog": {
+            "first_request_ms": 379.887,
+            "status": 200
+          },
+          "search_common": {
+            "first_request_ms": 533.417,
+            "status": 200
+          },
+          "search_title": {
+            "first_request_ms": 396.969,
+            "status": 200
+          },
+          "search_missing": {
+            "first_request_ms": 438.414,
+            "status": 200
+          },
+          "archive": {
+            "first_request_ms": 277.562,
+            "status": 200
+          },
+          "series": {
+            "first_request_ms": 459.74,
+            "status": 200
+          },
+          "collections": {
+            "first_request_ms": 42.456,
+            "status": 200
+          },
+          "collection_works": {
+            "first_request_ms": 78.82,
+            "status": 200
+          }
+        },
+        "warm": {
+          "catalog": {
+            "samples": 30,
+            "median_ms": 92.615,
+            "p95_ms": 148.305,
+            "max_ms": 174.002
+          },
+          "search_common": {
+            "samples": 30,
+            "median_ms": 475.161,
+            "p95_ms": 558.525,
+            "max_ms": 822.512
+          },
+          "search_title": {
+            "samples": 30,
+            "median_ms": 421.239,
+            "p95_ms": 505.08,
+            "max_ms": 648.212
+          },
+          "search_missing": {
+            "samples": 30,
+            "median_ms": 446.66,
+            "p95_ms": 518.602,
+            "max_ms": 519.475
+          },
+          "archive": {
+            "samples": 30,
+            "median_ms": 223.216,
+            "p95_ms": 318.139,
+            "max_ms": 334.893
+          },
+          "series": {
+            "samples": 30,
+            "median_ms": 213.324,
+            "p95_ms": 298.734,
+            "max_ms": 300.003
+          },
+          "collections": {
+            "samples": 30,
+            "median_ms": 38.436,
+            "p95_ms": 115.798,
+            "max_ms": 119.816
+          },
+          "collection_works": {
+            "samples": 30,
+            "median_ms": 42.038,
+            "p95_ms": 105.872,
+            "max_ms": 124.761
+          }
+        },
+        "concurrent_audio_ranges": {
+          "samples": 199,
+          "median_ms": 31.308,
+          "p95_ms": 119.325,
+          "max_ms": 129.857
+        },
+        "audio_errors": [],
+        "intake_after_measurement": {
+          "state": "running",
+          "discovered": 500,
+          "completed": 274,
+          "remaining": 226,
+          "failed": 0
+        },
+        "limitations": "First HTTP requests after process startup are not a flushed NAS filesystem cache. Range polling is service continuity evidence, not physical-device acceptance."
+      },
+      "grid": {
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "browser": "Chromium desktop",
+        "first_navigation_ms": 687.6964999999998,
+        "warm": {
+          "samples": 15,
+          "median_ms": 811.0482919999995,
+          "p95_ms": 836.6179160000002,
+          "max_ms": 836.6179160000002
+        },
+        "visible_grid_tiles": 24,
+        "loaded_covers": 17,
+        "page_errors": [],
+        "audio_samples": [
+          {
+            "position": 0.278566,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 0.781915,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.291704,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.802985,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.327117,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.835146,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.340504,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.848081,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.355015,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.863302,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.36784,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.874776,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.382274,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.905435,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.409772,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.917111,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.418364,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.924633,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.43324,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.945663,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.45097,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.964688,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.467202,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.987128,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.498528,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.005755,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.510913,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.013762,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.524374,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.040874,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.54555,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 16.048974,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          }
+        ],
+        "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
+      }
+    },
+    "100000": {
+      "fixture": {
+        "synthetic_works": 100000,
+        "actual_audio_works": 1,
+        "distribution": {
+          "comic_percent": 80,
+          "ebook_percent": 18,
+          "audio_percent": 2,
+          "archive_percent": 10,
+          "embedded_cover_percent": 75
+        },
+        "series": 4000,
+        "contributors": 1000,
+        "intake_files": 500,
+        "audio_representation_id": "353f1f44-dde4-41d9-be01-3a422f08ad70",
+        "audio_asset_id": "c8930751-1e39-4795-ba90-73a811df0b7e",
+        "seed_seconds": 22.17,
+        "limitations": "Catalog-scale rows reference intentionally absent synthetic originals; a verified audiobook and generated EPUB intake fixtures exercise media I/O."
+      },
+      "http": {
+        "cold_first_requests": {
+          "catalog": {
+            "first_request_ms": 728.68,
+            "status": 200
+          },
+          "search_common": {
+            "first_request_ms": 1580.945,
+            "status": 200
+          },
+          "search_title": {
+            "first_request_ms": 825.011,
+            "status": 200
+          },
+          "search_missing": {
+            "first_request_ms": 738.894,
+            "status": 200
+          },
+          "archive": {
+            "first_request_ms": 564.897,
+            "status": 200
+          },
+          "series": {
+            "first_request_ms": 3890.816,
+            "status": 200
+          },
+          "collections": {
+            "first_request_ms": 350.399,
+            "status": 200
+          },
+          "collection_works": {
+            "first_request_ms": 150.113,
+            "status": 200
+          }
+        },
+        "warm": {
+          "catalog": {
+            "samples": 30,
+            "median_ms": 150.808,
+            "p95_ms": 245.851,
+            "max_ms": 362.948
+          },
+          "search_common": {
+            "samples": 30,
+            "median_ms": 1055.203,
+            "p95_ms": 2358.426,
+            "max_ms": 2501.55
+          },
+          "search_title": {
+            "samples": 30,
+            "median_ms": 944.797,
+            "p95_ms": 2226.408,
+            "max_ms": 2340.027
+          },
+          "search_missing": {
+            "samples": 30,
+            "median_ms": 977.296,
+            "p95_ms": 2329.751,
+            "max_ms": 2853.254
+          },
+          "archive": {
+            "samples": 30,
+            "median_ms": 508.233,
+            "p95_ms": 1009.495,
+            "max_ms": 1230.968
+          },
+          "series": {
+            "samples": 30,
+            "median_ms": 479.943,
+            "p95_ms": 1013.28,
+            "max_ms": 1398.008
+          },
+          "collections": {
+            "samples": 30,
+            "median_ms": 38.957,
+            "p95_ms": 102.983,
+            "max_ms": 115.114
+          },
+          "collection_works": {
+            "samples": 30,
+            "median_ms": 46.32,
+            "p95_ms": 122.488,
+            "max_ms": 122.572
+          }
+        },
+        "concurrent_audio_ranges": {
+          "samples": 459,
+          "median_ms": 34.268,
+          "p95_ms": 132.241,
+          "max_ms": 223.099
+        },
+        "audio_errors": [],
+        "intake_after_measurement": {
+          "state": "completed",
+          "discovered": 500,
+          "completed": 500,
+          "remaining": 0,
+          "failed": 0
+        },
+        "limitations": "First HTTP requests after process startup are not a flushed NAS filesystem cache. Range polling is service continuity evidence, not physical-device acceptance."
+      },
+      "grid": {
+        "viewport": {
+          "width": 1365,
+          "height": 900
+        },
+        "browser": "Chromium desktop",
+        "first_navigation_ms": 2182.4010419999995,
+        "warm": {
+          "samples": 15,
+          "median_ms": 1834.7344169999997,
+          "p95_ms": 2362.507749999997,
+          "max_ms": 2362.507749999997
+        },
+        "visible_grid_tiles": 24,
+        "loaded_covers": 18,
+        "page_errors": [],
+        "audio_samples": [
+          {
+            "position": 0.283778,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 0.790299,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.293703,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 1.813534,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.329376,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 2.834724,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.340744,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 3.848445,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.355753,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 4.86008,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.374971,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 5.890124,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.392189,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 6.908156,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.413966,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 7.917405,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.424069,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 8.930316,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.435916,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 9.940044,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.455929,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 10.9613,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.470959,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 11.976825,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.487536,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 12.99084,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 13.495713,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.000717,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 14.519643,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.02369,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 15.529702,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          },
+          {
+            "position": 16.036068,
+            "paused": false,
+            "ready": 4,
+            "error": null
+          }
+        ],
+        "limitations": "Authenticated LAN navigation, including 24 tiles and available covers; browser cache cold only for first navigation. Short real Chromium playback observation; not physical phone, Safari, lockscreen or long-duration listening acceptance."
+      }
+    }
+  }
+}
