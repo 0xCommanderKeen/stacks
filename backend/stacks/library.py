@@ -26,10 +26,14 @@ from stacks.models import (
     Credit,
     Edition,
     ImportOperation,
+    InboxCandidate,
+    IntakeItem,
+    IntakeJob,
     PersonalState,
     Progress,
     ReadingRecord,
     Representation,
+    ScanDirectory,
     Series,
     SeriesMembership,
     Work,
@@ -693,6 +697,10 @@ class Library:
                 Progress,
                 PersonalState,
                 ReadingRecord,
+                IntakeJob,
+                ScanDirectory,
+                InboxCandidate,
+                IntakeItem,
             ):
                 tables[model.__tablename__] = [
                     dict(row)
@@ -708,4 +716,6 @@ class Library:
                     if row["root"] != "managed"
                 }
             )
-            return {"schema_version": 8, "roots": roots, "tables": tables}
+            roots.update({row["root"]: {"kind": "external"} for row in tables["inbox_candidate"]})
+            roots.update({row["root"]: {"kind": "external"} for row in tables["intake_job"]})
+            return {"schema_version": 9, "roots": roots, "tables": tables}

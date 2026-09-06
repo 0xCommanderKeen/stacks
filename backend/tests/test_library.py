@@ -47,7 +47,7 @@ def test_complete_book_restart_and_restore(client, settings, publication, tmp_pa
         == "image/jpeg"
     )
     export = client.get("/api/export").json()
-    assert export["schema_version"] == 8
+    assert export["schema_version"] == 9
     assert export["tables"]["work"][0]["title"] == "My corrected title"
     assert "login_session" not in export["tables"]
     assert (

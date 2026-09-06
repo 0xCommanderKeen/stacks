@@ -25,12 +25,14 @@ from stacks.config import Settings
 from stacks.curation import Curation
 from stacks.epub import InvalidBook
 from stacks.inspection import FORMATS
+from stacks.intake import Intake
 from stacks.library import Library
 from stacks.models import Asset, ImportOperation, LoginSession, Representation, Work, WorkRedirect
 from stacks.operations import CatalogOperations
 from stacks.reading import Reading
 from stacks.schemas import (
     AssetAvailability,
+    CandidatePage,
     CatalogPage,
     CollectionChange,
     CollectionEdit,
@@ -44,6 +46,9 @@ from stacks.schemas import (
     GroupPreview,
     GroupRequest,
     ImportResult,
+    JobChange,
+    JobOut,
+    JobPage,
     Login,
     NextPage,
     OperationOut,
@@ -57,6 +62,7 @@ from stacks.schemas import (
     RecordPage,
     RunPage,
     RunWorksPage,
+    ScanRequest,
     SeriesEdit,
     SeriesOut,
     SeriesPage,
@@ -83,9 +89,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app):
         app.state.library = await to_thread.run_sync(Library, settings.data_dir, settings.sources)
+        app.state.intake = Intake(app.state.library)
+        app.state.intake.start()
         try:
             yield
         finally:
+            await to_thread.run_sync(app.state.intake.close)
             app.state.library.close()
 
     app = FastAPI(
@@ -419,6 +428,44 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         offset: int = Query(default=0, ge=0),
     ):
         return CatalogOperations(lib).list(limit, offset, work_id)
+
+    @app.post("/api/intake/scans", response_model=JobOut)
+    def start_scan(body: ScanRequest, request: Request, lib: Auth):
+        try:
+            return request.app.state.intake.scan(body)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+        except OSError:
+            raise HTTPException(409, "The source folder is inaccessible.") from None
+
+    @app.get("/api/intake/jobs", response_model=JobPage)
+    def intake_jobs(
+        request: Request,
+        lib: Auth,
+        limit: int = Query(24, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        return request.app.state.intake.jobs(limit, offset)
+
+    @app.post("/api/intake/jobs/{job_id}", response_model=JobOut)
+    def change_job(job_id: str, body: JobChange, request: Request, lib: Auth):
+        try:
+            return request.app.state.intake.change(job_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/intake/candidates", response_model=CandidatePage)
+    def inbox_candidates(
+        request: Request,
+        lib: Auth,
+        q: str = Query("", max_length=300),
+        state: str = Query("", max_length=20),
+        root: str = Query("", max_length=64),
+        job_id: str = Query("", max_length=36),
+        limit: int = Query(24, ge=1, le=100),
+        offset: int = Query(0, ge=0),
+    ):
+        return request.app.state.intake.candidates(q, state, root, job_id, limit, offset)
 
     @app.post(
         "/api/import",

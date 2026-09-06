@@ -243,6 +243,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/intake/candidates': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Inbox Candidates */
+    get: operations['inbox_candidates_api_intake_candidates_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/intake/jobs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Intake Jobs */
+    get: operations['intake_jobs_api_intake_jobs_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/intake/jobs/{job_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Change Job */
+    post: operations['change_job_api_intake_jobs__job_id__post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/intake/scans': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Start Scan */
+    post: operations['start_scan_api_intake_scans_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/login': {
     parameters: {
       query?: never;
@@ -712,6 +780,46 @@ export interface components {
       /** Title */
       title: string;
     };
+    /** CandidateOut */
+    CandidateOut: {
+      /** Edits */
+      edits: {
+        [key: string]: unknown;
+      };
+      /** Error */
+      error: string | null;
+      /** Facts */
+      facts: {
+        [key: string]: unknown;
+      };
+      /** Id */
+      id: string;
+      /** Relative Path */
+      relative_path: string;
+      /** Revision */
+      revision: number;
+      /** Root */
+      root: string;
+      /** Sha256 */
+      sha256: string | null;
+      /** State */
+      state: string;
+      /** Updated At */
+      updated_at: string;
+      /** Work Id */
+      work_id: string | null;
+    };
+    /** CandidatePage */
+    CandidatePage: {
+      /** Items */
+      items: components['schemas']['CandidateOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
     /** CatalogPage */
     CatalogPage: {
       /** Items */
@@ -948,6 +1056,58 @@ export interface components {
       /** Duplicate */
       duplicate: boolean;
       work: components['schemas']['WorkOut'];
+    };
+    /** JobChange */
+    JobChange: {
+      /**
+       * Action
+       * @enum {string}
+       */
+      action: 'cancel' | 'retry';
+      /** Revision */
+      revision: number;
+    };
+    /** JobOut */
+    JobOut: {
+      /** Completed */
+      completed: number;
+      /** Created At */
+      created_at: string;
+      /** Directories Remaining */
+      directories_remaining: number;
+      /** Discovered */
+      discovered: number;
+      /** Error */
+      error: string | null;
+      /** Failed */
+      failed: number;
+      /** Id */
+      id: string;
+      /** Prefix */
+      prefix: string;
+      /** Remaining */
+      remaining: number;
+      /** Revision */
+      revision: number;
+      /** Root */
+      root: string;
+      /** Skipped */
+      skipped: number;
+      /** State */
+      state: string;
+      /** Updated At */
+      updated_at: string;
+    };
+    /** JobPage */
+    JobPage: {
+      /** Items */
+      items: components['schemas']['JobOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
     };
     /** Login */
     Login: {
@@ -1224,6 +1384,16 @@ export interface components {
       offset: number;
       /** Total */
       total: number;
+    };
+    /** ScanRequest */
+    ScanRequest: {
+      /**
+       * Prefix
+       * @default
+       */
+      prefix: string;
+      /** Root */
+      root: string;
     };
     /** SeriesEdit */
     SeriesEdit: {
@@ -1817,6 +1987,142 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ImportResult'];
+        };
+      };
+    };
+  };
+  inbox_candidates_api_intake_candidates_get: {
+    parameters: {
+      query?: {
+        q?: string;
+        state?: string;
+        root?: string;
+        job_id?: string;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CandidatePage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  intake_jobs_api_intake_jobs_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['JobPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  change_job_api_intake_jobs__job_id__post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['JobChange'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['JobOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  start_scan_api_intake_scans_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ScanRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['JobOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };

@@ -828,3 +828,45 @@ test('register an original in Archive and explain external backup protection', a
   ).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('sources.png'), fullPage: true });
 });
+
+test('Inbox scans sources without importing and preserves paged review across navigation', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page.getByRole('button', { name: 'Inbox', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Inbox.', exact: true })).toBeVisible();
+  await page.getByLabel('Source', { exact: true }).selectOption('sample');
+  await page.getByLabel('Folder within source').fill(`Inbox ${testInfo.project.name}`);
+  const before = (await (await page.request.get('/api/catalog?scope=all')).json()).total;
+  await page.getByRole('button', { name: 'Scan source', exact: true }).click();
+  const jobs = page.getByRole('region', { name: 'Scan jobs', exact: true });
+  await expect(jobs).toContainText('26 inspected', { timeout: 20000 });
+  const files = page.getByRole('region', { name: 'Discovered files', exact: true });
+  await expect(files).toContainText('26 files in this scan');
+  await files.getByRole('button', { name: 'Next files', exact: true }).click();
+  await expect(page).toHaveURL(/inbox_offset=24/);
+  await expect(
+    files.getByRole('heading', { name: `Inbox ${testInfo.project.name} 24`, exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    files.getByRole('heading', { name: `Inbox ${testInfo.project.name} 25`, exact: true }),
+  ).toBeVisible();
+  await files.getByRole('button', { name: 'Previous files', exact: true }).click();
+  await expect(
+    files.getByRole('heading', { name: `Inbox ${testInfo.project.name} 00`, exact: true }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(
+    files.getByRole('heading', { name: `Inbox ${testInfo.project.name} 24`, exact: true }),
+  ).toBeVisible();
+  await files.getByText('Inspection evidence', { exact: true }).first().click();
+  await expect(files).toContainText('SHA-256');
+  expect((await (await page.request.get('/api/catalog?scope=all')).json()).total).toBe(before);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('inbox.png'), fullPage: true });
+});

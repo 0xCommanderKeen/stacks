@@ -2,7 +2,7 @@
 
 from sqlalchemy import func, select
 
-from stacks.models import Asset, Edition, Representation
+from stacks.models import Asset, Edition, InboxCandidate, IntakeJob, Representation
 from stacks.schemas import AssetAvailability, SourceOut
 
 
@@ -19,6 +19,8 @@ class Sources:
                     .group_by(Asset.root)
                 ).all()
             )
+            discovered = set(session.scalars(select(InboxCandidate.root).distinct()))
+            discovered.update(session.scalars(select(IntakeJob.root).distinct()))
         return [
             SourceOut(
                 alias=alias,
@@ -26,7 +28,7 @@ class Sources:
                 available=alias in self.library.sources and self.library.sources[alias].is_dir(),
                 registered_assets=counts.get(alias, 0),
             )
-            for alias in sorted(set(counts) | self.library.sources.keys())
+            for alias in sorted(set(counts) | self.library.sources.keys() | discovered)
         ]
 
     def availability(self, work_id):

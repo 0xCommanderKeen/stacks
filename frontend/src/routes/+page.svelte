@@ -5,6 +5,7 @@
   import CatalogGroups from '$lib/CatalogGroups.svelte';
   import AudioPlayer from '$lib/AudioPlayer.svelte';
   import Personal from '$lib/Personal.svelte';
+  import Inbox from '$lib/Inbox.svelte';
   import SourceRoots from '$lib/SourceRoots.svelte';
   import OriginalStatus from '$lib/OriginalStatus.svelte';
   import RunBrowser from '$lib/RunBrowser.svelte';
@@ -45,7 +46,7 @@
   let collectionNextOffset = $state(0);
   let offset = $state(0);
   let selected = $state<Book | null>(null);
-  let view = $state<'library' | 'settings' | 'home' | 'collections'>('library');
+  let view = $state<'library' | 'settings' | 'home' | 'collections' | 'inbox'>('library');
   let continuing = $state<components['schemas']['ContinuePage'] | null>(null);
   let homeOffset = $state(0);
   let player = $state<{
@@ -143,7 +144,9 @@
           ? 'home'
           : params.get('view') === 'collections'
             ? 'collections'
-            : 'library';
+            : params.get('view') === 'inbox'
+              ? 'inbox'
+              : 'library';
     const continuationOffset = Number(params.get('continue_offset') || 0);
     homeOffset =
       Number.isSafeInteger(continuationOffset) && continuationOffset >= 0 ? continuationOffset : 0;
@@ -423,6 +426,14 @@
       <button class:active={view === 'home'} onclick={showHome}>Home</button>
       <button class:active={view === 'library'} onclick={libraryView}>Library</button>
       <button
+        class:active={view === 'inbox'}
+        onclick={() => {
+          selected = null;
+          view = 'inbox';
+          setUrl();
+        }}>Inbox</button
+      >
+      <button
         class:active={view === 'collections'}
         onclick={() => {
           selected = null;
@@ -528,6 +539,8 @@
         onopen={open}
         onnavigate={setUrl}
       />
+    {:else if view === 'inbox'}
+      <Inbox />
     {:else if view === 'settings'}
       <div class="eyebrow">LOOK AFTER YOUR LIBRARY</div>
       <h1>Keep it <em>safe.</em></h1>
