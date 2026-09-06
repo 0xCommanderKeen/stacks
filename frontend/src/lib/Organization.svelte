@@ -324,15 +324,16 @@
   .organization {
     margin: 2rem 0;
     padding-top: 1.5rem;
-    border-top: 1px solid #cfcabd;
+    border-top: 1px solid var(--line);
   }
   h2 {
-    font-family: Georgia, serif;
+    font-family: inherit;
+    font-weight: 600;
     font-weight: normal;
     font-size: 1.5rem;
   }
   fieldset {
-    border: 1px solid #cfcabd;
+    border: 1px solid var(--line);
     padding: 1rem;
     margin: 1rem 0;
     min-width: 0;
@@ -347,8 +348,8 @@
     width: 100%;
     box-sizing: border-box;
     padding: 0.6rem;
-    background: #fffcf5;
-    border: 1px solid #cfcabd;
+    background: var(--surface);
+    border: 1px solid var(--line);
     color: inherit;
     font: inherit;
   }

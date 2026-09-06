@@ -6,7 +6,7 @@ test('import, search, edit, download, reload and back up a book', async ({ page 
   await page.goto('/');
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
-  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   const originalTitle =
     testInfo.project.name === 'phone' ? 'The Quiet Library — phone' : 'The Quiet Library';
   await page
@@ -325,7 +325,7 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   await page.goto('/');
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
-  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   const catalog = await (await page.request.get('/api/catalog?q=Listening%20Practice')).json();
   const work = catalog.items.find(
     (w: { editions: { representations: { format: string }[] }[] }) =>
@@ -337,7 +337,7 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   const player = page.getByRole('region', { name: 'Audiobook player' });
   await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Keep it safe.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
   await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
   await player.getByRole('button', { name: 'Pause audio' }).click();
   await player.getByRole('combobox', { name: 'Speed', exact: true }).selectOption('1.5');
@@ -349,6 +349,14 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   await player.getByRole('slider', { name: 'Listening position' }).focus();
   await page.keyboard.press('ArrowLeft');
   await expect.poll(async () => (await progress()).position).toBeLessThan(10);
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  const continuation = page.getByRole('region', { name: 'Continue listening', exact: true });
+  await expect(continuation).toContainText('Saved at 0:09 in current track');
+  await continuation.getByRole('button', { name: 'Resume Listening Practice' }).first().click();
+  await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
+  await player.getByRole('button', { name: 'Pause audio' }).click();
+  await expect(player.getByRole('combobox', { name: 'Speed', exact: true })).toHaveValue('1.5');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Home', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Continue Listening Practice' }).first(),
@@ -465,7 +473,7 @@ test('personal shelves and repeated records survive reload and scope navigation'
   await page.goto('/');
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
-  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   await page
     .getByLabel('Choose publications')
     .setInputFiles(path.resolve('../samples/The Long Way Home.epub'));
@@ -569,7 +577,7 @@ test('comic runs stay distinct, ordered, followed, and available through Home', 
   await page.goto('/');
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
-  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   await page
     .getByRole('group', { name: 'Publication type' })
     .getByRole('button', { name: 'Comics', exact: true })
@@ -646,7 +654,7 @@ test('new run search and shelf filters reset run paging while back preserves it'
   await page.goto('/');
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
-  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   const work = (await (await page.request.get('/api/catalog?q=Orbit%2001')).json()).items[0];
   const prefix = `ZZ Slice ${testInfo.project.name}`;
   const memberships = [...work.memberships];
@@ -771,7 +779,7 @@ test('collection history navigation disables edits until the requested identity 
   await page.goto('/');
   await page.getByLabel('Library password').fill('browser-test-password');
   await page.getByRole('button', { name: 'Open my library' }).click();
-  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   const collections = [];
   for (const suffix of ['A', 'B']) {
     const response = await page.request.post('/api/collections', {
@@ -1333,7 +1341,7 @@ test('keyboard-only login, search, details, cancelled edit and navigation', asyn
   await tabTo(page.getByLabel('Library password'));
   await page.keyboard.type('browser-test-password');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   await tabTo(page.getByLabel('Search books or authors'));
   await page.keyboard.type('A Standalone Comic');
   await page.keyboard.press('Enter');
@@ -1360,7 +1368,7 @@ test('keyboard-only login, search, details, cancelled edit and navigation', asyn
   await expect(page.getByRole('region', { name: 'Library backups' })).toBeVisible();
   await tabTo(page.getByRole('button', { name: 'Library', exact: true }));
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Good books.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible();
   await tabTo(page.getByRole('button', { name: /Sign out/ }));
   await page.keyboard.press('Enter');
   await expect(page.getByLabel('Library password')).toBeVisible();

@@ -334,15 +334,16 @@
     position: fixed;
     z-index: 20;
     bottom: 0;
-    left: 0;
+    left: 220px;
     right: 0;
-    background: #293e35;
-    color: #f5f0e3;
-    padding: 1rem max(1.5rem, calc((100vw - 1320px) / 2));
+    background: var(--surface);
+    color: var(--ink);
+    padding: 1rem 28px;
+    border-top: 1px solid var(--line);
     display: grid;
     grid-template-columns: minmax(160px, 1fr) 2fr;
     gap: 0.5rem 2rem;
-    box-shadow: 0 -4px 20px #19251c20;
+    box-shadow: 0 -4px 20px #20305018;
   }
   button {
     background: transparent;
@@ -357,7 +358,8 @@
   .player-title button {
     color: inherit;
     text-align: left;
-    font-family: Georgia, serif;
+    font-family: inherit;
+    font-weight: 600;
     font-size: 1.3rem;
     padding: 0;
     overflow: hidden;
@@ -382,7 +384,7 @@
     padding: 0.4rem;
   }
   .transport .play {
-    border: 1px solid #bbcabb;
+    border: 1px solid var(--line);
     border-radius: 50%;
     width: 42px;
     height: 42px;
@@ -391,7 +393,7 @@
   .transport input {
     flex: 1;
     min-width: 60px;
-    accent-color: #ccb56f;
+    accent-color: var(--accent);
   }
   .time {
     font-variant-numeric: tabular-nums;
@@ -408,8 +410,8 @@
   select {
     font: inherit;
     color: inherit;
-    background: #344e41;
-    border: 1px solid #829687;
+    background: var(--surface);
+    border: 1px solid var(--line);
     padding: 0.3rem;
     max-width: 100%;
   }
@@ -435,15 +437,21 @@
   .player-error {
     grid-column: 1/-1;
     font-size: 0.85rem;
-    color: #ffd4b6;
+    color: #9b482e;
   }
   .player-error button {
     color: inherit;
     text-decoration: underline;
     padding-left: 0.5rem;
   }
-  @media (max-width: 700px) {
+  @media (min-width: 801px) and (max-width: 1100px) {
     .player {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 800px) {
+    .player {
+      left: 0;
       grid-template-columns: 1fr;
       padding: 0.7rem 1rem;
       gap: 0.4rem;

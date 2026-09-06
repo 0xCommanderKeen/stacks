@@ -345,9 +345,9 @@
     overflow-wrap: anywhere;
   }
   h2 {
-    font:
-      400 1.8rem Georgia,
-      serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
   }
   button {
     font: inherit;
@@ -406,7 +406,8 @@
     border-bottom: 1px solid var(--line);
   }
   .ordinal {
-    font-family: Georgia, serif;
+    font-family: inherit;
+    font-weight: 600;
     color: var(--muted);
     width: 2rem;
     flex-shrink: 0;
@@ -475,7 +476,7 @@
   }
   .collection-card {
     padding: 1.5rem;
-    background: #ebe9de;
+    background: var(--accent-soft);
     border: 1px solid var(--line);
     text-align: left;
     overflow-wrap: anywhere;

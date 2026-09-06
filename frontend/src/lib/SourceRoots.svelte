@@ -118,9 +118,9 @@
     max-width: 54rem;
   }
   h2 {
-    font:
-      400 2.4rem Georgia,
-      serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
   }
   p {
     color: var(--muted);

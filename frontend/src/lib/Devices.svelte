@@ -164,9 +164,9 @@
     max-width: 54rem;
   }
   h2 {
-    font:
-      400 2.4rem Georgia,
-      serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
   }
   p {
     color: var(--muted);
@@ -185,9 +185,9 @@
   }
   h3 {
     margin: 0;
-    font:
-      400 1.6rem Georgia,
-      serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
   }
   input,
   select {

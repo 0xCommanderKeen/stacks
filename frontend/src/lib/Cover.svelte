@@ -40,8 +40,8 @@
     overflow: hidden;
     background: #304e46;
     color: #f6eedc;
-    box-shadow: 3px 5px 8px #252c2020;
-    border-radius: 1px 4px 4px 1px;
+    box-shadow: 0 4px 10px #20305018;
+    border-radius: 5px;
   }
   .cover::after {
     content: '';
@@ -76,7 +76,8 @@
     line-height: 1.6;
   }
   .cover-title {
-    font-family: Georgia, serif;
+    font-family: inherit;
+    font-weight: 600;
     font-size: clamp(19px, 2.3vw, 30px);
     line-height: 1.15;
     margin-top: 12%;

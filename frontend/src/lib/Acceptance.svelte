@@ -544,9 +544,9 @@
     border: 1px solid var(--line);
   }
   h2 {
-    font:
-      400 1.8rem Georgia,
-      serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
     margin: 0;
   }
   h3 {
