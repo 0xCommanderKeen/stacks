@@ -24,11 +24,17 @@ from stacks.config import Settings
 from stacks.epub import InvalidBook
 from stacks.inspection import FORMATS
 from stacks.library import Library
-from stacks.models import Asset, ImportOperation, LoginSession, Representation, Work
+from stacks.models import Asset, ImportOperation, LoginSession, Representation, Work, WorkRedirect
+from stacks.operations import CatalogOperations
 from stacks.schemas import (
     CatalogPage,
+    GroupCommit,
+    GroupPreview,
+    GroupRequest,
     ImportResult,
     Login,
+    OperationOut,
+    OperationPage,
     SeriesEdit,
     SeriesOut,
     SeriesPage,
@@ -220,6 +226,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ):
         return lib.list(limit=limit, offset=offset, series_id=series_id)
 
+    @app.post("/api/operations/preview", response_model=GroupPreview)
+    def preview_group(body: GroupRequest, lib: Auth):
+        try:
+            return CatalogOperations(lib).preview(body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post("/api/operations/{operation_id}/commit", response_model=OperationOut)
+    def commit_group(operation_id: str, body: GroupCommit, lib: Auth):
+        try:
+            return CatalogOperations(lib).commit(operation_id, body.resolutions)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post("/api/operations/{operation_id}/undo", response_model=OperationOut)
+    def undo_group(operation_id: str, lib: Auth):
+        try:
+            return CatalogOperations(lib).undo(operation_id)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/operations", response_model=OperationPage)
+    def operations(
+        lib: Auth,
+        work_id: str | None = Query(default=None, max_length=36),
+        limit: int = Query(default=60, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return CatalogOperations(lib).list(limit, offset, work_id)
+
     @app.post(
         "/api/import",
         response_model=ImportResult,
@@ -295,7 +331,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def status(lib: Auth):
         with lib.sessions() as session:
             return StatusOut(
-                books=session.scalar(select(func.count()).select_from(Work)),
+                books=session.scalar(
+                    select(func.count())
+                    .select_from(Work)
+                    .where(
+                        ~select(WorkRedirect.source_id)
+                        .where(WorkRedirect.source_id == Work.id)
+                        .exists()
+                    )
+                ),
                 import_errors=session.scalar(
                     select(func.count())
                     .select_from(ImportOperation)

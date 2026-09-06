@@ -183,3 +183,107 @@ test('PDF details and distinct series survive reload', async ({ page }, testInfo
   ).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('editions-series.png'), fullPage: true });
 });
+
+test('group alternate formats, split, undo, and preserve separate narrations', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(
+      ['Ways to Read.epub', 'A Different Format.pdf'].map((n) => path.resolve(`../samples/${n}`)),
+    );
+  await expect(page.getByRole('status')).toContainText(/added/);
+  await page.getByLabel('Search books or authors').fill('A Different Format');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Open A Different Format', exact: true }).click();
+  const originalLink = await page.getByRole('link', { name: 'Download PDF' }).getAttribute('href');
+  await page.getByRole('button', { name: 'Group or separate formats' }).click();
+  await page.getByRole('combobox', { name: 'Action', exact: true }).selectOption('representation');
+  await page
+    .getByLabel('Format to move')
+    .selectOption({ label: 'PDF · Unknown language · A Different Format.pdf' });
+  await page.getByLabel('Find the target book').fill('Ways to Read');
+  await page.getByRole('button', { name: 'Find target', exact: true }).click();
+  await page.getByRole('button', { name: /Ways to Read.*EPUB/ }).click();
+  await page.getByRole('button', { name: 'Preview changes' }).click();
+  await expect(page.getByRole('region', { name: 'Grouping preview' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: testInfo.outputPath('group-preview.png'), fullPage: true });
+  for (const choice of await page
+    .getByRole('region', { name: 'Grouping preview' })
+    .locator('select')
+    .all())
+    await choice.selectOption('target');
+  await page.getByRole('button', { name: 'Confirm grouping', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveAttribute(
+    'href',
+    originalLink!,
+  );
+  await expect(page.getByRole('link', { name: 'Download EPUB' })).toBeVisible();
+  await page.getByRole('button', { name: 'Group or separate formats' }).click();
+  await page.getByRole('combobox', { name: 'Action', exact: true }).selectOption('split');
+  await page
+    .getByLabel('Format to move')
+    .selectOption({ label: 'PDF · en · A Different Format.pdf' });
+  await page.getByRole('button', { name: 'Preview changes' }).click();
+  await page.getByRole('button', { name: 'Confirm split', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveAttribute(
+    'href',
+    originalLink!,
+  );
+  await expect(page.getByRole('link', { name: 'Download EPUB' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Group or separate formats' }).click();
+  await page.getByRole('button', { name: 'Undo grouping or split' }).click();
+  await expect(page.getByRole('link', { name: 'Download EPUB' })).toBeVisible();
+  await page.getByRole('button', { name: 'Group or separate formats' }).click();
+  await page.getByRole('button', { name: 'Undo grouping or split' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'A Different Format', exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: '← Back to library' }).click();
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(
+      ['tone.mp3', 'tone.m4a'].map((n) => path.resolve(`../backend/tests/fixtures/${n}`)),
+    );
+  await expect(page.getByRole('status')).toContainText(/added/);
+  const catalog = await (await page.request.get('/api/catalog?q=A%20Listening%20Room')).json();
+  for (const work of catalog.items) {
+    const edition = work.editions[0];
+    const narrator = edition.representations[0].format === 'mp3' ? 'Reader One' : 'Reader Two';
+    const response = await page.request.patch(`/api/works/${work.id}`, {
+      headers: { 'X-Stacks-Request': '1' },
+      data: {
+        revision: work.revision,
+        title: work.title,
+        authors: work.authors,
+        description: work.description,
+        editions: [{ id: edition.id, language: 'en', publisher: '', identifier: '', narrator }],
+      },
+    });
+    expect(response.ok()).toBe(true);
+  }
+  const source = catalog.items.find(
+    (w: { editions: { representations: { format: string }[] }[] }) =>
+      w.editions[0].representations[0].format === 'mp3',
+  );
+  await page.goto(`/?book=${source.id}`);
+  await page.getByRole('button', { name: 'Group or separate formats' }).click();
+  await page.getByLabel('Find the target book').fill('A Listening Room');
+  await page.getByRole('button', { name: 'Find target', exact: true }).click();
+  await page.getByRole('button', { name: /A Listening Room.*Reader Two.*M4A/ }).click();
+  await page.getByRole('button', { name: 'Preview changes' }).click();
+  await expect(page.getByRole('region', { name: 'Grouping preview' })).toContainText('Reader One');
+  await expect(page.getByRole('region', { name: 'Grouping preview' })).toContainText('Reader Two');
+  await page.getByRole('button', { name: 'Confirm grouping', exact: true }).click();
+  await expect(page.getByText(/Narrated by Reader One/)).toBeVisible();
+  await expect(page.getByText(/Narrated by Reader Two/)).toBeVisible();
+  await page.getByRole('button', { name: 'Group or separate formats' }).click();
+  await page.getByRole('button', { name: 'Undo grouping or split' }).click();
+});

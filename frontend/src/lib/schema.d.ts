@@ -140,6 +140,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/operations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Operations */
+    get: operations['operations_api_operations_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/operations/preview': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Preview Group */
+    post: operations['preview_group_api_operations_preview_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/operations/{operation_id}/commit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Commit Group */
+    post: operations['commit_group_api_operations__operation_id__commit_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/operations/{operation_id}/undo': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Undo Group */
+    post: operations['undo_group_api_operations__operation_id__undo_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/representations/{representation_id}/cover': {
     parameters: {
       query?: never;
@@ -321,6 +389,15 @@ export interface components {
       /** Total */
       total: number;
     };
+    /** ConflictOut */
+    ConflictOut: {
+      /** Field */
+      field: string;
+      /** Source */
+      source: string;
+      /** Target */
+      target: string;
+    };
     /** EditionEdit */
     EditionEdit: {
       /**
@@ -362,6 +439,42 @@ export interface components {
       /** Representations */
       representations: components['schemas']['RepresentationOut'][];
     };
+    /** GroupCommit */
+    GroupCommit: {
+      /** Resolutions */
+      resolutions?: {
+        [key: string]: 'source' | 'target';
+      };
+    };
+    /** GroupPreview */
+    GroupPreview: {
+      /** Conflicts */
+      conflicts: components['schemas']['ConflictOut'][];
+      /** Explanation */
+      explanation: string;
+      /** Id */
+      id: string;
+      /** Mode */
+      mode: string;
+      source: components['schemas']['WorkOut'];
+      target: components['schemas']['WorkOut'] | null;
+    };
+    /** GroupRequest */
+    GroupRequest: {
+      /**
+       * Mode
+       * @enum {string}
+       */
+      mode: 'editions' | 'representation' | 'split';
+      /** Representation Id */
+      representation_id?: string | null;
+      /** Source Work Id */
+      source_work_id: string;
+      /** Target Edition Id */
+      target_edition_id?: string | null;
+      /** Target Work Id */
+      target_work_id?: string | null;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -402,6 +515,28 @@ export interface components {
       series: components['schemas']['SeriesOut'];
       /** Series Id */
       series_id: string;
+    };
+    /** OperationOut */
+    OperationOut: {
+      /** Created At */
+      created_at: string;
+      /** Id */
+      id: string;
+      /** State */
+      state: string;
+      /** Work Ids */
+      work_ids: string[];
+    };
+    /** OperationPage */
+    OperationPage: {
+      /** Items */
+      items: components['schemas']['OperationOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
     };
     /** RepresentationOut */
     RepresentationOut: {
@@ -724,6 +859,138 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+    };
+  };
+  operations_api_operations_get: {
+    parameters: {
+      query?: {
+        work_id?: string | null;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['OperationPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  preview_group_api_operations_preview_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GroupRequest'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['GroupPreview'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  commit_group_api_operations__operation_id__commit_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        operation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GroupCommit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['OperationOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  undo_group_api_operations__operation_id__undo_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        operation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['OperationOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };

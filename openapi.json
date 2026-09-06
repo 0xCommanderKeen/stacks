@@ -60,6 +60,29 @@
         "title": "CatalogPage",
         "type": "object"
       },
+      "ConflictOut": {
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "source",
+          "target"
+        ],
+        "title": "ConflictOut",
+        "type": "object"
+      },
       "EditionEdit": {
         "properties": {
           "abridgement": {
@@ -156,6 +179,125 @@
           "representations"
         ],
         "title": "EditionOut",
+        "type": "object"
+      },
+      "GroupCommit": {
+        "properties": {
+          "resolutions": {
+            "additionalProperties": {
+              "enum": [
+                "source",
+                "target"
+              ],
+              "type": "string"
+            },
+            "title": "Resolutions",
+            "type": "object"
+          }
+        },
+        "title": "GroupCommit",
+        "type": "object"
+      },
+      "GroupPreview": {
+        "properties": {
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/ConflictOut"
+            },
+            "title": "Conflicts",
+            "type": "array"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/WorkOut"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "source",
+          "target",
+          "conflicts",
+          "explanation"
+        ],
+        "title": "GroupPreview",
+        "type": "object"
+      },
+      "GroupRequest": {
+        "properties": {
+          "mode": {
+            "enum": [
+              "editions",
+              "representation",
+              "split"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "representation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Representation Id"
+          },
+          "source_work_id": {
+            "title": "Source Work Id",
+            "type": "string"
+          },
+          "target_edition_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Edition Id"
+          },
+          "target_work_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Work Id"
+          }
+        },
+        "required": [
+          "mode",
+          "source_work_id"
+        ],
+        "title": "GroupRequest",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -256,6 +398,68 @@
           "series"
         ],
         "title": "MembershipOut",
+        "type": "object"
+      },
+      "OperationOut": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "work_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Work Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "work_ids",
+          "created_at"
+        ],
+        "title": "OperationOut",
+        "type": "object"
+      },
+      "OperationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OperationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "OperationPage",
         "type": "object"
       },
       "RepresentationOut": {
@@ -805,6 +1009,202 @@
           }
         },
         "summary": "Schema"
+      }
+    },
+    "/api/operations": {
+      "get": {
+        "operationId": "operations_api_operations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "work_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 36,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Work Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 60,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Operations"
+      }
+    },
+    "/api/operations/preview": {
+      "post": {
+        "operationId": "preview_group_api_operations_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Group"
+      }
+    },
+    "/api/operations/{operation_id}/commit": {
+      "post": {
+        "operationId": "commit_group_api_operations__operation_id__commit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "title": "Operation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupCommit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Commit Group"
+      }
+    },
+    "/api/operations/{operation_id}/undo": {
+      "post": {
+        "operationId": "undo_group_api_operations__operation_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "title": "Operation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo Group"
       }
     },
     "/api/representations/{representation_id}/cover": {

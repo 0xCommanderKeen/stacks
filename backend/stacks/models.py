@@ -124,3 +124,19 @@ class SeriesMembership(Base):
     designation: Mapped[str] = mapped_column(Text, default="")
     position: Mapped[float]
     series: Mapped[Series] = relationship()
+
+
+class WorkRedirect(Base):
+    __tablename__ = "work_redirect"
+    source_id: Mapped[str] = mapped_column(ForeignKey("work.id"), primary_key=True)
+    target_id: Mapped[str] = mapped_column(ForeignKey("work.id"))
+
+
+class CatalogOperation(Base):
+    __tablename__ = "catalog_operation"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    state: Mapped[str] = mapped_column(default="preview")
+    request_json: Mapped[str] = mapped_column(Text)
+    before_json: Mapped[str] = mapped_column(Text)
+    after_json: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(default=now)
