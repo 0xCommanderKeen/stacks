@@ -36,6 +36,7 @@
 <style>
   .cover {
     aspect-ratio: 2 / 3;
+    container-type: inline-size;
     position: relative;
     overflow: hidden;
     background: #304e46;
@@ -78,7 +79,7 @@
   .cover-title {
     font-family: inherit;
     font-weight: 600;
-    font-size: clamp(19px, 2.3vw, 30px);
+    font-size: clamp(12px, 12cqi, 28px);
     line-height: 1.15;
     margin-top: 12%;
     overflow: hidden;

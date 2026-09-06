@@ -158,10 +158,11 @@
 
 <style>
   .devices {
-    border-top: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 12px;
+    border: 1px solid var(--line);
     margin-top: 3rem;
-    padding: 2rem 0;
-    max-width: 54rem;
+    padding: 2rem;
   }
   h2 {
     font-size: 2rem;
@@ -181,7 +182,7 @@
   .credential {
     border: 1px solid var(--line);
     padding: 1.5rem;
-    background: var(--paper);
+    background: var(--surface);
   }
   h3 {
     margin: 0;
