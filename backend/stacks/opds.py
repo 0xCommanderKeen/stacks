@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from stacks.covers import Covers
 from stacks.inspection import FORMATS
-from stacks.models import Asset, Edition, PersonalState, Representation, Work, now
+from stacks.models import Asset, Edition, PersonalState, Representation, Work, WorkRedirect, now
 
 ATOM = "http://www.w3.org/2005/Atom"
 SEARCH = "http://a9.com/-/spec/opensearch/1.1/"
@@ -152,7 +152,7 @@ class Opds:
         return document(feed)
 
     def _allowed(self, session, work):
-        if work is None or work.trashed_at:
+        if work is None or work.trashed_at or session.get(WorkRedirect, work.id):
             raise KeyError("Publication unavailable")
         personal = session.get(PersonalState, work.id)
         shelf = (personal.shelf_override or personal.default_shelf) if personal else "library"

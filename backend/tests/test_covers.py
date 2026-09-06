@@ -182,3 +182,50 @@ def test_cover_upload_limit_and_later_choice_block_stale_undo(client):
         ).status_code
         == 413
     )
+
+
+def test_old_grouped_cover_id_cannot_bypass_archive_or_trash(client):
+    from stacks.curation import Curation
+    from stacks.schemas import PersonalEdit
+
+    source, target = pair(client)
+    source = choose(client, source)
+    library = client.app.state.library
+    target = (
+        Curation(library)
+        .edit(target["id"], PersonalEdit(revision=target["revision"], shelf_override="archive"))
+        .model_dump()
+    )
+    _, shelf_auth = issue(client)
+    _, all_auth = issue(client, "all")
+    old_url = f"/opds/works/{source['id']}/cover"
+    assert client.get(old_url, auth=shelf_auth).status_code == 200
+    plan = preview(client, source, target)
+    response = client.post(
+        f"/api/operations/{plan['id']}/commit",
+        json={
+            "resolutions": {
+                c["field"]: ("source" if c["field"] == "selected_cover_id" else "target")
+                for c in plan["conflicts"]
+            }
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert client.get(old_url, auth=shelf_auth).status_code == 404
+    assert client.get(old_url, auth=all_auth).status_code == 404
+    assert client.get(f"/opds/works/{source['id']}", auth=all_auth).status_code == 404
+    assert client.get(f"/api/works/{source['id']}/cover/original").status_code == 404
+    stale_source = source.copy()
+    assert (
+        client.delete(
+            f"/api/works/{stale_source['id']}/cover?revision={stale_source['revision']}"
+        ).status_code
+        == 409
+    )
+    target = library.get(target["id"])
+    current_url = f"/opds/works/{target.id}/cover"
+    assert client.get(current_url, auth=shelf_auth).status_code == 404
+    assert client.get(current_url, auth=all_auth).status_code == 200
+    Trash(library).request(target.id, TrashRequest(revision=target.revision, action="trash"))
+    assert client.get(current_url, auth=all_auth).status_code == 404
+    assert client.get(old_url, auth=all_auth).status_code == 404

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from stacks.inspection import inspect_file
 from stacks.library import sync_dir, work_out, write_durable
-from stacks.models import CoverBlob, Work, identity
+from stacks.models import CoverBlob, Work, WorkRedirect, identity
 
 
 class Covers:
@@ -18,6 +18,8 @@ class Covers:
         work = session.get(Work, work_id)
         if work is None:
             raise KeyError(work_id)
+        if session.get(WorkRedirect, work_id):
+            raise ValueError("This work was regrouped. Open its current page before saving.")
         if work.trashed_at:
             raise ValueError("Restore this work before choosing its cover.")
         if work.revision != revision:
@@ -76,7 +78,7 @@ class Covers:
     def original(self, work_id):
         with self.library.sessions() as session:
             work = session.get(Work, work_id)
-            if work is None or not work.selected_cover_id:
+            if work is None or not work.selected_cover_id or session.get(WorkRedirect, work_id):
                 raise KeyError(work_id)
             blob = session.get(CoverBlob, work.selected_cover_id)
             extension = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}[
@@ -91,7 +93,7 @@ class Covers:
     def thumbnail(self, work_id):
         with self.library.sessions() as session:
             work = session.get(Work, work_id)
-            if work is None:
+            if work is None or session.get(WorkRedirect, work_id):
                 raise KeyError(work_id)
             if work.selected_cover_id:
                 return self.library.resolve(f".covers/{work.selected_cover_id}/thumbnail.jpg")
