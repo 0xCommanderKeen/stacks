@@ -814,7 +814,7 @@ test('register an original in Archive and explain external backup protection', a
   const originals = page.getByRole('region', { name: 'Original availability', exact: true });
   await expect(originals).toContainText('Registered in sample');
   const download = page.waitForEvent('download');
-  await page.getByRole('link', { name: 'Download EPUB', exact: true }).click();
+  await page.getByRole('link', { name: 'Download EPUB' }).click();
   expect((await download).suggestedFilename()).toBe(`Registered ${testInfo.project.name}.epub`);
   await page.reload();
   await expect(originals).toContainText('Registered in sample');

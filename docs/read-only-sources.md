@@ -32,7 +32,7 @@ and catalog facts. It does not copy the original bytes. Interrupted publication
 can resume at startup; unavailable or changed originals retain the journal and
 catalog instead of being deleted. Wait for source writes to finish before
 registering. An already registered file set resolves to its current Work, even
-after grouping. Overlapping a different registered set is refused; use catalog
+after grouping. Paths are canonicalized, including in-root symlink aliases, before identity checks. Pending journals reserve their source paths as well as published assets. Overlapping a different registered or pending set is refused; use catalog
 grouping instead of assigning one source path to two representations.
 
 ## Availability and relocation

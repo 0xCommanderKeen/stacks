@@ -10,7 +10,8 @@ import shutil
 import threading
 from pathlib import Path
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, true
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from stacks.db import initialize
@@ -215,6 +216,10 @@ class Library:
     def register_files(self, root: str, paths: list[str]) -> ImportResult:
         if root not in self.sources:
             raise InvalidBook("Choose a configured source.")
+        paths = [
+            self.source_path(root, relative).relative_to(self.sources[root]).as_posix()
+            for relative in paths
+        ]
         if len(set(paths)) != len(paths):
             raise InvalidBook("Choose each source file only once.")
         sources = [(self.source_path(root, relative), relative) for relative in paths]
@@ -467,6 +472,30 @@ class Library:
                             "Some source files are already registered in a different set. "
                             "Regroup the existing works first."
                         )
+            if root:
+                with self.sessions() as session:
+                    entries_table = func.json_each(
+                        ImportOperation.extracted_json, "$.assets"
+                    ).table_valued("value")
+                    reserved = session.scalar(
+                        select(ImportOperation.id)
+                        .join(entries_table, true())
+                        .where(
+                            ImportOperation.state != "complete",
+                            ImportOperation.sha256 != sha,
+                            func.json_extract(ImportOperation.extracted_json, "$.source_root")
+                            == root,
+                            func.json_extract(entries_table.c.value, "$.relative_path").in_(
+                                [name for _, name in sources]
+                            ),
+                        )
+                        .limit(1)
+                    )
+                    if reserved:
+                        raise InvalidBook(
+                            "A pending registration already reserves these source files. "
+                            "Recover it before choosing a different set."
+                        )
             with self.sessions() as session:
                 pending = session.scalar(
                     select(ImportOperation.id)
@@ -608,10 +637,17 @@ class Library:
         for operation_id in pending:
             try:
                 self._publish(operation_id)
-            except (OSError, ValueError, InvalidBook) as exc:
+            except (OSError, ValueError, InvalidBook, IntegrityError) as exc:
                 with self.sessions.begin() as session:
                     operation = session.get(ImportOperation, operation_id)
-                    operation.state, operation.error = "error", str(exc)
+                    operation.state, operation.error = (
+                        "error",
+                        (
+                            "Catalog ownership conflict; pending files retained for review."
+                            if isinstance(exc, IntegrityError)
+                            else str(exc)
+                        ),
+                    )
         # Unjournaled upload/staging copies have no library ownership yet and are disposable.
         with self.sessions() as session:
             known = set(session.scalars(select(ImportOperation.id)))

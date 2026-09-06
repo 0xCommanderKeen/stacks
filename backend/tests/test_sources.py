@@ -278,3 +278,116 @@ def test_failed_schema_upgrade_rolls_back_ddl_and_restores_foreign_keys(tmp_path
             connection.exec_driver_sql("DELETE FROM asset")
     finally:
         reopened.close()
+
+
+def test_equivalent_path_spellings_and_internal_symlinks_share_identity(source_client):
+    client, source = source_client
+    first = register(client, ["Disc 1/01.m4b"])
+    (source / "alias.m4b").symlink_to(source / "Disc 1/01.m4b")
+    assert register(client, ["alias.m4b"])["work"]["id"] == first["work"]["id"]
+    for names in (
+        ["./Disc 1/01.m4b", "Disc 1/01.m4b"],
+        ["alias.m4b", "Disc 1/01.m4b"],
+        ["./Disc 1/01.m4b", "Disc 2/01.mp3"],
+        ["alias.m4b", "Disc 2/01.mp3"],
+    ):
+        response = client.post("/api/sources/register", json={"root": "archive", "paths": names})
+        assert response.status_code == 422, response.text
+    assert client.get("/api/catalog").json()["total"] == 1
+
+
+def test_pending_set_reserves_paths_and_restarts_without_conflict(source_client, monkeypatch):
+    client, source = source_client
+    lib = client.app.state.library
+    publish = lib._publish
+    monkeypatch.setattr(lib, "_publish", lambda _: (_ for _ in ()).throw(OSError("interrupted")))
+    assert (
+        client.post(
+            "/api/sources/register",
+            json={"root": "archive", "paths": ["Disc 1/01.m4b", "Disc 2/01.mp3"]},
+        ).status_code
+        == 409
+    )
+    monkeypatch.setattr(lib, "_publish", publish)
+    response = client.post(
+        "/api/sources/register", json={"root": "archive", "paths": ["./Disc 1/01.m4b"]}
+    )
+    assert response.status_code == 422 and "pending registration" in response.json()["detail"]
+    lib.close()
+    lib = Library(lib.data_dir, lib.sources)
+    client.app.state.library = lib
+    assert client.get("/api/catalog").json()["total"] == 1
+    with lib.sessions() as session:
+        assert session.scalar(select(ImportOperation.state)) == "complete"
+
+
+def test_historical_conflicting_journal_is_retained_without_blocking_startup(source_client):
+    client, _ = source_client
+    lib = client.app.state.library
+    work = register(client)["work"]
+    rep_id = work["editions"][0]["representations"][0]["id"]
+    with lib.sessions.begin() as session:
+        operation = session.get(ImportOperation, rep_id)
+        details = json.loads(operation.extracted_json)
+        session.add(
+            ImportOperation(
+                id="conflicting",
+                state="staged",
+                sha256=operation.sha256,
+                size=operation.size,
+                original_name=operation.original_name,
+                extracted_json=json.dumps(details),
+            )
+        )
+    stage = lib.staging / "conflicting"
+    stage.mkdir()
+    lib.close()
+    lib = Library(lib.data_dir, lib.sources)
+    client.app.state.library = lib
+    with lib.sessions() as session:
+        operation = session.get(ImportOperation, "conflicting")
+        assert operation.state == "error" and "ownership conflict" in operation.error
+    assert (lib.managed / "conflicting").is_dir()
+    assert lib.get(work["id"]).title == work["title"]
+
+
+def test_backup_external_declarations_and_legacy_manifest(source_client, tmp_path):
+    client, _ = source_client
+    register(client)
+    external = tmp_path / "external.zip"
+    backup(client.app.state.library, external)
+    broken = tmp_path / "undeclared.zip"
+    with zipfile.ZipFile(external) as source, zipfile.ZipFile(broken, "w") as target:
+        for name in source.namelist():
+            content = source.read(name)
+            if name == "manifest.json":
+                manifest = json.loads(content)
+                manifest["external_roots"] = {}
+                content = json.dumps(manifest).encode()
+            target.writestr(name, content)
+    with pytest.raises(ValueError, match="declarations"):
+        restore(broken, tmp_path / "rejected")
+    assert not (tmp_path / "rejected").exists()
+    library = Library(tmp_path / "managed-only")
+    try:
+        work = library.import_file(FIXTURES / "tone.mp3", "tone.mp3").work
+        current = tmp_path / "current.zip"
+        backup(library, current)
+    finally:
+        library.close()
+    legacy = tmp_path / "legacy.zip"
+    with zipfile.ZipFile(current) as source, zipfile.ZipFile(legacy, "w") as target:
+        for name in source.namelist():
+            content = source.read(name)
+            if name == "manifest.json":
+                manifest = json.loads(content)
+                manifest["version"] = 1
+                del manifest["external_roots"]
+                content = json.dumps(manifest).encode()
+            target.writestr(name, content)
+    restore(legacy, tmp_path / "legacy-restored")
+    reopened = Library(tmp_path / "legacy-restored")
+    try:
+        assert reopened.get(work.id).id == work.id
+    finally:
+        reopened.close()
