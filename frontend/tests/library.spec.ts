@@ -508,7 +508,8 @@ test('archiving the final book on a page returns to the last populated page', as
         path.resolve(`../samples/${prefix} ${String(i).padStart(2, '0')}.epub`),
       ),
     );
-  await expect(page.getByRole('status')).toContainText('25 books added');
+  // Each original is inspected in its own bounded process; wait for the batch.
+  await expect(page.getByRole('status')).toContainText('25 books added', { timeout: 30_000 });
   await page.getByLabel('Search books or authors').fill(prefix);
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByRole('button', { name: 'Next →', exact: true }).click();
