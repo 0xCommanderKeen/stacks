@@ -19,7 +19,7 @@ not belong in it.
 ## Run locally
 
 Requires Python 3.13, uv, Node 22, and pnpm 10.6.5. Compressed CBR inspection also
-requires a rarfile-supported decompressor, such as `bsdtar` from libarchive-tools.
+requires a rarfile-supported decompressor, such as `unar` (the backend bundled in the container).
 
 ```sh
 cp .env.example .env

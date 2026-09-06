@@ -514,7 +514,7 @@ requires-dist = [
     { name = "pillow", specifier = ">=11,<13" },
     { name = "pydantic-settings", specifier = ">=2.8,<3" },
     { name = "pypdf", specifier = ">=6.17,<7" },
-    { name = "rarfile", specifier = "==4.2" },
+    { name = "rarfile", specifier = ">=4.2,<5" },
     { name = "sqlalchemy", specifier = ">=2.0,<2.1" },
     { name = "uvicorn", specifier = ">=0.34,<1" },
 ]
