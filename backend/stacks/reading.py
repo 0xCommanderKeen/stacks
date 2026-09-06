@@ -148,4 +148,4 @@ class Reading:
             if asset is None:
                 raise KeyError(asset_id)
             self._representation(session, asset.representation_id)
-            return self.library.resolve(asset.relative_path), asset.original_name
+            return self.library.resolve_asset(asset), asset.original_name
