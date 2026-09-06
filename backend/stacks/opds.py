@@ -6,6 +6,7 @@ from xml.etree.ElementTree import Element, SubElement, register_namespace, tostr
 
 from sqlalchemy import func, select
 
+from stacks.covers import Covers
 from stacks.inspection import FORMATS
 from stacks.models import Asset, Edition, PersonalState, Representation, Work, now
 
@@ -141,11 +142,11 @@ class Opds:
                 ),
                 None,
             )
-            if cover:
+            if cover or work.selected_cover_id:
                 link(
                     entry,
                     "http://opds-spec.org/image",
-                    self.url("/covers/" + cover.id),
+                    self.url("/works/" + work.id + "/cover"),
                     "image/jpeg",
                 )
         return document(feed)
@@ -204,11 +205,11 @@ class Opds:
                     media,
                     asset.original_name,
                 ).set("length", str(asset.size))
-                if representation.cover_path:
+                if representation.cover_path or work.selected_cover_id:
                     link(
                         entry,
                         "http://opds-spec.org/image",
-                        self.url("/covers/" + representation.id),
+                        self.url("/works/" + work.id + "/cover"),
                         "image/jpeg",
                     )
             return document(feed)
@@ -235,3 +236,8 @@ class Opds:
             edition = session.get(Edition, representation.edition_id)
             self._allowed(session, session.get(Work, edition.work_id))
             return self.library.resolve(representation.cover_path)
+
+    def work_cover(self, work_id):
+        with self.library.sessions() as session:
+            self._allowed(session, session.get(Work, work_id))
+            return Covers(self.library).thumbnail(work_id)

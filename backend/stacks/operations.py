@@ -91,6 +91,7 @@ def _saved_snapshot(raw):
     for work in snapshot["work"]:
         work.setdefault("trashed_at", None)
         work.setdefault("updated_at", work["created_at"])
+        work.setdefault("selected_cover_id", None)
     return snapshot
 
 
@@ -98,14 +99,22 @@ def _conflicts(source, target):
     if target is None:
         return []
     conflicts = []
-    for name in ("title", "authors", "description"):
+    for name in ("title", "authors", "description", "selected_cover_id"):
         left, right = getattr(source, name), getattr(target, name)
         if left != right and left:
             conflicts.append(
                 ConflictOut(
                     field=name,
-                    source=json.dumps(left, ensure_ascii=False),
-                    target=json.dumps(right, ensure_ascii=False),
+                    source=(
+                        f"Chosen cover from {source.title}"
+                        if name == "selected_cover_id"
+                        else json.dumps(left, ensure_ascii=False)
+                    ),
+                    target=(
+                        (f"Chosen cover from {target.title}" if right else "Embedded cover")
+                        if name == "selected_cover_id"
+                        else json.dumps(right, ensure_ascii=False)
+                    ),
                 )
             )
     left_values, right_values = _personal_values(source), _personal_values(target)
@@ -272,7 +281,7 @@ class CatalogOperations:
     def _group(self, session, data, resolutions):
         source = session.get(Work, data["source_work_id"])
         target = session.get(Work, data["target_work_id"])
-        for name in ("title", "description"):
+        for name in ("title", "description", "selected_cover_id"):
             if resolutions.get(name) == "source":
                 setattr(target, name, getattr(source, name))
         if resolutions.get("authors") == "source":
@@ -387,6 +396,7 @@ class CatalogOperations:
         edition = session.get(Edition, representation.edition_id)
         new = Work(
             id=data["new_work_id"],
+            selected_cover_id=source.selected_cover_id,
             title=source.title,
             description=source.description,
             credits=[

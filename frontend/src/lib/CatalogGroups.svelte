@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Cover from './Cover.svelte';
   import { json, type Book, type Page } from './api';
   import type { components } from './schema';
   type Preview = components['schemas']['GroupPreview'];
@@ -147,10 +148,24 @@
             Into <strong>{preview.target.title}</strong><br />{describe(preview.target)}
           </p>{/if}
         {#each preview.conflicts as conflict}
+          {#if conflict.field === 'selected_cover_id' && preview.target}
+            <div class="cover-comparison">
+              <figure>
+                <Cover book={preview.source} />
+                <figcaption>Source</figcaption>
+              </figure>
+              <figure>
+                <Cover book={preview.target} />
+                <figcaption>Target</figcaption>
+              </figure>
+            </div>
+          {/if}
           <label
             >{conflict.field.startsWith('personal:')
               ? 'Personal ' + conflict.field.slice(9)
-              : conflict.field}<select bind:value={resolutions[conflict.field]}
+              : conflict.field === 'selected_cover_id'
+                ? 'Chosen cover'
+                : conflict.field}<select bind:value={resolutions[conflict.field]}
               ><option value="">Choose which to keep</option><option value="target"
                 >Keep target: {conflict.target}</option
               ><option value="source">Keep source: {conflict.source}</option></select
@@ -238,6 +253,19 @@
 </section>
 
 <style>
+  .cover-comparison {
+    display: flex;
+    gap: 1.5rem;
+    margin: 1rem 0;
+  }
+  .cover-comparison figure {
+    width: 100px;
+    margin: 0;
+  }
+  figcaption {
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+  }
   .groups {
     margin: 1.5rem 0;
     padding: 1.5rem 0;

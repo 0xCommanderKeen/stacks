@@ -188,7 +188,7 @@ def test_backup_restores_scan_and_candidate_facts_with_relocated_root(inbox, tmp
         finish(resumed)
         assert resumed.candidates().items[0].facts["title"] == "Fresh"
         export = restored.export()
-        assert export["schema_version"] == 12
+        assert export["schema_version"] == 13
         assert export["roots"]["books"] == {"kind": "external"}
         assert len(export["tables"]["inbox_candidate"]) == 1
     finally:

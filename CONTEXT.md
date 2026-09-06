@@ -92,3 +92,11 @@ Library shelf or Library plus Archive, evaluated against current work ownership
 on each request. It is independent of the owner session and is not portable
 catalog data. An acquisition delivers an original Asset, including individual
 ordered tracks of a multi-file audiobook. See `docs/reader-access.md`.
+
+### Chosen cover (implemented)
+
+A Work can select an immutable CoverBlob independently of its Representations.
+The blob is the owner's original image, with byte identity and manual provenance;
+its thumbnail is derived. Grouping explicitly resolves differing selections,
+split carries the choice, and retained originals support guarded undo and backup.
+See `docs/chosen-covers.md`.

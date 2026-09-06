@@ -3,13 +3,21 @@
   let { book, large = false }: { book: Book; large?: boolean } = $props();
   let failed = $state(false);
   const representation = $derived(book.editions[0]?.representations[0]);
+  const coverKey = $derived(`${book.id}:${book.selected_cover_id || 'embedded'}`);
+  $effect(() => {
+    coverKey;
+    failed = false;
+  });
+  const hasCover = $derived(
+    book.selected_cover_id || book.editions.some((e) => e.representations.some((r) => r.has_cover)),
+  );
   const tone = $derived(book.title.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % 5);
 </script>
 
 <div class:large class="cover tone-{tone}">
-  {#if representation?.has_cover && !failed}
+  {#if hasCover && !failed}
     <img
-      src="/api/representations/{representation.id}/cover"
+      src="/api/works/{book.id}/cover?selected={book.selected_cover_id || 'embedded'}"
       alt="Cover of {book.title}"
       loading="lazy"
       onerror={() => (failed = true)}

@@ -131,6 +131,7 @@ class RecordPage(BaseModel):
 
 
 class WorkOut(BaseModel):
+    selected_cover_id: str | None
     updated_at: str
     trashed_at: str | None
     id: str

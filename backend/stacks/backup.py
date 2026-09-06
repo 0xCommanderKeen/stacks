@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from stacks.epub import safe_member
 from stacks.library import Library, digest, sync_dir
-from stacks.models import Asset, ImportOperation, TrashOperation
+from stacks.models import Asset, CoverBlob, ImportOperation, TrashOperation
 
 
 def backup(library: Library, output: Path):
@@ -46,6 +46,12 @@ def backup(library: Library, output: Path):
                     if original.stat().st_size != asset.size or digest(original) != asset.sha256:
                         raise ValueError(
                             "An original file has changed; backup verification failed."
+                        )
+                for cover in session.scalars(select(CoverBlob)):
+                    original = library.resolve(f".covers/{cover.id}/original")
+                    if original.stat().st_size != cover.size or digest(original) != cover.sha256:
+                        raise ValueError(
+                            "A chosen cover original changed; backup verification failed."
                         )
             db = Path(scratch) / "catalog.sqlite3"
             with closing(sqlite3.connect(library.data_dir / "catalog.sqlite3")) as source:
@@ -138,6 +144,7 @@ def restore(archive_path: Path, destination: Path):
                 ("0010",),
                 ("0011",),
                 ("0012",),
+                ("0013",),
             }:
                 raise ValueError("This Stacks version cannot restore the backup schema.")
             external_roots = {}

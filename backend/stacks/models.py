@@ -19,9 +19,20 @@ class Base(DeclarativeBase):
     pass
 
 
+class CoverBlob(Base):
+    __tablename__ = "cover_blob"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    sha256: Mapped[str] = mapped_column(String(64))
+    media_type: Mapped[str] = mapped_column(String())
+    size: Mapped[int] = mapped_column(BigInteger)
+    origin: Mapped[str] = mapped_column(String(), default="manual")
+    created_at: Mapped[str] = mapped_column(String(), default=now)
+
+
 class Work(Base):
     __tablename__ = "work"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
+    selected_cover_id: Mapped[str | None] = mapped_column(ForeignKey("cover_blob.id"))
     title: Mapped[str] = mapped_column(Text)
     description: Mapped[str] = mapped_column(Text, default="")
     revision: Mapped[int] = mapped_column(default=1)

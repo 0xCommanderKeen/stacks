@@ -774,6 +774,42 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/works/{work_id}/cover': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Work Cover */
+    get: operations['work_cover_api_works__work_id__cover_get'];
+    put?: never;
+    /** Choose Cover */
+    post: operations['choose_cover_api_works__work_id__cover_post'];
+    /** Reset Cover */
+    delete: operations['reset_cover_api_works__work_id__cover_delete'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/works/{work_id}/cover/original': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Cover Original */
+    get: operations['cover_original_api_works__work_id__cover_original_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/works/{work_id}/personal': {
     parameters: {
       query?: never;
@@ -973,6 +1009,23 @@ export interface paths {
     };
     /** Opds Originals */
     get: operations['opds_originals_opds_works__work_id__get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/opds/works/{work_id}/cover': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Opds Work Cover */
+    get: operations['opds_work_cover_opds_works__work_id__cover_get'];
     put?: never;
     post?: never;
     delete?: never;
@@ -1976,6 +2029,8 @@ export interface components {
       personal: components['schemas']['PersonalOut'];
       /** Revision */
       revision: number;
+      /** Selected Cover Id */
+      selected_cover_id: string | null;
       /** Title */
       title: string;
       /** Trashed At */
@@ -3545,6 +3600,134 @@ export interface operations {
       };
     };
   };
+  work_cover_api_works__work_id__cover_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  choose_cover_api_works__work_id__cover_post: {
+    parameters: {
+      query: {
+        revision: number;
+      };
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  reset_cover_api_works__work_id__cover_delete: {
+    parameters: {
+      query: {
+        revision: number;
+      };
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WorkOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  cover_original_api_works__work_id__cover_original_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   personal_api_works__work_id__personal_patch: {
     parameters: {
       query?: never;
@@ -3965,6 +4148,37 @@ export interface operations {
         limit?: number;
         offset?: number;
       };
+      header?: never;
+      path: {
+        work_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  opds_work_cover_opds_works__work_id__cover_get: {
+    parameters: {
+      query?: never;
       header?: never;
       path: {
         work_id: string;
