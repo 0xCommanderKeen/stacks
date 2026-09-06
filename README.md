@@ -123,3 +123,5 @@ Full library backups include catalog and Stacks-owned originals/covers. Register
 external originals require their own source-folder backup or snapshot.
 
 Recoverable removal is described in [Trash and restore](docs/recoverable-trash.md).
+
+Portable JSON export and fresh import are documented in [portable catalog](docs/portable-catalog.md).

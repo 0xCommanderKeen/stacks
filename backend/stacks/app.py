@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import secrets
+import shutil
 import tempfile
 import threading
 import time
@@ -44,6 +45,7 @@ from stacks.models import (
 from stacks.opds import ACQUISITION, NAVIGATION, Opds
 from stacks.openlibrary import OpenLibrary, ProviderUnavailable
 from stacks.operations import CatalogOperations
+from stacks.portable import write_catalog
 from stacks.reading import Reading
 from stacks.schemas import (
     AcceptancePage,
@@ -848,9 +850,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api/export")
     def export(lib: Auth):
-        return JSONResponse(
-            lib.export(),
-            headers={"Content-Disposition": 'attachment; filename="stacks-catalog.json"'},
+        directory = Path(tempfile.mkdtemp(prefix="stacks-export-"))
+        output = directory / "stacks-catalog.json"
+        try:
+            write_catalog(lib, output)
+        except BaseException:
+            shutil.rmtree(directory)
+            raise
+        return FileResponse(
+            output,
+            media_type="application/json",
+            filename="stacks-catalog.json",
+            background=BackgroundTask(shutil.rmtree, directory),
         )
 
     @app.get("/api/maintenance", response_model=MaintenanceOut)
