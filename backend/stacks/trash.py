@@ -235,13 +235,21 @@ class Trash:
             self._path(file.destination)
             # Same-filesystem exclusive link never overwrites a destination, even in a race.
             os.link(source, destination)
-            sync_dir(destination.parent)
             self._verify(destination, file, stopped)
+        # Recovery must re-establish every destination name's durability too: a prior
+        # attempt may have linked/mkdir'd successfully and failed before its directory fsync.
+        parent = destination.parent
+        while True:
+            sync_dir(parent)
+            if parent == self.library.managed:
+                break
+            parent = parent.parent
         if source.exists():
             if not source.samefile(destination):
                 raise ValueError("The source changed during relocation. Recovery needs inspection.")
             source.unlink()
-            sync_dir(source.parent)
+        # A destination-only replay may follow a successful unlink but a failed source fsync.
+        sync_dir(source.parent)
 
     def step(self, stopped=lambda: False):
         # Serialize file relocation with direct imports/recovery, never while holding catalog.lock.

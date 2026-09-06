@@ -68,8 +68,8 @@
       throw new Error('Listening position is not saved. Retry before signing out.');
   }
 
-  export async function releaseWork(workId: string) {
-    if (data?.work_id !== workId) return;
+  export async function releaseRepresentations(ids: string[]) {
+    if (!data || !ids.includes(data.representation_id)) return;
     await pauseAndFlush();
     generation++;
     data = null;

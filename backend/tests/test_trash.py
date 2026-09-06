@@ -400,3 +400,55 @@ def test_actual_restart_recovers_link_before_catalog_acknowledgement(tmp_path, m
         assert reopened.list().items[0].id == work.id
     finally:
         reopened.close()
+
+
+def test_recovery_fsyncs_destination_ancestors_before_unlink_and_ack(
+    library, tmp_path, monkeypatch
+):
+    import stacks.trash as module
+
+    work = publication(library, tmp_path)
+    trash = Trash(library)
+    operation = trash.request(work.id, TrashRequest(revision=work.revision, action="trash"))
+    with library.sessions() as session:
+        file = session.scalar(select(TrashFile))
+    source, destination = library.managed / file.source, library.managed / file.destination
+    destination.parent.mkdir(parents=True)
+    sync = module.sync_dir
+    with monkeypatch.context() as patch:
+
+        def fail_destination(path):
+            if path == destination.parent:
+                raise OSError("Destination directory fsync failed")
+            sync(path)
+
+        patch.setattr(module, "sync_dir", fail_destination)
+        trash.step()
+        first = trash.operation(operation.id)
+        trash.retry(operation.id, first.revision)
+        trash.step()
+        assert source.samefile(destination)
+    assert source.samefile(destination)
+    failed = trash.operation(operation.id)
+    assert failed.state == "error"
+    events = []
+    unlink = Path.unlink
+    with monkeypatch.context() as patch:
+
+        def tracked_sync(path):
+            events.append(("sync", path))
+            sync(path)
+
+        def tracked_unlink(path, *args, **kwargs):
+            events.append(("unlink", path))
+            return unlink(path, *args, **kwargs)
+
+        patch.setattr(module, "sync_dir", tracked_sync)
+        patch.setattr(Path, "unlink", tracked_unlink)
+        trash.retry(operation.id, failed.revision)
+        finish(trash)
+    deletion = events.index(("unlink", source))
+    for ancestor in (destination.parent, destination.parent.parent, library.managed):
+        assert events.index(("sync", ancestor)) < deletion
+    assert events.index(("sync", source.parent)) > deletion
+    assert trash.operation(operation.id).state == "complete"

@@ -9,6 +9,7 @@ from pathlib import Path
 import uvicorn
 from mutagen.id3 import TIT2
 from mutagen.mp3 import MP3
+from mutagen.mp4 import MP4
 from PIL import Image, ImageDraw
 from pypdf import PdfWriter
 from stacks.app import create_app
@@ -119,12 +120,14 @@ with (
             )
     trash = Trash(library)
     for viewport in ("desktop", "phone"):
-        track = Path(f"samples/Trash audio {viewport}.mp3")
-        track.write_bytes(Path("backend/tests/fixtures/tone.mp3").read_bytes())
-        audio = MP3(track)
-        if audio.tags is None:
-            audio.add_tags()
-        audio.tags.add(TIT2(encoding=3, text=track.stem))
+        Path(f"samples/Trash audio target {viewport}.epub").write_bytes(
+            epub_bytes(f"Trash audio target {viewport}")
+        )
+        track = Path(f"samples/Trash audio {viewport}.m4b")
+        track.write_bytes(Path("backend/tests/fixtures/listening.m4b").read_bytes())
+        audio = MP4(track)
+        audio["\xa9nam"] = [track.stem]
+        audio["\xa9alb"] = [track.stem]
         audio.save()
     for viewport in ("desktop", "phone"):
         Path(f"samples/Trash journey {viewport}.epub").write_bytes(

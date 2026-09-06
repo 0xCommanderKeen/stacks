@@ -57,7 +57,7 @@
     start: (id: string, play?: boolean) => Promise<void>;
     flush: () => Promise<void>;
     pauseAndFlush: () => Promise<void>;
-    releaseWork: (id: string) => Promise<void>;
+    releaseRepresentations: (ids: string[]) => Promise<void>;
   }>(null!);
   async function loadHome(nextOffset = homeOffset) {
     continuing = await json<components['schemas']['ContinuePage']>(
@@ -694,7 +694,12 @@
                 />{/key}{/if}
             {#key selected.id}<TrashAction
                 book={selected}
-                beforeTrash={() => player?.releaseWork(selected!.id)}
+                beforeTrash={() =>
+                  player?.releaseRepresentations(
+                    selected!.editions.flatMap((edition) =>
+                      edition.representations.map((rep) => rep.id),
+                    ),
+                  )}
                 onupdate={(book) => {
                   selected = book;
                   editing = false;
