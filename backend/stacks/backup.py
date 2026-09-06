@@ -1,4 +1,4 @@
-"""Consistent full backups and offline restoration into a new data directory."""
+"""Consistent catalog/owned-file backups; external originals are protected separately."""
 
 import hashlib
 import json
@@ -30,8 +30,12 @@ def backup(library: Library, output: Path):
                 )
                 if pending:
                     raise ValueError("Recover unfinished imports before creating a full backup.")
+                external_roots = {}
                 for asset in session.scalars(select(Asset)):
-                    original = library.resolve(asset.relative_path)
+                    if asset.root != "managed":
+                        external_roots[asset.root] = external_roots.get(asset.root, 0) + 1
+                        continue
+                    original = library.resolve_asset(asset)
                     if original.stat().st_size != asset.size or digest(original) != asset.sha256:
                         raise ValueError(
                             "An original file has changed; backup verification failed."
@@ -48,7 +52,7 @@ def backup(library: Library, output: Path):
                     raise ValueError("Managed storage contains a symlink; backup stopped.")
                 if file.is_file():
                     files[file.relative_to(library.data_dir).as_posix()] = file
-            manifest = {"version": 1, "files": {}}
+            manifest = {"version": 2, "files": {}, "external_roots": external_roots}
             with zipfile.ZipFile(temporary, "x", compression=zipfile.ZIP_STORED) as archive:
                 for name, source in sorted(files.items()):
                     checksum = hashlib.sha256()
@@ -89,7 +93,10 @@ def restore(archive_path: Path, destination: Path):
             if archive.getinfo("manifest.json").file_size > 20 * 1024**2:
                 raise ValueError("Backup manifest too large.")
             manifest = json.loads(archive.read("manifest.json"))
-            if manifest.get("version") != 1 or set(names) != {*manifest["files"], "manifest.json"}:
+            if manifest.get("version") not in {1, 2} or set(names) != {
+                *manifest["files"],
+                "manifest.json",
+            }:
                 raise ValueError("Unsupported or incomplete backup manifest.")
             for name, expected in manifest["files"].items():
                 if name != "catalog.sqlite3" and not name.startswith("managed/"):
@@ -118,20 +125,25 @@ def restore(archive_path: Path, destination: Path):
                 ("0005",),
                 ("0006",),
                 ("0007",),
+                ("0008",),
             }:
                 raise ValueError("This Stacks version cannot restore the backup schema.")
+            external_roots = {}
             for root, relative, sha, size in connection.execute(
                 "SELECT root, relative_path, sha256, size FROM asset"
             ):
+                if not safe_member(relative):
+                    raise ValueError("Backup contains an unsafe asset path.")
+                if root != "managed":
+                    external_roots[root] = external_roots.get(root, 0) + 1
+                    continue
                 file = scratch / "managed" / relative
-                if (
-                    root != "managed"
-                    or not safe_member(relative)
-                    or not file.is_file()
-                    or file.stat().st_size != size
-                    or digest(file) != sha
-                ):
+                if not file.is_file() or file.stat().st_size != size or digest(file) != sha:
                     raise ValueError("Backup is missing a verified original asset.")
+            if external_roots != manifest.get("external_roots", {}):
+                raise ValueError("Backup external-original declarations do not match the catalog.")
+            if external_roots and manifest["version"] != 2:
+                raise ValueError("This backup does not declare separately protected originals.")
         # Flush names as well as bytes before publishing the complete data directory.
         for directory in sorted((p for p in scratch.rglob("*") if p.is_dir()), reverse=True):
             sync_dir(directory)

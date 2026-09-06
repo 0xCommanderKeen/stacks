@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 class AssetOut(BaseModel):
     id: str
+    root: str
     original_name: str
     size: int
     sha256: str
@@ -364,3 +365,28 @@ class CollectionNextPage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class SourceOut(BaseModel):
+    alias: str
+    configured: bool
+    available: bool
+    registered_assets: int
+
+
+class SourceRegistration(BaseModel):
+    root: str = Field(max_length=64)
+    paths: list[str] = Field(min_length=1, max_length=2000)
+
+    @field_validator("paths")
+    @classmethod
+    def bounded_paths(cls, paths):
+        if any(not path or len(path) > 1024 for path in paths):
+            raise ValueError("Each relative path must be between 1 and 1024 characters.")
+        return paths
+
+
+class AssetAvailability(BaseModel):
+    asset_id: str
+    available: bool
+    detail: str

@@ -10,7 +10,8 @@ import shutil
 import threading
 from pathlib import Path
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, true
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from stacks.db import initialize
@@ -132,7 +133,11 @@ def work_out(work: Work) -> WorkOut:
                         else ["download"],
                         assets=[
                             dict(
-                                id=a.id, original_name=a.original_name, size=a.size, sha256=a.sha256
+                                id=a.id,
+                                root=a.root,
+                                original_name=a.original_name,
+                                size=a.size,
+                                sha256=a.sha256,
                             )
                             for a in r.assets
                         ],
@@ -147,8 +152,14 @@ def work_out(work: Work) -> WorkOut:
 
 
 class Library:
-    def __init__(self, data_dir: Path):
+    def __init__(self, data_dir: Path, sources: dict[str, Path] | None = None):
+        self.sources = {alias: path.resolve() for alias, path in (sources or {}).items()}
         self.data_dir = data_dir.resolve()
+        if any(
+            self.data_dir.is_relative_to(root) or root.is_relative_to(self.data_dir)
+            for root in self.sources.values()
+        ):
+            raise ValueError("Source directories and Stacks data must not overlap.")
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._lock_file = (self.data_dir / ".owner.lock").open("a")
         try:
@@ -179,6 +190,40 @@ class Library:
         if not path.is_relative_to(self.managed.resolve()) or not path.is_file():
             raise FileNotFoundError("The original file is unavailable.")
         return path
+
+    def source_path(self, root: str, relative: str) -> Path:
+        if root not in self.sources or not safe_member(relative):
+            raise FileNotFoundError("The source is unconfigured or its relative path is invalid.")
+        directory = self.sources[root]
+        path = (directory / relative).resolve()
+        if not path.is_relative_to(directory) or not path.is_file():
+            raise FileNotFoundError(
+                "The registered original is unavailable. Check its source mount."
+            )
+        return path
+
+    def resolve_asset(self, asset: Asset) -> Path:
+        if asset.root == "managed":
+            return self.resolve(asset.relative_path)
+        path = self.source_path(asset.root, asset.relative_path)
+        observation = path.stat()
+        if observation.st_size != asset.size or observation.st_mtime_ns != asset.observed_mtime_ns:
+            raise FileNotFoundError(
+                "The registered original changed. Review the source before using it."
+            )
+        return path
+
+    def register_files(self, root: str, paths: list[str]) -> ImportResult:
+        if root not in self.sources:
+            raise InvalidBook("Choose a configured source.")
+        paths = [
+            self.source_path(root, relative).relative_to(self.sources[root]).as_posix()
+            for relative in paths
+        ]
+        if len(set(paths)) != len(paths):
+            raise InvalidBook("Choose each source file only once.")
+        sources = [(self.source_path(root, relative), relative) for relative in paths]
+        return self._ingest(sources, root)
 
     def list(
         self,
@@ -339,11 +384,15 @@ class Library:
 
     def import_files(self, sources: list[tuple[Path, str]]) -> ImportResult:
         """An ordered audio set is one representation; other formats have exactly one asset."""
+        return self._ingest(sources)
+
+    def _ingest(self, sources: list[tuple[Path, str]], root: str | None = None) -> ImportResult:
         if not sources or len(sources) > 2000:
             raise InvalidBook("Choose between 1 and 2000 files.")
         sources = sorted(sources, key=lambda item: (natural_key(item[1]), item[1]))
         if any(not safe_member(name) or len(name) > 1024 for _, name in sources):
             raise InvalidBook("Invalid original filename.")
+        observations = {name: path.stat() for path, name in sources} if root else {}
         inspections = [inspect_file(path, name) for path, name in sources]
         if len(sources) > 1 and any(i.facts["medium"] != "audio" for i in inspections):
             raise InvalidBook("Only audio tracks can be imported as one file set.")
@@ -363,6 +412,15 @@ class Library:
                     facts=inspection.facts,
                 )
             )
+        if root:
+            for (_, name), entry in zip(sources, entries, strict=True):
+                original, current = observations[name], self.source_path(root, name).stat()
+                fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns")
+                if any(getattr(original, field) != getattr(current, field) for field in fields):
+                    raise InvalidBook("A source file changed while inspecting it. Wait and retry.")
+                entry["relative_path"] = name
+                entry["observed_mtime_ns"] = current.st_mtime_ns
+            metadata["source_root"] = root
         metadata["assets"] = entries
         if len(entries) > 1:
             metadata["format"] = "audio-set"
@@ -374,6 +432,21 @@ class Library:
         )
         original_name = sources[0][1]
         with self.lock:
+            if root:
+                with self.sessions() as session:
+                    registered = session.scalars(
+                        select(Asset).where(
+                            Asset.root == root,
+                            Asset.relative_path.in_([name for _, name in sources]),
+                        )
+                    )
+                    expected = {entry["relative_path"]: entry for entry in entries}
+                    for asset in registered:
+                        if asset.sha256 != expected[asset.relative_path]["sha256"]:
+                            raise InvalidBook(
+                                "A registered source path has different bytes. "
+                                "Review it before replacing it."
+                            )
             with self.sessions() as session:
                 existing = session.scalar(
                     select(Work.id)
@@ -384,6 +457,45 @@ class Library:
                 )
             if existing:
                 return ImportResult(work=self.get(existing), duplicate=True)
+            if root:
+                with self.sessions() as session:
+                    overlap = session.scalar(
+                        select(Asset.id)
+                        .where(
+                            Asset.root == root,
+                            Asset.relative_path.in_([name for _, name in sources]),
+                        )
+                        .limit(1)
+                    )
+                    if overlap:
+                        raise InvalidBook(
+                            "Some source files are already registered in a different set. "
+                            "Regroup the existing works first."
+                        )
+            if root:
+                with self.sessions() as session:
+                    entries_table = func.json_each(
+                        ImportOperation.extracted_json, "$.assets"
+                    ).table_valued("value")
+                    reserved = session.scalar(
+                        select(ImportOperation.id)
+                        .join(entries_table, true())
+                        .where(
+                            ImportOperation.state != "complete",
+                            ImportOperation.sha256 != sha,
+                            func.json_extract(ImportOperation.extracted_json, "$.source_root")
+                            == root,
+                            func.json_extract(entries_table.c.value, "$.relative_path").in_(
+                                [name for _, name in sources]
+                            ),
+                        )
+                        .limit(1)
+                    )
+                    if reserved:
+                        raise InvalidBook(
+                            "A pending registration already reserves these source files. "
+                            "Recover it before choosing a different set."
+                        )
             with self.sessions() as session:
                 pending = session.scalar(
                     select(ImportOperation.id)
@@ -397,7 +509,7 @@ class Library:
             stage = self.staging / operation_id
             stage.mkdir()
             try:
-                for (source, _), entry in zip(sources, entries, strict=True):
+                for (source, _), entry in [] if root else zip(sources, entries, strict=True):
                     destination = stage / entry["filename"]
                     with source.open("rb") as incoming, destination.open("xb") as out:
                         shutil.copyfileobj(incoming, out, 1024**2)
@@ -451,11 +563,17 @@ class Library:
         for entry in entries:
             if not safe_member(entry["filename"]):
                 raise OSError("Unsafe journal path; copies retained.")
-            original = location / entry["filename"]
+            root = metadata.get("source_root")
+            original = (
+                self.source_path(root, entry["relative_path"])
+                if root
+                else location / entry["filename"]
+            )
             if (
                 not original.is_file()
                 or original.stat().st_size != entry["size"]
                 or digest(original) != entry["sha256"]
+                or (root and original.stat().st_mtime_ns != entry["observed_mtime_ns"])
             ):
                 raise OSError("Import original missing or checksum mismatch; copies retained.")
         if location == stage:
@@ -468,6 +586,8 @@ class Library:
             operation = session.get(ImportOperation, operation_id)
             metadata = json.loads(operation.extracted_json)
             work = Work(title=metadata["title"], description=metadata["description"])
+            if metadata.get("source_root"):
+                work.personal = PersonalState(default_shelf="archive")
             work.credits = [
                 Credit(position=i, contributor=Contributor(name=name))
                 for i, name in enumerate(metadata["authors"])
@@ -488,7 +608,11 @@ class Library:
             )
             representation.assets = [
                 Asset(
-                    relative_path=f"{operation_id}/{entry['filename']}",
+                    root=metadata.get("source_root", "managed"),
+                    relative_path=entry["relative_path"]
+                    if metadata.get("source_root")
+                    else f"{operation_id}/{entry['filename']}",
+                    observed_mtime_ns=entry.get("observed_mtime_ns"),
                     original_name=entry["original_name"],
                     sha256=entry["sha256"],
                     size=entry["size"],
@@ -513,10 +637,17 @@ class Library:
         for operation_id in pending:
             try:
                 self._publish(operation_id)
-            except (OSError, ValueError, InvalidBook) as exc:
+            except (OSError, ValueError, InvalidBook, IntegrityError) as exc:
                 with self.sessions.begin() as session:
                     operation = session.get(ImportOperation, operation_id)
-                    operation.state, operation.error = "error", str(exc)
+                    operation.state, operation.error = (
+                        "error",
+                        (
+                            "Catalog ownership conflict; pending files retained for review."
+                            if isinstance(exc, IntegrityError)
+                            else str(exc)
+                        ),
+                    )
         # Unjournaled upload/staging copies have no library ownership yet and are disposable.
         with self.sessions() as session:
             known = set(session.scalars(select(ImportOperation.id)))
@@ -554,4 +685,12 @@ class Library:
                         select(model.__table__).order_by(*model.__table__.primary_key.columns)
                     ).mappings()
                 ]
-            return {"schema_version": 7, "roots": {"managed": "managed/"}, "tables": tables}
+            roots = {"managed": {"kind": "managed"}}
+            roots.update(
+                {
+                    row["root"]: {"kind": "external"}
+                    for row in tables["asset"]
+                    if row["root"] != "managed"
+                }
+            )
+            return {"schema_version": 8, "roots": roots, "tables": tables}

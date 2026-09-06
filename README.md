@@ -107,3 +107,9 @@ Current format and series behavior is documented in [Formats and series](docs/fo
 
 [Collections](docs/collections.md) explains ordered reading lists across books,
 comics, and audio, including Home choices and grouping-safe membership.
+
+
+[Read-only sources](docs/read-only-sources.md) explains fresh registration without
+copying, source relocation, and the separate backup policy for external originals.
+Library backups include catalog and Stacks-owned originals/covers. Registered
+external originals require their own source-folder backup or snapshot.

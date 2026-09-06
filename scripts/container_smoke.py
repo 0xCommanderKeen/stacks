@@ -1,4 +1,4 @@
-"""Verify the shipped image, including a full backup restored into a second container."""
+"""Verify the image, readonly registration, and library backup in a second container."""
 
 import http.cookiejar
 import json
@@ -30,6 +30,12 @@ def main():
             # Linux preserves host bind-mount permissions. This directory contains only
             # synthetic test data and must be traversable by the container's UID 10001.
             root.chmod(0o755)
+            originals = root / "originals"
+            originals.mkdir(mode=0o755)
+            external_bytes = epub_bytes("A registered container book")
+            (originals / "registered.epub").write_bytes(external_bytes)
+            (originals / "registered.epub").chmod(0o444)
+            source_stamp = (originals / "registered.epub").stat().st_mtime_ns
             for restoring in (False, True):
                 container = name + ("-restored" if restoring else "-initial")
                 args = [
@@ -42,6 +48,15 @@ def main():
                     "-e",
                     "STACKS_PASSWORD=container-test-password",
                 ]
+                mount = "/sources/reconnected" if restoring else "/sources/archive"
+                args.extend(
+                    [
+                        "-v",
+                        f"{originals}:{mount}:ro",
+                        "-e",
+                        "STACKS_SOURCES=" + json.dumps({"archive": mount}),
+                    ]
+                )
                 if restoring:
                     docker(
                         "run",
@@ -136,8 +151,22 @@ def main():
                             0
                         ]
                         assert request(f"/api/assets/{original['id']}/download").read() == content
+                    registered = json.load(
+                        request(
+                            "/api/sources/register",
+                            json.dumps({"root": "archive", "paths": ["registered.epub"]}).encode(),
+                            headers={"Content-Type": "application/json"},
+                        )
+                    )
+                    assert registered["work"]["personal"]["default_shelf"] == "archive"
                     (root / "backup.zip").write_bytes(request("/api/backup", b"", "POST").read())
                     (root / "backup.zip").chmod(0o644)
+                external = json.load(request("/api/catalog?q=registered&scope=archive"))["items"][0]
+                original = external["editions"][0]["representations"][0]["assets"][0]
+                assert original["root"] == "archive"
+                assert request(f"/api/assets/{original['id']}/download").read() == external_bytes
+                assert (originals / "registered.epub").read_bytes() == external_bytes
+                assert (originals / "registered.epub").stat().st_mtime_ns == source_stamp
                 catalog = json.load(request("/api/catalog?q=Restored"))
                 assert catalog["items"][0]["title"] == "Restored from the shipped image"
                 asset = catalog["items"][0]["editions"][0]["representations"][0]["assets"][0]

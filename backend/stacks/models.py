@@ -80,12 +80,16 @@ class Representation(Base):
 
 class Asset(Base):
     __tablename__ = "asset"
-    __table_args__ = (UniqueConstraint("representation_id", "position"),)
+    __table_args__ = (
+        UniqueConstraint("representation_id", "position"),
+        UniqueConstraint("root", "relative_path"),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identity)
     representation_id: Mapped[str] = mapped_column(ForeignKey("representation.id"), index=True)
     position: Mapped[int] = mapped_column(default=0)
     root: Mapped[str] = mapped_column(default="managed")
-    relative_path: Mapped[str] = mapped_column(Text, unique=True)
+    relative_path: Mapped[str] = mapped_column(Text)
+    observed_mtime_ns: Mapped[int | None] = mapped_column(BigInteger, default=None)
     original_name: Mapped[str] = mapped_column(Text)
     sha256: Mapped[str] = mapped_column(String(64), index=True)
     size: Mapped[int] = mapped_column(BigInteger)

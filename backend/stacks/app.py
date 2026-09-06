@@ -30,6 +30,7 @@ from stacks.models import Asset, ImportOperation, LoginSession, Representation, 
 from stacks.operations import CatalogOperations
 from stacks.reading import Reading
 from stacks.schemas import (
+    AssetAvailability,
     CatalogPage,
     CollectionChange,
     CollectionEdit,
@@ -59,11 +60,14 @@ from stacks.schemas import (
     SeriesEdit,
     SeriesOut,
     SeriesPage,
+    SourceOut,
+    SourceRegistration,
     StatusOut,
     WorkEdit,
     WorkOut,
 )
 from stacks.series import SeriesCatalog
+from stacks.sources import Sources
 
 COOKIE = "stacks_session"
 SESSION_SECONDS = 7 * 86400
@@ -78,7 +82,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app):
-        app.state.library = await to_thread.run_sync(Library, settings.data_dir)
+        app.state.library = await to_thread.run_sync(Library, settings.data_dir, settings.sources)
         try:
             yield
         finally:
@@ -260,6 +264,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             Curation(lib).delete_record(work_id, record_id, revision)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from None
+
+    @app.get("/api/sources", response_model=list[SourceOut])
+    def sources(lib: Auth):
+        return Sources(lib).list()
+
+    @app.post("/api/sources/register", response_model=ImportResult)
+    def register_source(body: SourceRegistration, lib: Auth):
+        try:
+            return lib.register_files(body.root, body.paths)
+        except InvalidBook as error:
+            raise HTTPException(422, str(error)) from error
+        except OSError as error:
+            raise HTTPException(
+                409,
+                "The source is unavailable, changed, or could not be registered. "
+                "Check it before retrying.",
+            ) from error
+
+    @app.get("/api/works/{work_id}/availability", response_model=list[AssetAvailability])
+    def original_availability(work_id: str, lib: Auth):
+        return Sources(lib).availability(work_id)
 
     @app.get("/api/collections", response_model=CollectionPage)
     def collections(
@@ -450,7 +475,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if asset is None:
                 raise HTTPException(404, "File not found.")
             return FileResponse(
-                lib.resolve(asset.relative_path),
+                lib.resolve_asset(asset),
                 filename=asset.original_name,
                 media_type=FORMATS.get(
                     Path(asset.original_name).suffix.lower().lstrip("."),

@@ -64,3 +64,13 @@ order; future membership changes are not silently mirrored. Showing a collection
 on Home is an explicit choice. Collection revisions guard client writes; a
 separate content-state identity supports guarded, chained catalog undo. See
 [collections](docs/collections.md) for grouping, split, and next-up rules.
+
+
+### Read-only source roots (implementation underway)
+
+Root aliases identify configured source directories without storing machine paths
+in portable catalog data. External Assets retain root-relative locations and file
+observations; their original bytes are never managed or copied by registration.
+New registrations default to Archive. A library backup includes owned files and
+external references; registered original bytes require separate source protection.
+See [read-only sources](docs/read-only-sources.md).
