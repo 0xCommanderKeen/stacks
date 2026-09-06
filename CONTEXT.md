@@ -54,3 +54,13 @@ A proposed descriptive value from a file, filename, or external catalog, distinc
 
 **Import candidate**:
 A discovered file or file group being assessed for inclusion in the library. It may be ready to import, need a decision, be an exact duplicate, or have an error.
+
+### Ordered collections (implemented)
+
+A Collection is a named personal reading order of distinct Works, across media.
+CollectionEntry has its own identity and an integer position unique within that
+collection. Adding a series appends its currently owned Works in publication
+order; future membership changes are not silently mirrored. Showing a collection
+on Home is an explicit choice. Collection revisions guard client writes; a
+separate content-state identity supports guarded, chained catalog undo. See
+[collections](docs/collections.md) for grouping, split, and next-up rules.

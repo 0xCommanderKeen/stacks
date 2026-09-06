@@ -104,3 +104,6 @@ Implementation targets Linux/NAS and macOS. Windows is not currently supported.
 Current format and series behavior is documented in [Formats and series](docs/formats-and-series.md).
 
 [Grouping and undo](docs/grouping.md) explains previews, conflict choices, and stable format identity.
+
+[Collections](docs/collections.md) explains ordered reading lists across books,
+comics, and audio, including Home choices and grouping-safe membership.

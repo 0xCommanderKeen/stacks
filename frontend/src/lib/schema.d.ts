@@ -89,6 +89,75 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/collections': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Collections */
+    get: operations['collections_api_collections_get'];
+    put?: never;
+    /** Create Collection */
+    post: operations['create_collection_api_collections_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/collections/{collection_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Edit Collection */
+    patch: operations['edit_collection_api_collections__collection_id__patch'];
+    trace?: never;
+  };
+  '/api/collections/{collection_id}/entries': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Change Collection */
+    post: operations['change_collection_api_collections__collection_id__entries_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/collections/{collection_id}/works': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Collection Works */
+    get: operations['collection_works_api_collections__collection_id__works_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/export': {
     parameters: {
       query?: never;
@@ -98,6 +167,23 @@ export interface paths {
     };
     /** Export */
     get: operations['export_api_export_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/home/collections': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Collection Next */
+    get: operations['collection_next_api_home_collections_get'];
     put?: never;
     post?: never;
     delete?: never;
@@ -581,6 +667,103 @@ export interface components {
       start: number;
       /** Title */
       title: string;
+    };
+    /** CollectionChange */
+    CollectionChange: {
+      /**
+       * Action
+       * @enum {string}
+       */
+      action: 'add' | 'remove' | 'up' | 'down' | 'add_series';
+      /** Revision */
+      revision: number;
+      /** Series Id */
+      series_id?: string | null;
+      /** Work Id */
+      work_id?: string | null;
+    };
+    /** CollectionEdit */
+    CollectionEdit: {
+      /**
+       * Home
+       * @default false
+       */
+      home: boolean;
+      /** Name */
+      name: string;
+      /**
+       * Revision
+       * @default 1
+       */
+      revision: number;
+    };
+    /** CollectionEntryOut */
+    CollectionEntryOut: {
+      /** Finished */
+      finished: boolean;
+      /** Id */
+      id: string;
+      /** Position */
+      position: number;
+      work: components['schemas']['WorkOut'];
+    };
+    /** CollectionNextOut */
+    CollectionNextOut: {
+      collection: components['schemas']['CollectionOut'];
+      work: components['schemas']['WorkOut'];
+    };
+    /** CollectionNextPage */
+    CollectionNextPage: {
+      /** Items */
+      items: components['schemas']['CollectionNextOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
+    /** CollectionOut */
+    CollectionOut: {
+      /** Count */
+      count: number;
+      /**
+       * Home
+       * @default false
+       */
+      home: boolean;
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /**
+       * Revision
+       * @default 1
+       */
+      revision: number;
+    };
+    /** CollectionPage */
+    CollectionPage: {
+      /** Items */
+      items: components['schemas']['CollectionOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
+    };
+    /** CollectionWorksPage */
+    CollectionWorksPage: {
+      collection: components['schemas']['CollectionOut'];
+      /** Items */
+      items: components['schemas']['CollectionEntryOut'][];
+      /** Limit */
+      limit: number;
+      /** Offset */
+      offset: number;
+      /** Total */
+      total: number;
     };
     /** ConflictOut */
     ConflictOut: {
@@ -1248,6 +1431,176 @@ export interface operations {
       };
     };
   };
+  collections_api_collections_get: {
+    parameters: {
+      query?: {
+        q?: string;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CollectionPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_collection_api_collections_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CollectionEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CollectionOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  edit_collection_api_collections__collection_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        collection_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CollectionEdit'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CollectionOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  change_collection_api_collections__collection_id__entries_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        collection_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CollectionChange'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CollectionOut'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  collection_works_api_collections__collection_id__works_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        collection_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CollectionWorksPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
   export_api_export_get: {
     parameters: {
       query?: never;
@@ -1264,6 +1617,38 @@ export interface operations {
         };
         content: {
           'application/json': unknown;
+        };
+      };
+    };
+  };
+  collection_next_api_home_collections_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CollectionNextPage'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };
