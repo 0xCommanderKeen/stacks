@@ -1,0 +1,14 @@
+services:
+  stacks:
+    build: .
+    ports:
+      - "127.0.0.1:8133:8000"
+    environment:
+      STACKS_PASSWORD: ${STACKS_PASSWORD:?Set STACKS_PASSWORD in .env}
+      STACKS_SECURE_COOKIE: ${STACKS_SECURE_COOKIE:-false}
+    volumes:
+      - stacks-data:/data
+    restart: unless-stopped
+
+volumes:
+  stacks-data:

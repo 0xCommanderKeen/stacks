@@ -1,0 +1,301 @@
+import hashlib
+import hmac
+import secrets
+import tempfile
+import threading
+import time
+from collections import deque
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Annotated
+from urllib.parse import unquote
+
+from anyio import to_thread
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import delete, func, select
+from starlette.background import BackgroundTask
+
+from stacks.backup import backup
+from stacks.config import Settings
+from stacks.epub import InvalidBook
+from stacks.library import Library
+from stacks.models import Asset, ImportOperation, LoginSession, Representation, Work
+from stacks.schemas import CatalogPage, ImportResult, Login, StatusOut, WorkEdit, WorkOut
+
+COOKIE = "stacks_session"
+SESSION_SECONDS = 7 * 86400
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or Settings()
+    password_hasher = PasswordHasher()
+    password_hash = password_hasher.hash(settings.password.get_secret_value())
+    attempts = deque(maxlen=10)
+    attempts_lock = threading.Lock()
+
+    @asynccontextmanager
+    async def lifespan(app):
+        app.state.library = await to_thread.run_sync(Library, settings.data_dir)
+        try:
+            yield
+        finally:
+            app.state.library.close()
+
+    app = FastAPI(
+        title="Stacks",
+        version="0.1.0",
+        lifespan=lifespan,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
+
+    @app.middleware("http")
+    async def protect_mutations(request: Request, call_next):
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            # Browser cross-origin requests cannot set this header without a CORS preflight.
+            # No CORS origins are allowed. Also blocks cross-site HTML form submissions.
+            if request.headers.get("x-stacks-request") != "1":
+                return JSONResponse(
+                    {"detail": "Missing request protection header."}, status_code=403
+                )
+            if request.headers.get("sec-fetch-site") == "cross-site":
+                return JSONResponse(
+                    {"detail": "Cross-site requests are not allowed."}, status_code=403
+                )
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "same-origin"
+        response.headers["X-Frame-Options"] = "DENY"
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+    def library(request: Request) -> Library:
+        return request.app.state.library
+
+    def authenticated(request: Request, lib: Annotated[Library, Depends(library)]):
+        token = request.cookies.get(COOKIE, "")
+        digest = hmac.new(
+            settings.password.get_secret_value().encode(), token.encode(), hashlib.sha256
+        ).hexdigest()
+        with lib.sessions() as session:
+            entry = session.get(LoginSession, digest)
+            if entry is None or entry.expires_at < time.time():
+                raise HTTPException(401, "Please sign in.")
+        return lib
+
+    Auth = Annotated[Library, Depends(authenticated)]
+
+    @app.exception_handler(KeyError)
+    async def missing(_request, _exc):
+        return JSONResponse({"detail": "Book not found."}, status_code=404)
+
+    @app.exception_handler(FileNotFoundError)
+    async def unavailable(_request, _exc):
+        return JSONResponse(
+            {"detail": "The original file is unavailable. Check your storage."}, status_code=409
+        )
+
+    @app.get("/health/live")
+    def live():
+        return {"status": "ok"}
+
+    @app.get("/health/ready")
+    def ready(lib: Annotated[Library, Depends(library)]):
+        with lib.engine.connect() as connection:
+            connection.exec_driver_sql("SELECT 1")
+        if not lib.managed.is_dir():
+            raise HTTPException(503, "Managed storage unavailable.")
+        return {"status": "ready"}
+
+    @app.post("/api/login", status_code=204)
+    def login(body: Login, response: Response, lib: Annotated[Library, Depends(library)]):
+        with attempts_lock:
+            if len(attempts) == 10 and attempts[0] > time.monotonic() - 60:
+                raise HTTPException(429, "Too many sign-in attempts. Try again in a minute.")
+            attempts.append(time.monotonic())
+        try:
+            password_hasher.verify(password_hash, body.password)
+        except VerifyMismatchError:
+            raise HTTPException(401, "Incorrect password.") from None
+        token = secrets.token_urlsafe(32)
+        with lib.sessions.begin() as session:
+            session.execute(delete(LoginSession).where(LoginSession.expires_at < int(time.time())))
+            session.add(
+                LoginSession(
+                    digest=hmac.new(
+                        settings.password.get_secret_value().encode(),
+                        token.encode(),
+                        hashlib.sha256,
+                    ).hexdigest(),
+                    expires_at=int(time.time()) + SESSION_SECONDS,
+                )
+            )
+        response.set_cookie(
+            COOKIE,
+            token,
+            httponly=True,
+            samesite="strict",
+            secure=settings.secure_cookie,
+            max_age=SESSION_SECONDS,
+        )
+
+    @app.get("/api/session", status_code=204)
+    def session(_lib: Auth):
+        return Response(status_code=204)
+
+    @app.post("/api/logout", status_code=204)
+    def logout(request: Request, response: Response, lib: Auth):
+        digest = hmac.new(
+            settings.password.get_secret_value().encode(),
+            request.cookies[COOKIE].encode(),
+            hashlib.sha256,
+        ).hexdigest()
+        with lib.sessions.begin() as session:
+            session.execute(delete(LoginSession).where(LoginSession.digest == digest))
+        response.delete_cookie(COOKIE)
+
+    @app.get("/api/catalog", response_model=CatalogPage)
+    def catalog(
+        lib: Auth,
+        q: str = Query(default="", max_length=300),
+        limit: int = Query(default=60, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ):
+        return lib.list(q, limit, offset)
+
+    @app.get("/api/works/{work_id}", response_model=WorkOut)
+    def work(work_id: str, lib: Auth):
+        return lib.get(work_id)
+
+    @app.patch("/api/works/{work_id}", response_model=WorkOut)
+    def edit(work_id: str, body: WorkEdit, lib: Auth):
+        try:
+            return lib.edit(work_id, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from None
+
+    @app.post(
+        "/api/import",
+        response_model=ImportResult,
+        openapi_extra={
+            "requestBody": {
+                "required": True,
+                "content": {
+                    "application/epub+zip": {"schema": {"type": "string", "format": "binary"}}
+                },
+            }
+        },
+    )
+    async def import_book(request: Request, lib: Auth):
+        name = (
+            unquote(request.headers.get("x-filename", "book.epub"))
+            .replace("\\", "/")
+            .split("/")[-1]
+        )
+        if not name.lower().endswith(".epub") or len(name) > 255 or any(ord(c) < 32 for c in name):
+            raise HTTPException(400, "Choose an EPUB file with a valid filename.")
+        content_length = request.headers.get("content-length")
+        if content_length and (
+            not content_length.isdigit() or int(content_length) > settings.max_upload_bytes
+        ):
+            raise HTTPException(413, "This file exceeds the upload limit.")
+        with tempfile.NamedTemporaryFile(
+            dir=lib.staging, prefix="upload-", suffix=".epub"
+        ) as temporary:
+            size = 0
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > settings.max_upload_bytes:
+                    raise HTTPException(413, "This file exceeds the upload limit.")
+                await to_thread.run_sync(temporary.write, chunk)
+            temporary.flush()
+            try:
+                return await to_thread.run_sync(lib.import_file, Path(temporary.name), name)
+            except InvalidBook as exc:
+                raise HTTPException(422, str(exc)) from None
+            except OSError:
+                raise HTTPException(
+                    503, "Import could not finish. Check storage and restart to recover."
+                ) from None
+
+    @app.get("/api/assets/{asset_id}/download")
+    def download(asset_id: str, lib: Auth):
+        with lib.sessions() as session:
+            asset = session.get(Asset, asset_id)
+            if asset is None:
+                raise HTTPException(404, "File not found.")
+            return FileResponse(
+                lib.resolve(asset.relative_path),
+                filename=asset.original_name,
+                media_type="application/epub+zip",
+            )
+
+    @app.get("/api/representations/{representation_id}/cover")
+    def cover(representation_id: str, lib: Auth):
+        with lib.sessions() as session:
+            representation = session.get(Representation, representation_id)
+            if representation is None or not representation.cover_path:
+                raise HTTPException(404, "Cover not found.")
+            return FileResponse(lib.resolve(representation.cover_path), media_type="image/jpeg")
+
+    @app.get("/api/status", response_model=StatusOut)
+    def status(lib: Auth):
+        with lib.sessions() as session:
+            return StatusOut(
+                books=session.scalar(select(func.count()).select_from(Work)),
+                import_errors=session.scalar(
+                    select(func.count())
+                    .select_from(ImportOperation)
+                    .where(ImportOperation.state == "error")
+                ),
+            )
+
+    @app.get("/api/export")
+    def export(lib: Auth):
+        return JSONResponse(
+            lib.export(),
+            headers={"Content-Disposition": 'attachment; filename="stacks-catalog.json"'},
+        )
+
+    @app.post("/api/backup")
+    def create_backup(lib: Auth):
+        directory = Path(tempfile.mkdtemp(prefix="stacks-backup-"))
+        path = directory / "stacks.backup.zip"
+        import shutil
+
+        try:
+            backup(lib, path)
+        except ValueError as exc:
+            shutil.rmtree(directory)
+            raise HTTPException(409, str(exc)) from None
+        except Exception:
+            shutil.rmtree(directory)
+            raise
+        return FileResponse(
+            path,
+            filename="stacks.backup.zip",
+            media_type="application/zip",
+            background=BackgroundTask(shutil.rmtree, directory),
+        )
+
+    @app.get("/api/openapi.json")
+    def schema(_lib: Auth):
+        return app.openapi()
+
+    if settings.frontend_dir.is_dir():
+        static = settings.frontend_dir.resolve()
+        app.mount("/_app", StaticFiles(directory=static / "_app"), name="assets")
+
+        @app.get("/{path:path}", include_in_schema=False)
+        def frontend(path: str):
+            if path.startswith(("api/", "health/")):
+                raise HTTPException(404)
+            return FileResponse(static / "index.html")
+
+    return app
