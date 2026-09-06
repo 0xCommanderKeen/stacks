@@ -12,6 +12,7 @@
   let speed = $state(1);
   let playing = $state(false);
   let loading = $state(false);
+  let unavailable = $state(false);
   let error = $state('');
   let conflicted = $state(false);
   let dirty = $state(false);
@@ -25,7 +26,7 @@
 
   export async function flush() {
     while (saving) await saving;
-    if (!data || !track || !dirty || conflicted || loading || audio?.error) return;
+    if (!data || !track || !dirty || conflicted || loading) return;
     dirty = false;
     const representation = data.representation_id;
     const payload = {
@@ -73,6 +74,7 @@
     await flush();
     if (sequence !== generation || (dirty && !conflicted)) return;
     loading = true;
+    unavailable = false;
     if (audio) audio.pause();
     error = '';
     try {
@@ -105,6 +107,8 @@
     audio.currentTime = Math.min(pendingSeek, track.duration);
     audio.playbackRate = speed;
     loading = false;
+    unavailable = false;
+    if (data && data.progress.asset_id !== track.asset_id) dirty = true;
     if (autoplay) {
       autoplay = false;
       try {
@@ -115,13 +119,13 @@
     }
   }
   function moved() {
-    if (loading || !track) return;
+    if (loading || unavailable || !track) return;
     const latest = Math.min(audio.currentTime, track.duration);
     if (Math.abs(latest - position) > 0.01) dirty = true;
     position = latest;
   }
   async function toggle() {
-    if (conflicted || loading) return;
+    if (conflicted || loading || unavailable) return;
     if (audio.paused) {
       error = '';
       completed = false;
@@ -142,12 +146,14 @@
     await flush();
     if (dirty || conflicted || sequence !== generation) return;
     loading = true;
+    unavailable = false;
     audio.pause();
     index = next;
     position = 0;
     pendingSeek = 0;
     completed = false;
-    dirty = true;
+    dirty = false;
+    error = '';
     autoplay = play;
     await tick();
     audio.load();
@@ -163,7 +169,7 @@
     }
   }
   async function seek(value: number) {
-    if (!track || loading || conflicted) return;
+    if (!track || loading || conflicted || unavailable) return;
     position = Math.max(0, Math.min(value, track.duration));
     audio.currentTime = position;
     completed = false;
@@ -171,6 +177,7 @@
     await flush();
   }
   async function rate() {
+    if (loading || unavailable) return;
     audio.playbackRate = speed;
     dirty = true;
     await flush();
@@ -223,6 +230,7 @@
         if (!loading) void flush();
       }}
       onerror={() => {
+        unavailable = true;
         loading = false;
         playing = false;
         error = 'The audio could not be opened. Check the original or try its download.';
@@ -240,7 +248,7 @@
       >
       <button
         class="play"
-        disabled={loading || conflicted}
+        disabled={loading || conflicted || unavailable}
         aria-label={playing ? 'Pause audio' : 'Play audio'}
         onclick={toggle}>{playing ? 'Ⅱ' : '▶'}</button
       >
@@ -257,11 +265,14 @@
         max={track.duration}
         step="0.1"
         value={position}
-        disabled={loading || conflicted}
+        disabled={loading || conflicted || unavailable}
         oninput={(event) => seek(Number(event.currentTarget.value))}
       />
       <label
-        >Speed<select bind:value={speed} onchange={rate} disabled={conflicted}
+        >Speed<select
+          bind:value={speed}
+          onchange={rate}
+          disabled={loading || conflicted || unavailable}
           ><option value={0.5}>0.5×</option><option value={0.75}>0.75×</option><option value={1}
             >1×</option
           ><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}

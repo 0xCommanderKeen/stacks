@@ -373,6 +373,31 @@ test('audio persists through navigation, seeks, resumes and detects stale device
   await expect(player.getByRole('alert')).toContainText('another device');
   await player.getByRole('button', { name: 'Reload saved position' }).click();
   await expect(player.getByRole('slider', { name: 'Listening position' })).toHaveValue('15');
+  const playback = await (
+    await page.request.get(`/api/representations/${representation.id}/playback`)
+  ).json();
+  const missingStream = `**/api/assets/${playback.tracks[1].asset_id}/stream`;
+  await page.route(missingStream, (route) => route.fulfill({ status: 404 }));
+  const beforeMissing = await progress();
+  await player.getByRole('button', { name: 'Next track' }).click();
+  await expect(player.getByRole('alert')).toContainText('could not be opened');
+  expect(await progress()).toEqual(beforeMissing);
+  await player.getByRole('button', { name: 'Previous track' }).click();
+  await expect(player.getByRole('slider', { name: 'Listening position' })).toBeEnabled();
+  await player.getByRole('button', { name: 'Next track' }).click();
+  await expect(player.getByRole('alert')).toContainText('could not be opened');
+  const beforeSignout = await progress();
+  await page.getByRole('button', { name: /Sign out/ }).click();
+  await expect(page.getByLabel('Library password')).toBeVisible();
+  await page.unroute(missingStream);
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  await expect(page.getByRole('heading', { name: work.title, exact: true })).toBeVisible();
+  expect(await progress()).toEqual(beforeSignout);
+  await page.getByRole('button', { name: 'Listen · AUDIO-SET', exact: true }).click();
+  await expect(player.getByRole('button', { name: 'Pause audio' })).toBeVisible();
+  await player.getByRole('button', { name: 'Pause audio' }).click();
+
   await player.getByRole('button', { name: 'Next track' }).click();
   await expect(player.getByRole('combobox', { name: 'Track', exact: true })).toHaveValue('1');
   await player.getByRole('button', { name: 'Previous track' }).click();
