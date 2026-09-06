@@ -66,10 +66,23 @@
 
   async function load(nextOffset = offset, query = appliedQuery) {
     const sequence = ++loadSequence;
-    const result = await json<Page>(
+    let result = await json<Page>(
       `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}&scope=${scope}`,
     );
     if (sequence !== loadSequence) return;
+    if (!result.items.length && nextOffset > 0) {
+      nextOffset = result.total ? Math.floor((result.total - 1) / pageSize) * pageSize : 0;
+      if (result.total) {
+        result = await json<Page>(
+          `/catalog?q=${encodeURIComponent(query)}&limit=${pageSize}&offset=${nextOffset}&scope=${scope}`,
+        );
+        if (sequence !== loadSequence) return;
+      }
+      const params = new URLSearchParams(location.search);
+      if (nextOffset) params.set('offset', String(nextOffset));
+      else params.delete('offset');
+      history.replaceState({}, '', params.size ? `?${params}` : location.pathname);
+    }
     books = result.items;
     total = result.total;
     offset = nextOffset;

@@ -480,3 +480,40 @@ test('personal shelves and repeated records survive reload and scope navigation'
   await personal.scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath('personal-library.png'), fullPage: true });
 });
+
+test('archiving the final book on a page returns to the last populated page', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.getByLabel('Library password').fill('browser-test-password');
+  await page.getByRole('button', { name: 'Open my library' }).click();
+  const prefix = `Shelf Test ${testInfo.project.name}`;
+  await page
+    .getByLabel('Choose publications')
+    .setInputFiles(
+      Array.from({ length: 25 }, (_, i) =>
+        path.resolve(`../samples/${prefix} ${String(i).padStart(2, '0')}.epub`),
+      ),
+    );
+  await expect(page.getByRole('status')).toContainText('25 books added');
+  await page.getByLabel('Search books or authors').fill(prefix);
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Next →', exact: true }).click();
+  await expect(page).toHaveURL(/offset=24/);
+  await page.locator('button.book').click();
+  const personal = page.getByRole('region', { name: 'Personal library details' });
+  await personal.getByRole('button', { name: 'Edit personal details' }).click();
+  await personal.getByRole('combobox', { name: 'Shelf', exact: true }).selectOption('archive');
+  await personal.getByRole('button', { name: 'Save personal details' }).click();
+  await expect(personal.getByRole('status')).toContainText('Personal details saved');
+  await expect(page).not.toHaveURL(/offset=/);
+  await expect(page).toHaveURL(/book=/);
+  await page.getByRole('button', { name: 'Back to library' }).click();
+  await expect(page.locator('button.book')).toHaveCount(24);
+  await page.reload();
+  await expect(page.locator('button.book')).toHaveCount(24);
+  // An invalid empty-result deep link also normalizes its offset.
+  await page.goto('/?q=nothing-owned-with-this-name&offset=240');
+  await expect(page.getByRole('heading', { name: 'No books found.' })).toBeVisible();
+  await expect(page).not.toHaveURL(/offset=/);
+});
