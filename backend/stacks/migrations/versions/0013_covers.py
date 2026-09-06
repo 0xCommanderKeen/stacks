@@ -19,15 +19,13 @@ def upgrade():
         sa.Column("origin", sa.String(), nullable=False),
         sa.Column("created_at", sa.String(), nullable=False),
     )
-    with op.batch_alter_table("work") as batch:
-        batch.add_column(sa.Column("selected_cover_id", sa.String(36)))
-        batch.create_foreign_key(
-            "fk_work_selected_cover", "cover_blob", ["selected_cover_id"], ["id"]
-        )
+    # SQLite supports a nullable inline reference without rebuilding the Work table.
+    # Avoid dropping a populated parent table during upgrade or test downgrades.
+    op.execute(
+        "ALTER TABLE work ADD COLUMN selected_cover_id VARCHAR(36) REFERENCES cover_blob(id)"
+    )
 
 
 def downgrade():
-    with op.batch_alter_table("work") as batch:
-        batch.drop_constraint("fk_work_selected_cover", type_="foreignkey")
-        batch.drop_column("selected_cover_id")
+    op.execute("ALTER TABLE work DROP COLUMN selected_cover_id")
     op.drop_table("cover_blob")
